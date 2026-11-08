@@ -1,0 +1,148 @@
+<style>
+    .partner-admin-teams { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .partner-admin-team { padding:12px; border:1px solid #566078; border-radius:7px; }
+    .partner-admin-question { padding:10px; margin-top:8px; border:1px solid #566078; border-radius:6px; }
+    .partner-admin-question button { margin:4px 4px 0 0; }
+    .partner-admin-score { display:flex; align-items:center; gap:8px; margin:8px 0; }
+    @media (max-width:700px) { .partner-admin-teams { grid-template-columns:1fr; } }
+</style>
+
+<div class="card">
+    <h2>Ich weiß, was mein Partner weiß</h2>
+    <p id="partnerAdminStatus">Keine Runde aktiv.</p>
+    <label>Fragenkatalog:</label>
+    <select id="partnerCatalog" style="width:100%; padding:7px; margin:4px 0 10px;"></select>
+    <div id="partnerAdminRoles" class="partner-admin-teams"></div>
+    <button onclick="startPartnerRound()">Runde starten</button>
+    <button onclick="resetPartnerGame()">Spiel zurücksetzen</button>
+    <div id="partnerAdminScores"></div>
+    <div id="partnerAdminQuestions" class="partner-admin-teams"></div>
+</div>
+
+<script>
+    let partnerAdminState = { players: {}, teams: {} };
+    let partnerAdminGame = { phase: 'IDLE', teams: {}, scores: {} };
+
+    socket.on('receivePartnerCatalogs', catalogs => {
+        const select = document.getElementById('partnerCatalog');
+        if (!select) return;
+        select.innerHTML = '';
+        catalogs.forEach(catalog => {
+            const option = document.createElement('option');
+            option.value = catalog;
+            option.innerText = catalog;
+            select.appendChild(option);
+        });
+    });
+    socket.emit('getPartnerCatalogs');
+
+    function playerOptions(state, team, selected) {
+        return Object.values(state.players || {})
+            .filter(player => player.team === team)
+            .map(player => `<option value="${player.id}" ${player.id === selected ? 'selected' : ''}>${player.name}</option>`)
+            .join('');
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        partnerAdminState = state;
+        const roles = document.getElementById('partnerAdminRoles');
+        if (!roles) return;
+        roles.innerHTML = '';
+        Object.keys(state.teams || {}).forEach(team => {
+            const players = Object.values(state.players || {}).filter(player => player.team === team);
+            const panel = document.createElement('div');
+            panel.className = 'partner-admin-team';
+            panel.innerHTML = `<h3>${team}</h3>
+                <label>Punkte verteilen:</label>
+                <select id="partner-rater-${team}" style="width:100%; padding:7px; margin:4px 0 8px;">${playerOptions(state, team)}</select>
+                <label>Fragen beantworten:</label>
+                <select id="partner-answerer-${team}" style="width:100%; padding:7px; margin:4px 0;">${playerOptions(state, team)}</select>`;
+            roles.appendChild(panel);
+        });
+    };
+
+    window.startPartnerRound = function() {
+        const assignments = {};
+        Object.keys(partnerAdminState.teams || {}).forEach(team => {
+            assignments[team] = {
+                raterId: document.getElementById(`partner-rater-${team}`).value,
+                answererId: document.getElementById(`partner-answerer-${team}`).value
+            };
+        });
+        socket.emit('adminStartPartnerRound', {
+            assignments,
+            catalogName: document.getElementById('partnerCatalog').value
+        });
+    };
+
+    window.resetPartnerGame = function() {
+        socket.emit('adminResetPartnerGame');
+    };
+
+    window.changePartnerPoint = function(team, amount) {
+        socket.emit('adminAddPartnerPoint', { team, amount });
+    };
+
+    window.onPartnerAdminUpdate = function(game) {
+        partnerAdminGame = game;
+        const status = document.getElementById('partnerAdminStatus');
+        const scores = document.getElementById('partnerAdminScores');
+        const questions = document.getElementById('partnerAdminQuestions');
+        if (!status || !scores || !questions) return;
+
+        status.innerText = game.round
+            ? `Runde ${game.round} / 4 | ${game.phase} | ${game.catalogName || ''}`
+            : 'Keine Runde aktiv.';
+        scores.innerHTML = '<h3>Punkte</h3>';
+        Object.entries(game.scores || {}).forEach(([team, points]) => {
+            const row = document.createElement('div');
+            row.className = 'partner-admin-score';
+            row.innerHTML = `<strong>${team}: ${points}</strong>`;
+            const minus = document.createElement('button');
+            minus.innerText = '-1';
+            minus.onclick = () => changePartnerPoint(team, -1);
+            const plus = document.createElement('button');
+            plus.innerText = '+1';
+            plus.onclick = () => changePartnerPoint(team, 1);
+            row.appendChild(minus);
+            row.appendChild(plus);
+            scores.appendChild(row);
+        });
+
+        questions.innerHTML = '';
+        Object.entries(game.teams || {}).forEach(([team, teamGame]) => {
+            const panel = document.createElement('div');
+            panel.className = 'partner-admin-team';
+            panel.innerHTML = `<h3>${team}: ${teamGame.raterName} verteilt, ${teamGame.answererName} antwortet</h3>`;
+            game.questions.forEach((question, index) => {
+                const item = document.createElement('div');
+                item.className = 'partner-admin-question';
+                const revealed = teamGame.revealedIndexes.includes(index);
+                const result = teamGame.results[index];
+                item.innerHTML = `<strong>${index + 1}. ${question.question}</strong><br>
+                    Richtige Antwort: ${question.answer}<br>
+                    Punkte: ${teamGame.allocations[index] ?? '-'}<br>`;
+                const reveal = document.createElement('button');
+                reveal.innerText = revealed ? 'Frage ist sichtbar' : 'Frage anzeigen';
+                reveal.disabled = revealed;
+                reveal.onclick = () => socket.emit('adminRevealPartnerQuestion', { team, index });
+                item.appendChild(reveal);
+                if (revealed && teamGame.allocations[index] !== null && !result) {
+                    const correct = document.createElement('button');
+                    correct.innerText = 'Richtig';
+                    correct.onclick = () => socket.emit('adminMarkPartnerAnswer', { team, index, correct: true });
+                    const wrong = document.createElement('button');
+                    wrong.innerText = 'Falsch';
+                    wrong.onclick = () => socket.emit('adminMarkPartnerAnswer', { team, index, correct: false });
+                    item.appendChild(correct);
+                    item.appendChild(wrong);
+                }
+                if (result) {
+                    item.innerHTML += `<br>${result.correct ? `Richtig: +${result.points}` : 'Falsch'}`;
+                }
+                panel.appendChild(item);
+            });
+            questions.appendChild(panel);
+        });
+    };
+</script>

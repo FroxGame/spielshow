@@ -1,0 +1,15 @@
+[
+    { "name": "Wo liegt die Hauptstadt des Landes in der die letzten olympischen Sommerspiele stattgefunden haben?", "answer": "Paris", "lat": 48.8535, "lng": 2.3484 },
+    { "name": "Wo ist die religiöse Stätte, die ein Kreis aus Steinen ist und heute UNESCO Weltkulturerbe ist?", "answer": "Stonhenge", "lat": 51.1789, "lng": -1.8264 },
+    { "name": "Wo liegt der Ort der sich zusammensetzt aus dem Geräusch, mit dem man Enten anlockt und dem Ort, wo Getreide angebaut wird?", "answer": "Bielefeld", "lat": 52.0218, "lng": 8.5351 },
+    { "name": "Wo liegt der höchste Punkt des Sitzes der griechischen Götter?", "answer": "Mykitas", "lat": 40.0862, "lng": 22.3585 },
+    { "name": "Wo ist der Ort, an dem es die einzigen freilebenden Affen in Europa gibt?", "answer": "Gibraltar", "lat": 36.1324, "lng": -5.3781 },
+    { "name": "Wo ist die Burg die als Albumcover für das The Paper Kingdom Album dient?", "answer": "Burg Eltz", "lat": 50.205, "lng": 7.336667 },
+    { "name": "Wo liegt die Hauptstadt des europäischen Landes mit der höchsten Durchschnittshöhe (1996m über N.N.)?", "answer": "Andorra", "lat": 42.5075, "lng": 1.5225 },
+    { "name": "Wo ist Hauptstadt des Landes mit höchstem Preisniveau für alkoholische Getränke in der EU 2024?", "answer": "Helsinki", "lat": 60.1756, "lng": 24.9342 },
+    { "name": "Wo liegt der zweitkleinste Staat der Erde, der für seine luxuriösen Jachthäfen bekannt ist?", "answer": "Monaco", "lat": 43.7396, "lng": 7.4069 },
+    { "name": "Wo findet das zweitgrößte Volksfest der Welt statt?", "answer": "Stuttgart, Bad Canstatt", "lat": 48.7953, "lng": 9.2197 },
+    { "name": "Wo liegt das höchste Hochhaus (nicht Bauwerk) in Deutschland?", "answer": "Commerzbank Tower", "lat": 50.1112, "lng": 8.6744 },
+    { "name": "Wo liegt der Flughafen mit dem IATA Code SJJ?", "answer": "Sarajevo", "lat": 43.8246, "lng": 18.3315 },
+    { "name": "Wo liegt die Stadt mit den meisten Touristen/Besuchern 2023 laut Euromonitor?", "answer": "Istanbul", "lat": 41.0128, "lng": 28.9603 }
+]

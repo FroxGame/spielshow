@@ -1,0 +1,388 @@
+<style>
+    .malen-admin-section { margin-bottom: 16px; }
+    .malen-admin-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .malen-admin-label { font-size: 0.85rem; color: #a4b0be; margin-bottom: 4px; display: block; }
+    .malen-admin-scores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .malen-score-row {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 5px 14px; border-radius: 6px; background: #1c202c;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    }
+    .malen-score-btn {
+        padding: 3px 9px; font-size: 0.85rem; font-weight: bold;
+        cursor: pointer; border-radius: 4px; border: 1px solid #4a5676;
+        background: #2b3348; color: #fff;
+    }
+    .malen-score-btn:hover { background: #3e4a68; }
+    .malen-select {
+        padding: 7px 10px; min-width: 220px; background: #1c202c;
+        border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-family: inherit;
+    }
+    .malen-word-badge {
+        font-size: 1.3rem; font-weight: bold; padding: 10px 18px;
+        border-radius: 8px; background: #1c202c;
+        border-left: 5px solid #2ed573; color: #2ed573;
+        display: inline-block; margin-bottom: 10px;
+    }
+    .malen-admin-canvases {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        margin-top: 14px;
+    }
+    .malen-canvas-card {
+        padding: 10px;
+        border: 1px solid #3d4763;
+        border-radius: 8px;
+        background: #171922;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .malen-canvas-card h4 {
+        margin: 0 0 8px;
+        font-size: 1rem;
+        align-self: flex-start;
+    }
+    .malen-preview-canvas {
+        width: 100%;
+        max-width: 400px;
+        aspect-ratio: 4 / 3;
+        background: #ffffff;
+        border-radius: 6px;
+        border: 2px solid #2a2f40;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+        display: block;
+    }
+    @media (max-width: 800px) {
+        .malen-admin-canvases { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="card">
+    <h2>Blindes Malen (Montagsmaler)</h2>
+    <div id="malenScores" class="malen-admin-scores"></div>
+
+    <div class="malen-admin-section">
+        <div class="malen-admin-row">
+            <div>
+                <label class="malen-admin-label">Begriff aus Vorlagen wählen:</label>
+                <select id="malenWordSelect" class="malen-select" onchange="onSelectMalenWord(this.value)">
+                    <option value="">-- Begriff auswählen --</option>
+                </select>
+            </div>
+            <div>
+                <label class="malen-admin-label">Begriff (oder manuell eingeben):</label>
+                <input type="text" id="malenWordInput" placeholder="z.B. Schneemann" maxlength="100"
+                    style="padding: 7px 10px; min-width: 240px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-size: 0.95rem; font-family: inherit;">
+            </div>
+            <div style="align-self: flex-end;">
+                <button onclick="randomMalenWord()" style="background: #3742fa; color: #fff;">🎲 Zufall</button>
+            </div>
+        </div>
+
+        <div class="malen-admin-row">
+            <div>
+                <label class="malen-admin-label">Maler Team 1:</label>
+                <select id="malenPainterTeam1" class="malen-select" onchange="savePainters()">
+                    <option value="">-- Maler Team 1 wählen --</option>
+                </select>
+            </div>
+            <div>
+                <label class="malen-admin-label">Maler Team 2:</label>
+                <select id="malenPainterTeam2" class="malen-select" onchange="savePainters()">
+                    <option value="">-- Maler Team 2 wählen --</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="malen-admin-row" style="margin-top: 12px; gap: 8px;">
+            <button onclick="startMalenRound()" style="background: #2ed573; color: #000; font-weight: bold; font-size: 1rem; padding: 8px 16px;">▶ Runde starten / Neuer Begriff</button>
+            <button onclick="clearAllCanvases()" style="background: #e67e22; color: #fff; font-weight: bold;">🗑️ Beide Canvas leeren</button>
+            <button onclick="resetMalenGame()" style="background: #c0392b; color: #fff;">Spiel zurücksetzen</button>
+        </div>
+    </div>
+
+    <div id="malenActiveInfo" style="display: none; margin-top: 14px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+            <div>
+                <span class="malen-admin-label">Aktueller Begriff (für Maler & Admin sichtbar):</span>
+                <div id="malenCurrentWordDisplay" class="malen-word-badge">-</div>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button onclick="quickNextSequentialWord()" style="background: #2ed573; color: #000; font-weight: bold;">➡️ Nächster Begriff</button>
+                <button onclick="quickNextWord()" style="background: #3742fa; color: #fff; font-weight: bold;">🎲 Nächster Zufallsbegriff</button>
+            </div>
+        </div>
+
+        <div class="malen-admin-canvases">
+            <div class="malen-canvas-card">
+                <h4 id="malenCardHeader1" style="color: #9b59b6;">Team 1</h4>
+                <canvas id="adminMalenCanvas1" class="malen-preview-canvas" width="600" height="450"></canvas>
+            </div>
+            <div class="malen-canvas-card">
+                <h4 id="malenCardHeader2" style="color: #2ecc71;">Team 2</h4>
+                <canvas id="adminMalenCanvas2" class="malen-preview-canvas" width="600" height="450"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let _allMalenWords = [];
+
+    window.onSelectMalenWord = function(val) {
+        const inp = document.getElementById('malenWordInput');
+        if (inp && val) inp.value = val;
+    };
+
+    window.randomMalenWord = function() {
+        if (!_allMalenWords.length) return;
+        const random = _allMalenWords[Math.floor(Math.random() * _allMalenWords.length)];
+        const inp = document.getElementById('malenWordInput');
+        const sel = document.getElementById('malenWordSelect');
+        if (inp) inp.value = random;
+        if (sel) sel.value = random;
+    };
+
+    function populateMalenWords(words) {
+        if (!Array.isArray(words)) return;
+        _allMalenWords = words;
+        const sel = document.getElementById('malenWordSelect');
+        if (!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">-- Begriff auswählen --</option>';
+        words.forEach(w => {
+            const opt = document.createElement('option');
+            opt.value = w;
+            opt.innerText = w;
+            if (w === cur) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    }
+
+    if (typeof socket !== 'undefined') {
+        socket.off('receiveMalenWords');
+        socket.on('receiveMalenWords', populateMalenWords);
+        socket.emit('getMalenWords');
+
+        socket.off('malenLinesAdded');
+        socket.on('malenLinesAdded', ({ team, lines }) => {
+            const canvas = team === window._malenFirstTeam
+                ? document.getElementById('adminMalenCanvas1')
+                : document.getElementById('adminMalenCanvas2');
+            if (canvas && lines) {
+                const ctx = canvas.getContext('2d');
+                drawLinesOnCanvas(ctx, canvas, lines);
+            }
+        });
+
+        socket.off('malenCanvasCleared');
+        socket.on('malenCanvasCleared', ({ team }) => {
+            if (team === window._malenFirstTeam || team === 'Team 1' || team === 'ALL') {
+                const c1 = document.getElementById('adminMalenCanvas1');
+                if (c1) clearCanvas(c1);
+            }
+            if (team === window._malenSecondTeam || team === 'Team 2' || team === 'ALL') {
+                const c2 = document.getElementById('adminMalenCanvas2');
+                if (c2) clearCanvas(c2);
+            }
+        });
+    }
+
+    fetch('/malen.json').then(r => r.json()).then(populateMalenWords).catch(() => {});
+
+    function clearCanvas(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawLinesOnCanvas(ctx, canvas, lines) {
+        if (!lines || !lines.length) return;
+        ctx.strokeStyle = '#111111';
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        lines.forEach(line => {
+            ctx.beginPath();
+            ctx.moveTo(line.x0 * canvas.width, line.y0 * canvas.height);
+            ctx.lineTo(line.x1 * canvas.width, line.y1 * canvas.height);
+            ctx.stroke();
+        });
+    }
+
+    function redrawWholeCanvas(canvas, lines) {
+        clearCanvas(canvas);
+        if (lines && lines.length) {
+            const ctx = canvas.getContext('2d');
+            drawLinesOnCanvas(ctx, canvas, lines);
+        }
+    }
+
+    window.savePainters = function() {
+        const p1 = document.getElementById('malenPainterTeam1').value || null;
+        const p2 = document.getElementById('malenPainterTeam2').value || null;
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminSetMalenPainters', { 'Team 1': p1, 'Team 2': p2 });
+        }
+    };
+
+    window.startMalenRound = function() {
+        const word = (document.getElementById('malenWordInput').value || '').trim();
+        if (!word) {
+            alert('Bitte einen Begriff auswählen oder eingeben!');
+            return;
+        }
+        const p1 = document.getElementById('malenPainterTeam1').value || null;
+        const p2 = document.getElementById('malenPainterTeam2').value || null;
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminStartMalenRound', {
+                word,
+                painters: { 'Team 1': p1, 'Team 2': p2 }
+            });
+        }
+    };
+
+    window.nextSequentialWord = function() {
+        if (!_allMalenWords.length) return;
+        const curWord = (document.getElementById('malenWordInput').value || '').trim();
+        let curIdx = _allMalenWords.indexOf(curWord);
+        let nextIdx = (curIdx + 1) % _allMalenWords.length;
+        const nextWord = _allMalenWords[nextIdx];
+        
+        const inp = document.getElementById('malenWordInput');
+        const sel = document.getElementById('malenWordSelect');
+        if (inp) inp.value = nextWord;
+        if (sel) sel.value = nextWord;
+    };
+
+    window.quickNextSequentialWord = function() {
+        nextSequentialWord();
+        const word = (document.getElementById('malenWordInput').value || '').trim();
+        if (word && typeof socket !== 'undefined') {
+            socket.emit('adminSetMalenWord', word);
+        }
+    };
+
+    window.quickNextWord = function() {
+        randomMalenWord();
+        const word = (document.getElementById('malenWordInput').value || '').trim();
+        if (word && typeof socket !== 'undefined') {
+            socket.emit('adminSetMalenWord', word);
+        }
+    };
+
+    window.clearAllCanvases = function() {
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminClearAllMalenCanvases');
+        }
+    };
+
+    window.addMalenPoint = function(team, amount) {
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminAddMalenPoint', { team, amount });
+        }
+    };
+
+    window.resetMalenGame = function() {
+        if (confirm('Blindes Malen wirklich zurücksetzen?') && typeof socket !== 'undefined') {
+            socket.emit('adminResetMalen');
+        }
+    };
+
+    window.onModuleStateUpdate = function(state) {
+        const malen = state.malenGame || {};
+        const teams = state.teams || {};
+        const players = state.players || {};
+        const teamNames = Object.keys(teams);
+        const firstTeam = teamNames[0] || 'Team 1';
+        const secondTeam = teamNames[1] || 'Team 2';
+        window._malenFirstTeam = firstTeam;
+        window._malenSecondTeam = secondTeam;
+        const phase = malen.phase || 'IDLE';
+
+        // Update scores
+        const scoresEl = document.getElementById('malenScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = malen.scores || {};
+            Object.keys(teams).forEach(t => {
+                const color = (teams[t] || {}).color || '#fff';
+                const row = document.createElement('div');
+                row.className = 'malen-score-row';
+                row.style.borderLeft = '5px solid ' + color;
+                row.innerHTML = '<span style="font-weight:bold;color:' + color + '">' + t + ': ' + (scores[t] || 0) + ' Pkt.</span>';
+                
+                const minus = document.createElement('button');
+                minus.className = 'malen-score-btn';
+                minus.innerText = '-1';
+                minus.onclick = () => addMalenPoint(t, -1);
+
+                const plus = document.createElement('button');
+                plus.className = 'malen-score-btn';
+                plus.innerText = '+1';
+                plus.onclick = () => addMalenPoint(t, 1);
+
+                row.appendChild(minus);
+                row.appendChild(plus);
+                scoresEl.appendChild(row);
+            });
+        }
+
+        // Update painter selects
+        const s1 = document.getElementById('malenPainterTeam1');
+        const s2 = document.getElementById('malenPainterTeam2');
+        const painters = malen.painters || {};
+
+        if (s1) {
+            const cur1 = s1.value || painters[firstTeam] || painters['Team 1'];
+            s1.innerHTML = '<option value="">-- Maler Team 1 wählen --</option>';
+            Object.values(players).filter(p => p.team === firstTeam).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.innerText = p.name;
+                if (p.id === cur1) opt.selected = true;
+                s1.appendChild(opt);
+            });
+        }
+
+        if (s2) {
+            const cur2 = s2.value || painters[secondTeam] || painters['Team 2'];
+            s2.innerHTML = '<option value="">-- Maler Team 2 wählen --</option>';
+            Object.values(players).filter(p => p.team === secondTeam).forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.innerText = p.name;
+                if (p.id === cur2) opt.selected = true;
+                s2.appendChild(opt);
+            });
+        }
+
+        const activeDiv = document.getElementById('malenActiveInfo');
+        if (activeDiv) {
+            activeDiv.style.display = phase === 'PLAYING' ? 'block' : 'none';
+        }
+
+        if (phase === 'PLAYING') {
+            const wordEl = document.getElementById('malenCurrentWordDisplay');
+            if (wordEl) wordEl.innerText = malen.word || '-';
+
+            const p1Obj = players[painters[firstTeam] || painters['Team 1']];
+            const p2Obj = players[painters[secondTeam] || painters['Team 2']];
+            const h1 = document.getElementById('malenCardHeader1');
+            const h2 = document.getElementById('malenCardHeader2');
+            if (h1) h1.innerText = firstTeam + ' ' + (p1Obj ? '(Malt: ' + p1Obj.name + ')' : '');
+            if (h2) h2.innerText = secondTeam + ' ' + (p2Obj ? '(Malt: ' + p2Obj.name + ')' : '');
+
+            // Redraw canvases with latest state if available
+            const drawings = malen.drawings || {};
+            const c1 = document.getElementById('adminMalenCanvas1');
+            const c2 = document.getElementById('adminMalenCanvas2');
+            if (c1) redrawWholeCanvas(c1, drawings[firstTeam] || drawings['Team 1'] || []);
+            if (c2) redrawWholeCanvas(c2, drawings[secondTeam] || drawings['Team 2'] || []);
+        }
+    };
+</script>
+

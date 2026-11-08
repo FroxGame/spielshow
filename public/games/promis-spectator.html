@@ -1,0 +1,87 @@
+<style>
+    .promi-spectator-score {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+
+    .promi-spectator-score span {
+        padding: 7px 12px;
+        border-radius: 6px;
+        background: #2c2f3c;
+        font-weight: bold;
+    }
+
+    #promiSpectatorImage {
+        display: block;
+        width: 100%;
+        max-height: 52vh;
+        object-fit: contain;
+        margin: 10px auto;
+        border-radius: 10px;
+        background: #202431;
+    }
+
+    .promi-spectator-reveal {
+        padding: 12px;
+        border-radius: 6px;
+        background: #202a2b;
+        font-size: 1.15rem;
+        font-weight: bold;
+    }
+</style>
+
+<div id="promiSpectatorScore" class="promi-spectator-score"></div>
+<section class="card">
+    <h2>Promis raten</h2>
+    <p id="promiSpectatorStatus">Warte auf ein Bild...</p>
+    <img id="promiSpectatorImage" alt="Promi">
+    <div id="promiSpectatorReveal" class="promi-spectator-reveal"></div>
+</section>
+
+<script>
+    let lastPromiSpectatorBuzzerWinner = null;
+
+    function playPromiSpectatorBuzzerSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(880, context.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.18, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.22);
+    }
+
+    window.onSpectatorStateUpdate = function(state) {
+        const promi = state.promiGame || {};
+        const image = document.getElementById('promiSpectatorImage');
+        const status = document.getElementById('promiSpectatorStatus');
+        const reveal = document.getElementById('promiSpectatorReveal');
+        const scores = document.getElementById('promiSpectatorScore');
+        if (!image || !status || !reveal || !scores) return;
+        if (promi.buzzerWinner && promi.buzzerWinner !== lastPromiSpectatorBuzzerWinner) {
+            playPromiSpectatorBuzzerSound();
+            lastPromiSpectatorBuzzerWinner = promi.buzzerWinner;
+        }
+        if (!promi.buzzerWinner) lastPromiSpectatorBuzzerWinner = null;
+
+        scores.innerHTML = Object.entries(promi.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points} / 5</span>`)
+            .join('');
+        image.src = promi.currentImage ? `/${promi.currentImage}` : '';
+        image.style.display = promi.currentImage ? 'block' : 'none';
+        status.innerText = promi.buzzerWinner
+            ? `${promi.buzzerWinner} hat gebuzzert.`
+            : promi.buzzerLocked ? 'Der Buzzer ist gesperrt.' : 'Buzzer ist offen.';
+        reveal.innerText = promi.revealedName || '';
+    };
+</script>

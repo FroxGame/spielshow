@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spielshow Client</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background: #121212; color: white; margin: 0; }
+        
+        #top-bar {
+            position: fixed;
+            transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* WAITING-Zustand: Zentriert und groß */
+        #top-bar.large {
+            top: 15%;
+            left: 50%;
+            transform: translate(-50%, 0) scale(1.1);
+            flex-direction: column;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        /* Während des Spiels: Rechts oben, alles kompakt NEBENEINANDER */
+        #top-bar.small {
+            top: 12px;
+            right: 12px;
+            left: auto;
+            transform: translate(0, 0) scale(0.9);
+            flex-direction: row;
+        }
+
+        #scoreboard {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 12px 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            display: flex;
+            gap: 25px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #my-badge {
+            background: #2a2a2a;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            border: 2px solid #555;
+            white-space: nowrap;
+        }
+
+        .team-box { 
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        #top-bar.large .team-box {
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .team-name { font-size: 16px; font-weight: bold; }
+        #top-bar.large .team-name { font-size: 20px; }
+
+        .stars { font-size: 18px; letter-spacing: 2px; }
+        
+        /* Große Sterne in der Übersicht (WAITING) */
+        #top-bar.large .stars { 
+            font-size: 32px; 
+            letter-spacing: 4px; 
+        }
+
+        .star-filled {
+            opacity: 1;
+            text-shadow: 0 0 8px currentColor;
+        }
+
+        .star-empty {
+            opacity: 0.25;
+        }
+
+        #content-area { margin-top: 250px; }
+        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 15px auto; max-width: 500px; }
+        .card.listenwissen-container, .card.kategorien-container, .card.malen-container, .card.flaggen-container { width: 100%; max-width: 1400px; box-sizing: border-box; padding: 18px; }
+        .card.promis-container { width: 100%; max-width: 750px; box-sizing: border-box; padding: 18px; }
+        body.fullscreen-mode { padding: 0; overflow: hidden; }
+        body.fullscreen-mode #content-area { margin-top: 0; }
+        body.fullscreen-mode .card.karte-fullscreen { width: 100vw; height: 100vh; max-width: 100vw; margin: 0; padding: 0; border-radius: 0; box-shadow: none; background: #0e1626; position: absolute; top: 0; left: 0; z-index: 10; }
+        button { padding: 15px 25px; font-size: 18px; cursor: pointer; border-radius: 8px; border: none; }
+
+        #game-intro {
+            position: fixed;
+            inset: 0;
+            z-index: 3000;
+            display: none;
+            place-items: center;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #273c75 0%, #121212 70%);
+        }
+
+        #game-intro.visible { display: grid; }
+
+        .game-intro-card {
+            display: grid;
+            justify-items: center;
+            gap: 30px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .game-intro-badge {
+            display: grid;
+            place-items: center;
+            width: min(72vw, 430px);
+            height: min(35vw, 210px);
+            border: 8px solid #f5c542;
+            border-radius: 50%;
+            background: #18213a;
+            box-shadow: 0 0 35px rgba(245, 197, 66, .7), inset 0 0 25px rgba(255,255,255,.15);
+            font-size: clamp(2.4rem, 8vw, 6rem);
+            font-weight: 900;
+            animation: intro-spin 2.2s cubic-bezier(.2,.8,.25,1) both;
+        }
+
+        .game-intro-name {
+            max-width: 90vw;
+            margin: 0;
+            font-size: clamp(2rem, 6vw, 5rem);
+            opacity: 0;
+            transform: translateY(18px) scale(.9);
+            animation: intro-name .8s ease-out 1.8s forwards;
+        }
+
+        @keyframes intro-spin {
+            0% { opacity: 0; transform: perspective(800px) rotateY(-180deg) scale(.45); }
+            45% { opacity: 1; transform: perspective(800px) rotateY(25deg) scale(1.08); }
+            100% { opacity: 1; transform: perspective(800px) rotateY(0) scale(1); }
+        }
+
+        @keyframes intro-name {
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/karte-config.js"></script>
+    <script src="/europe_land_clean.js"></script>
+</head>
+<body>
+    <div id="game-intro" aria-live="polite">
+        <div class="game-intro-card">
+            <div class="game-intro-badge" id="game-intro-number"></div>
+            <h1 class="game-intro-name" id="game-intro-name"></h1>
+        </div>
+    </div>
+
+    <div id="top-bar" class="large">
+        <div id="my-badge">Verbinde...</div>
+        <div id="scoreboard"></div>
+    </div>
+
+    <div id="content-area">
+        <div id="screen-WAITING" class="card">
+            <h3>Willkommen zur Spielshow!</h3>
+            <p>Warte auf den Start der nächsten Runde...</p>
+        </div>
+
+        <!-- Behälter für modular geladene Spiele wie Listenwissen -->
+        <div id="dynamic-module-container" class="card" style="display: none;"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        let loadedScreen = null;
+        let latestPlayerState = null;
+        let latestTeamNotes = [];
+        let latestDiscordPlayerView = { role: 'WAITING', phase: 'IDLE' };
+        let latestPartnerPlayerView = { role: 'WAITING', phase: 'IDLE', scores: {} };
+        let latestDiktatPlayerView = { phase: 'IDLE', scores: {} };
+        let gameIntroHideTimer = null;
+
+        function showGameIntro(intro) {
+            const overlay = document.getElementById('game-intro');
+            const badge = document.getElementById('game-intro-number');
+            const name = document.getElementById('game-intro-name');
+            badge.textContent = `Spiel ${intro.number}`;
+            name.textContent = intro.name;
+            badge.style.animation = 'none';
+            name.style.animation = 'none';
+            overlay.classList.remove('visible');
+            void overlay.offsetWidth;
+            void badge.offsetWidth;
+            void name.offsetWidth;
+            badge.style.animation = '';
+            name.style.animation = '';
+            overlay.classList.add('visible');
+            if (gameIntroHideTimer) {
+                window.clearTimeout(gameIntroHideTimer);
+            }
+            gameIntroHideTimer = window.setTimeout(() => {
+                overlay.classList.remove('visible');
+                gameIntroHideTimer = null;
+            }, 4300);
+        }
+
+        socket.emit('registerAsPlayer');
+        socket.on('gameIntro', showGameIntro);
+
+        async function loadModule(screenName) {
+            if (loadedScreen === screenName) return;
+            loadedScreen = screenName;
+
+            const container = document.getElementById('dynamic-module-container');
+            const modules = {
+                'LISTENWISSEN': 'games/listenwissen-player.html',
+                'DISCORD_GAME': 'games/discord-player.html',
+                'PROMI_RATEN': 'games/promis-player.html',
+                'DRUDEL': 'games/drudel-player.html',
+                'DIKTAT': 'games/diktat-player.html',
+                'KATEGORIEN': 'games/kategorien-player.html',
+                'PARTNERWISSEN': 'games/partnerwissen-player.html',
+                'BINGO': 'games/bingo-player.html',
+                'MALEN': 'games/malen-player.html',
+                'KARTE': 'games/karte-player.html'
+                ,'MERKEN': 'games/merken-player.html'
+                ,'REALITAET': 'games/realitaet-player.html'
+                ,'FLAGGEN': 'games/flaggen-player.html'
+                ,'BUCHSTABENSALAT': 'games/buchstabensalat-player.html'
+            };
+
+            document.body.classList.toggle('fullscreen-mode', screenName === 'KARTE');
+            container.classList.toggle('karte-fullscreen', screenName === 'KARTE');
+            container.classList.toggle('malen-container', screenName === 'MALEN');
+            container.classList.toggle('promis-container', screenName === 'PROMI_RATEN');
+            container.classList.toggle('flaggen-container', screenName === 'FLAGGEN');
+            const file = modules[screenName];
+            if (!file) {
+                container.style.display = 'none';
+                return;
+            }
+
+            try {
+                const res = await fetch(file);
+                const html = await res.text();
+                container.innerHTML = html;
+                container.style.display = 'block';
+
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(s => eval(s.innerText));
+
+                if (window.onModuleStateUpdate && latestPlayerState) {
+                    window.onModuleStateUpdate(latestPlayerState);
+                }
+
+                if (window.onTeamNotesUpdate) {
+                    window.onTeamNotesUpdate(latestTeamNotes);
+                }
+
+                if (window.onDiscordPlayerUpdate) {
+                    window.onDiscordPlayerUpdate(latestDiscordPlayerView);
+                }
+
+                if (window.onPartnerPlayerUpdate) {
+                    window.onPartnerPlayerUpdate(latestPartnerPlayerView);
+                }
+
+                if (window.onDiktatPlayerUpdate) {
+                    window.onDiktatPlayerUpdate(latestDiktatPlayerView);
+                }
+            } catch (err) {
+                console.error("Fehler beim Laden des Spielmoduls:", err);
+            }
+        }
+
+        socket.on('stateUpdate', (state) => {
+            latestPlayerState = state;
+            const me = state.players[socket.id];
+            const badge = document.getElementById('my-badge');
+            
+            if (me) {
+                const myTeamColor = state.teams[me.team] ? state.teams[me.team].color : '#fff';
+                badge.innerText = `👤 ${me.name} | 🚩 ${me.team}`;
+                badge.style.borderColor = myTeamColor;
+                badge.style.color = myTeamColor;
+            }
+
+            const sb = document.getElementById('scoreboard');
+            sb.innerHTML = '';
+            
+            for (let teamName in state.teams) {
+                const team = state.teams[teamName];
+                let starsHTML = '';
+                
+                for (let i = 0; i < 5; i++) {
+                    if (i < team.score) {
+                        starsHTML += '<span class="star-filled">★</span>';
+                    } else {
+                        starsHTML += '<span class="star-empty">★</span>';
+                    }
+                }
+
+                const teamBox = document.createElement('div');
+                teamBox.className = 'team-box';
+                teamBox.innerHTML = `
+                    <span class="team-name" style="color: ${team.color}">${teamName}:</span>
+                    <span class="stars" style="color: ${team.color}">${starsHTML}</span>
+                `;
+                sb.appendChild(teamBox);
+            }
+
+            const topBar = document.getElementById('top-bar');
+            if (state.currentScreen === 'WAITING') {
+                topBar.className = 'large';
+            } else {
+                topBar.className = 'small';
+            }
+
+            const contentArea = document.getElementById('content-area');
+            contentArea.style.marginTop = state.currentScreen === 'WAITING' ? '250px' : '80px';
+
+            const moduleContainer = document.getElementById('dynamic-module-container');
+            moduleContainer.classList.toggle('listenwissen-container', state.currentScreen === 'LISTENWISSEN');
+            moduleContainer.classList.toggle('kategorien-container', state.currentScreen === 'KATEGORIEN');
+            moduleContainer.classList.toggle('malen-container', state.currentScreen === 'MALEN');
+            moduleContainer.classList.toggle('promis-container', state.currentScreen === 'PROMI_RATEN');
+            moduleContainer.classList.toggle('flaggen-container', state.currentScreen === 'FLAGGEN');
+
+            // Standard-Screens umschalten
+            document.getElementById('screen-WAITING').style.display = state.currentScreen === 'WAITING' ? 'block' : 'none';
+
+            // Dynamische Spiel-Module nachladen & aktualisieren
+            loadModule(state.currentScreen);
+
+            // Modul-internen State per Event-Hook updaten
+            if (window.onModuleStateUpdate) {
+                window.onModuleStateUpdate(state);
+            }
+        });
+
+        socket.on('teamNotesUpdate', (notes) => {
+            latestTeamNotes = notes;
+            if (window.onTeamNotesUpdate) {
+                window.onTeamNotesUpdate(notes);
+            }
+        });
+
+        socket.on('discordPlayerUpdate', (view) => {
+            latestDiscordPlayerView = view;
+            if (window.onDiscordPlayerUpdate) {
+                window.onDiscordPlayerUpdate(view);
+            }
+        });
+
+        socket.on('partnerPlayerUpdate', (view) => {
+            latestPartnerPlayerView = view;
+            if (window.onPartnerPlayerUpdate) {
+                window.onPartnerPlayerUpdate(view);
+            }
+        });
+
+        socket.on('diktatPlayerUpdate', (view) => {
+            latestDiktatPlayerView = view;
+            if (window.onDiktatPlayerUpdate) {
+                window.onDiktatPlayerUpdate(view);
+            }
+        });
+    </script>
+</body>
+</html>

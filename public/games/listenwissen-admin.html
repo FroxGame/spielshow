@@ -1,0 +1,94 @@
+<div class="card">
+    <h2>Listenwissen Steuerung</h2>
+    <div id="wordGameScores" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+    
+    <label style="font-size: 12px; color: #a4b0be;">Kategorie auswählen:</label>
+    <select id="adminCategorySelect" style="width:100%; padding:10px; margin:10px 0;">
+        <option value="">-- Listen werden geladen... --</option>
+    </select>
+    <button style="background:#2ed573; color:white; width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="startWordGame()">
+        Spiel mit Kategorie starten
+    </button>
+    <button style="background:#3742fa; color:white; width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="revealAllWords()">
+        Alle Begriffe aufdecken
+    </button>
+
+    <h3 style="margin-top:20px;">Begriffe aufdecken (Klick = Toggle):</h3>
+    <div id="adminWordList" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+</div>
+
+<script>
+    socket.emit('getWordLists');
+
+    socket.on('receiveWordLists', (wordLists) => {
+        const select = document.getElementById('adminCategorySelect');
+        if(!select) return;
+        select.innerHTML = '<option value="">-- Kategorie wählen --</option>';
+        Object.keys(wordLists).forEach(key => {
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.innerText = key;
+            select.appendChild(opt);
+        });
+    });
+
+    window.startWordGame = function() {
+        const val = document.getElementById('adminCategorySelect').value;
+        if(!val) return alert("Bitte Kategorie wählen!");
+        socket.emit('adminStartWordGame', val);
+    };
+
+    window.revealAllWords = function() {
+        socket.emit('adminRevealAllWords');
+    };
+
+    window.addWordGamePoint = function(team, amount) {
+        socket.emit('adminAddWordGamePoint', { team, amount });
+    };
+
+    window.onModuleStateUpdate = function(state) {
+        const listContainer = document.getElementById('adminWordList');
+        if (!listContainer) return;
+
+        const scoreContainer = document.getElementById('wordGameScores');
+        if (scoreContainer) {
+            scoreContainer.innerHTML = '';
+            Object.entries(state.listenwissenScores || {}).forEach(([team, score]) => {
+                const wrapper = document.createElement('div');
+                wrapper.style.display = 'flex';
+                wrapper.style.alignItems = 'center';
+                wrapper.style.gap = '5px';
+                wrapper.innerHTML = `<b>${team}: ${score} / 5</b>`;
+
+                const minus = document.createElement('button');
+                minus.innerText = '-1';
+                minus.onclick = () => addWordGamePoint(team, -1);
+
+                const plus = document.createElement('button');
+                plus.innerText = '+1';
+                plus.onclick = () => addWordGamePoint(team, 1);
+
+                wrapper.appendChild(minus);
+                wrapper.appendChild(plus);
+                scoreContainer.appendChild(wrapper);
+            });
+        }
+
+        if (state.wordGameData && state.wordGameData.length > 0) {
+            listContainer.innerHTML = '';
+            state.wordGameData.forEach(item => {
+                const btn = document.createElement('button');
+                btn.style.padding = '10px 14px';
+                btn.style.borderRadius = '6px';
+                btn.style.border = 'none';
+                btn.style.fontWeight = 'bold';
+                btn.style.cursor = 'pointer';
+                btn.style.background = item.revealed ? '#2ed573' : '#ff4757';
+                btn.style.color = '#fff';
+                btn.innerText = `${item.id + 1}. ${item.word} ${item.revealed ? '✓' : '✗'}`;
+                btn.onclick = () => socket.emit('adminToggleWord', item.id);
+                listContainer.appendChild(btn);
+            });
+        }
+    };
+</script>

@@ -1,0 +1,728 @@
+<style>
+    .flaggen-player-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 1350px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+    .flaggen-player-scores {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .flaggen-score-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 14px;
+        border-radius: 6px;
+        background: #1c202c;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+    .flaggen-country-banner {
+        font-size: 1.45rem;
+        font-weight: bold;
+        padding: 10px 22px;
+        border-radius: 8px;
+        background: #171922;
+        border: 2px solid #ffd166;
+        color: #ffd166;
+        text-align: center;
+        margin-bottom: 10px;
+        width: 100%;
+        max-width: 800px;
+        box-sizing: border-box;
+    }
+    .flaggen-role-banner {
+        font-size: 1rem;
+        padding: 8px 16px;
+        border-radius: 6px;
+        margin-bottom: 14px;
+        text-align: center;
+        width: 100%;
+        max-width: 800px;
+        box-sizing: border-box;
+    }
+    .flaggen-role-builder {
+        background: rgba(46, 213, 115, 0.15);
+        border: 1px solid #2ed573;
+        color: #2ed573;
+        font-weight: bold;
+    }
+    .flaggen-role-spectator {
+        background: rgba(87, 101, 116, 0.2);
+        border: 1px solid #747d8c;
+        color: #ced6e0;
+    }
+    .flaggen-role-locked {
+        background: rgba(230, 126, 34, 0.2);
+        border: 1px solid #e67e22;
+        color: #f39c12;
+        font-weight: bold;
+    }
+
+    /* Building Workspace Grid */
+    .flaggen-workspace {
+        display: grid;
+        grid-template-columns: minmax(320px, 1fr) minmax(300px, 460px);
+        gap: 24px;
+        width: 100%;
+        align-items: start;
+        margin-top: 6px;
+    }
+
+    /* Flag Board Canvas */
+    .flaggen-board-column {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+    .flaggen-canvas-wrapper {
+        position: relative;
+        width: 100%;
+        max-width: 600px;
+        aspect-ratio: 3 / 2;
+        background: #11131a;
+        border: 6px solid #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.65), 0 0 20px rgba(255,255,255,0.15);
+        overflow: hidden;
+        user-select: none;
+        touch-action: none;
+    }
+    .flaggen-canvas-disabled {
+        opacity: 0.92;
+        filter: grayscale(0.2);
+    }
+    .flaggen-canvas-empty-hint {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #576574;
+        font-size: 1.15rem;
+        font-weight: bold;
+        pointer-events: none;
+        text-align: center;
+        padding: 20px;
+    }
+
+    /* Placed Piece on Board */
+    .flaggen-piece-item {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+    }
+    .flaggen-piece-item:active {
+        cursor: grabbing;
+    }
+    .flaggen-piece-item.selected {
+        outline: 2px dashed #ffd166;
+        outline-offset: 3px;
+    }
+    .flaggen-piece-toolbar {
+        position: absolute;
+        top: -34px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        gap: 4px;
+        background: #171922;
+        border: 1px solid #4a5676;
+        border-radius: 6px;
+        padding: 2px 4px;
+        z-index: 9999;
+        white-space: nowrap;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+    }
+    .flaggen-piece-item:hover .flaggen-piece-toolbar,
+    .flaggen-piece-item.selected .flaggen-piece-toolbar {
+        display: flex;
+    }
+    .flaggen-piece-btn {
+        background: #2b3348;
+        border: none;
+        color: #fff;
+        padding: 3px 7px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+    .flaggen-piece-btn:hover {
+        background: #3e4a68;
+    }
+    .flaggen-piece-btn.btn-del {
+        background: #e74c3c;
+    }
+    .flaggen-piece-btn.btn-del:hover {
+        background: #c0392b;
+    }
+
+    /* Pool Column (Elements like in Screenshot) */
+    .flaggen-pool-column {
+        background: #171922;
+        border: 1px solid #303646;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        box-sizing: border-box;
+    }
+    .flaggen-pool-title {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: #fff;
+        margin: 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .flaggen-pool-hint {
+        font-size: 0.8rem;
+        color: #a4b0be;
+        font-weight: normal;
+    }
+    .flaggen-pool-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        justify-content: center;
+        align-items: center;
+        padding: 10px 4px;
+        max-height: 520px;
+        overflow-y: auto;
+    }
+
+    /* Individual Pool Tile Card (Inspired by Screenshot) */
+    .flaggen-pool-tile {
+        background: #202431;
+        border: 3px solid #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        user-select: none;
+    }
+    .flaggen-pool-tile:hover {
+        transform: translateY(-3px) scale(1.04);
+        box-shadow: 0 8px 22px rgba(255,255,255,0.35);
+        border-color: #ffd166;
+    }
+    .flaggen-pool-tile:active {
+        transform: scale(0.97);
+    }
+    .flaggen-pool-tile.tile-horizontal {
+        width: 130px;
+        height: 42px;
+    }
+    .flaggen-pool-tile.tile-vertical {
+        width: 44px;
+        height: 105px;
+    }
+    .flaggen-pool-tile.tile-symbol {
+        width: 72px;
+        height: 56px;
+    }
+    .flaggen-pool-tile.tile-field {
+        width: 90px;
+        height: 60px;
+    }
+
+    /* Bottom action buttons */
+    .flaggen-board-actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 14px;
+        justify-content: center;
+    }
+    .flaggen-action-btn {
+        padding: 8px 18px;
+        border-radius: 6px;
+        font-weight: bold;
+        font-size: 0.95rem;
+        cursor: pointer;
+        border: none;
+        background: #2c3e50;
+        color: #ecf0f1;
+        transition: background 0.15s;
+    }
+    .flaggen-action-btn:hover {
+        background: #34495e;
+    }
+
+    /* Revealed Comparison Grid (Side-by-side like screenshot!) */
+    .flaggen-revealed-section {
+        display: grid;
+        grid-template-columns: 1fr 220px 1fr;
+        gap: 20px;
+        width: 100%;
+        margin-top: 10px;
+        align-items: start;
+    }
+    .flaggen-reveal-card {
+        background: #171922;
+        border: 1px solid #303646;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    .flaggen-reveal-card h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.25rem;
+    }
+    .flaggen-reveal-board {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        background: #11131a;
+        border: 5px solid #ffffff;
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    }
+    .flaggen-reveal-target-box {
+        background: #171922;
+        border: 2px solid #ffd166;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .flaggen-reveal-target-flag {
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        border-radius: 10px;
+        border: 3px solid #ffffff;
+        overflow: hidden;
+        margin-top: 10px;
+        background: #111;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+
+    @media (max-width: 900px) {
+        .flaggen-workspace { grid-template-columns: 1fr; }
+        .flaggen-revealed-section { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="flaggen-player-container">
+    <div id="flaggenPlayerScores" class="flaggen-player-scores"></div>
+    <div id="flaggenCountryBanner" class="flaggen-country-banner">Flaggen bauen</div>
+    <div id="flaggenRoleBanner" class="flaggen-role-banner flaggen-role-spectator">Warte auf Rundenstart...</div>
+
+    <!-- Active Building View (Hidden when Revealed) -->
+    <div id="flaggenBuildView" class="flaggen-workspace" style="display: none;">
+        <!-- Left: Own Team Flag Canvas -->
+        <div class="flaggen-board-column">
+            <div id="flaggenCanvas" class="flaggen-canvas-wrapper">
+                <div id="flaggenEmptyHint" class="flaggen-canvas-empty-hint">Klicke rechts auf Elemente, um deine Flagge zu bauen!</div>
+            </div>
+            <div class="flaggen-board-actions">
+                <button id="flaggenClearBtn" class="flaggen-action-btn" onclick="clearMyFlag()">🗑️ Flagge leeren</button>
+            </div>
+        </div>
+
+        <!-- Right: Pool of Available Elements -->
+        <div class="flaggen-pool-column">
+            <div class="flaggen-pool-title">
+                <span>Elemente-Pool</span>
+                <span class="flaggen-pool-hint">Klicken zum Hinzufügen</span>
+            </div>
+            <div id="flaggenPoolGrid" class="flaggen-pool-grid"></div>
+        </div>
+    </div>
+
+    <!-- Revealed View (Shown when Admin clicks "Aufdecken") -->
+    <div id="flaggenRevealedView" class="flaggen-revealed-section" style="display: none;">
+        <!-- Team 1 Result -->
+        <div class="flaggen-reveal-card">
+            <h3 id="flaggenRevTeam1Title" style="color: #9b59b6;">Team 1</h3>
+            <div id="flaggenRevBoard1" class="flaggen-reveal-board"></div>
+        </div>
+
+        <!-- Center: Official Target Flag -->
+        <div class="flaggen-reveal-target-box">
+            <div style="font-size: 0.85rem; color: #a4b0be; text-transform: uppercase; font-weight: bold;">Offizielles Original</div>
+            <h3 id="flaggenRevCountryName" style="margin: 4px 0 0 0; color: #ffd166;">-</h3>
+            <div id="flaggenRevTargetFlag" class="flaggen-reveal-target-flag"></div>
+        </div>
+
+        <!-- Team 2 Result -->
+        <div class="flaggen-reveal-card">
+            <h3 id="flaggenRevTeam2Title" style="color: #2ecc71;">Team 2</h3>
+            <div id="flaggenRevBoard2" class="flaggen-reveal-board"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let _flaggenElementsDef = [];
+    let _flaggenMyPlacements = [];
+    let _flaggenIsBuilder = false;
+    let _flaggenIsLocked = false;
+    let _flaggenCurrentCountry = null;
+    let _flaggenSelectedPieceId = null;
+
+    function getElementDef(elementId) {
+        return _flaggenElementsDef.find(e => e.id === elementId);
+    }
+
+    function sendMyPlacements() {
+        if (!_flaggenIsBuilder || _flaggenIsLocked) return;
+        if (typeof socket !== 'undefined') {
+            socket.emit('playerUpdateFlaggenBoard', { placements: _flaggenMyPlacements });
+        }
+    }
+
+    function clearMyFlag() {
+        if (!_flaggenIsBuilder || _flaggenIsLocked) return;
+        _flaggenMyPlacements = [];
+        sendMyPlacements();
+        renderMyBoard();
+    }
+
+    function addElementToBoard(elementId) {
+        if (!_flaggenIsBuilder || _flaggenIsLocked) return;
+        const def = getElementDef(elementId);
+        if (!def) return;
+
+        const maxZ = _flaggenMyPlacements.reduce((max, p) => Math.max(max, p.zIndex || 1), 0);
+        const newPiece = {
+            id: 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+            elementId: elementId,
+            x: 0.5,
+            y: 0.5,
+            rotation: 0,
+            zIndex: maxZ + 1
+        };
+
+        _flaggenMyPlacements.push(newPiece);
+        _flaggenSelectedPieceId = newPiece.id;
+        sendMyPlacements();
+        renderMyBoard();
+    }
+
+    function removePiece(pieceId) {
+        if (!_flaggenIsBuilder || _flaggenIsLocked) return;
+        _flaggenMyPlacements = _flaggenMyPlacements.filter(p => p.id !== pieceId);
+        if (_flaggenSelectedPieceId === pieceId) _flaggenSelectedPieceId = null;
+        sendMyPlacements();
+        renderMyBoard();
+    }
+
+    function rotatePiece(pieceId) {
+        if (!_flaggenIsBuilder || _flaggenIsLocked) return;
+        const piece = _flaggenMyPlacements.find(p => p.id === pieceId);
+        if (piece) {
+            piece.rotation = ((piece.rotation || 0) + 90) % 360;
+            sendMyPlacements();
+            renderMyBoard();
+        }
+    }
+
+    function changeZIndex(pieceId, direction) {
+        if (!_flaggenIsBuilder || _flaggenIsLocked) return;
+        const piece = _flaggenMyPlacements.find(p => p.id === pieceId);
+        if (piece) {
+            piece.zIndex = Math.max(1, (piece.zIndex || 1) + direction);
+            sendMyPlacements();
+            renderMyBoard();
+        }
+    }
+
+    window.clearMyFlag = clearMyFlag;
+    window.addElementToBoard = addElementToBoard;
+    window.removePiece = removePiece;
+    window.rotatePiece = rotatePiece;
+    window.changeZIndex = changeZIndex;
+
+    function attachPointerDrag(pieceEl, piece) {
+        if (!_flaggenIsBuilder || _flaggenIsLocked) return;
+
+        let startClientX = 0, startClientY = 0;
+        let startX = piece.x, startY = piece.y;
+        let isDragging = false;
+
+        function onPointerDown(e) {
+            if (e.target.closest('.flaggen-piece-btn')) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            _flaggenSelectedPieceId = piece.id;
+            isDragging = true;
+            startClientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
+            startClientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
+            startX = piece.x;
+            startY = piece.y;
+
+            const boardEl = document.getElementById('flaggenCanvas');
+
+            function onPointerMove(ev) {
+                if (!isDragging) return;
+                const curX = ev.clientX !== undefined ? ev.clientX : (ev.touches && ev.touches[0].clientX);
+                const curY = ev.clientY !== undefined ? ev.clientY : (ev.touches && ev.touches[0].clientY);
+                const rect = boardEl.getBoundingClientRect();
+
+                const deltaX = (curX - startClientX) / rect.width;
+                const deltaY = (curY - startClientY) / rect.height;
+
+                piece.x = Math.max(0, Math.min(1, startX + deltaX));
+                piece.y = Math.max(0, Math.min(1, startY + deltaY));
+
+                pieceEl.style.left = (piece.x * 100) + '%';
+                pieceEl.style.top = (piece.y * 100) + '%';
+            }
+
+            function onPointerUp() {
+                if (!isDragging) return;
+                isDragging = false;
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+                window.removeEventListener('pointercancel', onPointerUp);
+                sendMyPlacements();
+            }
+
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+            window.addEventListener('pointercancel', onPointerUp);
+        }
+
+        pieceEl.addEventListener('pointerdown', onPointerDown);
+    }
+
+    function renderMyBoard() {
+        const canvas = document.getElementById('flaggenCanvas');
+        const emptyHint = document.getElementById('flaggenEmptyHint');
+        if (!canvas) return;
+
+        // Clear existing pieces
+        const pieces = canvas.querySelectorAll('.flaggen-piece-item');
+        pieces.forEach(p => p.remove());
+
+        if (!_flaggenMyPlacements || _flaggenMyPlacements.length === 0) {
+            if (emptyHint) emptyHint.style.display = 'flex';
+            return;
+        }
+        if (emptyHint) emptyHint.style.display = 'none';
+
+        // Sort by zIndex
+        const sorted = [..._flaggenMyPlacements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+        sorted.forEach(p => {
+            const def = getElementDef(p.elementId);
+            if (!def) return;
+
+            const el = document.createElement('div');
+            el.className = 'flaggen-piece-item' + (_flaggenSelectedPieceId === p.id ? ' selected' : '');
+            el.style.left = (p.x * 100) + '%';
+            el.style.top = (p.y * 100) + '%';
+            el.style.width = (def.defaultWidth || 40) + '%';
+            el.style.height = (def.defaultHeight || 40) + '%';
+            el.style.zIndex = p.zIndex || 1;
+            el.style.transform = `translate(-50%, -50%) rotate(${p.rotation || 0}deg)`;
+
+            el.innerHTML = `
+                ${def.svg || `<div style="width:100%;height:100%;background:${def.color || '#fff'};border-radius:4px;"></div>`}
+                ${(_flaggenIsBuilder && !_flaggenIsLocked) ? `
+                    <div class="flaggen-piece-toolbar">
+                        <button class="flaggen-piece-btn" title="90° Drehen" onclick="rotatePiece('${p.id}')">🔄</button>
+                        <button class="flaggen-piece-btn" title="Nach vorne" onclick="changeZIndex('${p.id}', 1)">🔼</button>
+                        <button class="flaggen-piece-btn" title="Nach hinten" onclick="changeZIndex('${p.id}', -1)">🔽</button>
+                        <button class="flaggen-piece-btn btn-del" title="Entfernen" onclick="removePiece('${p.id}')">✕</button>
+                    </div>
+                ` : ''}
+            `;
+
+            attachPointerDrag(el, p);
+            canvas.appendChild(el);
+        });
+    }
+
+    function renderPool(elements) {
+        const poolEl = document.getElementById('flaggenPoolGrid');
+        if (!poolEl) return;
+        poolEl.innerHTML = '';
+
+        elements.forEach(el => {
+            const tile = document.createElement('div');
+            let typeClass = 'tile-symbol';
+            if (el.type === 'stripe-horizontal') typeClass = 'tile-horizontal';
+            else if (el.type === 'stripe-vertical') typeClass = 'tile-vertical';
+            else if (el.type === 'field') typeClass = 'tile-field';
+
+            tile.className = `flaggen-pool-tile ${typeClass}`;
+            tile.title = `${el.name} (Klicken zum Platzieren)`;
+            tile.innerHTML = el.svg || `<div style="width:100%;height:100%;background:${el.color || '#fff'};"></div>`;
+
+            if (_flaggenIsBuilder && !_flaggenIsLocked) {
+                tile.onclick = () => addElementToBoard(el.id);
+            } else {
+                tile.style.cursor = 'not-allowed';
+                tile.style.opacity = '0.65';
+            }
+
+            poolEl.appendChild(tile);
+        });
+    }
+
+    function renderStaticBoard(container, placements, elements) {
+        if (!container) return;
+        container.innerHTML = '';
+        if (!placements || !placements.length) return;
+
+        const elemMap = new Map();
+        (elements || []).forEach(e => elemMap.set(e.id, e));
+
+        const sorted = [...placements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+        sorted.forEach(p => {
+            const def = elemMap.get(p.elementId);
+            if (!def) return;
+
+            const el = document.createElement('div');
+            el.style.position = 'absolute';
+            el.style.left = (p.x * 100) + '%';
+            el.style.top = (p.y * 100) + '%';
+            el.style.width = (def.defaultWidth || 40) + '%';
+            el.style.height = (def.defaultHeight || 40) + '%';
+            el.style.zIndex = p.zIndex || 1;
+            el.style.transform = `translate(-50%, -50%) rotate(${p.rotation || 0}deg)`;
+            el.style.pointerEvents = 'none';
+            el.innerHTML = def.svg || `<div style="width:100%;height:100%;background:${def.color || '#fff'};"></div>`;
+            container.appendChild(el);
+        });
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.flaggenGame || {};
+        const me = (state.players && state.players[socket.id]) || null;
+        const teams = state.teams || {};
+        const teamNames = Object.keys(teams);
+        const t1 = teamNames[0] || 'Team 1';
+        const t2 = teamNames[1] || 'Team 2';
+        const phase = game.phase || 'IDLE';
+
+        // Scores
+        const scoresEl = document.getElementById('flaggenPlayerScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = game.scores || {};
+            teamNames.forEach(team => {
+                const col = (teams[team] || {}).color || '#fff';
+                const badge = document.createElement('div');
+                badge.className = 'flaggen-score-badge';
+                badge.style.borderLeft = '4px solid ' + col;
+                badge.innerHTML = `<span style="color:${col}">${team}:</span> <span>${scores[team] || 0} Pkt.</span>`;
+                scoresEl.appendChild(badge);
+            });
+        }
+
+        if (!me || phase === 'IDLE') {
+            document.getElementById('flaggenCountryBanner').textContent = 'Flaggen bauen';
+            document.getElementById('flaggenRoleBanner').className = 'flaggen-role-banner flaggen-role-spectator';
+            document.getElementById('flaggenRoleBanner').textContent = 'Warte auf den Start der nächsten Runde...';
+            document.getElementById('flaggenBuildView').style.display = 'none';
+            document.getElementById('flaggenRevealedView').style.display = 'none';
+            return;
+        }
+
+        const myTeam = me.team;
+        const elements = game.elements || [];
+        _flaggenElementsDef = elements;
+        _flaggenCurrentCountry = game.country;
+        _flaggenIsLocked = Boolean(game.buildingLocked);
+
+        const builders = game.builders || {};
+        const teamBuilderId = builders[myTeam];
+        _flaggenIsBuilder = !teamBuilderId || teamBuilderId === socket.id;
+
+        // Country Banner
+        const countryBanner = document.getElementById('flaggenCountryBanner');
+        const timerText = game.duration > 0 ? ` [⏱️ ${game.remaining}s]` : '';
+        countryBanner.textContent = `Flagge bauen: ${game.country || '-'}${timerText}`;
+
+        // Role Banner
+        const roleBanner = document.getElementById('flaggenRoleBanner');
+        if (game.revealed) {
+            roleBanner.className = 'flaggen-role-banner flaggen-role-builder';
+            roleBanner.textContent = '👁️ Die Flaggen wurden aufgedeckt! Vergleicht euer Werk mit dem Original.';
+        } else if (_flaggenIsLocked) {
+            roleBanner.className = 'flaggen-role-banner flaggen-role-locked';
+            roleBanner.textContent = '🔒 Das Bauen wurde vom Spielleiter beendet. Warte auf die Auswertung!';
+        } else if (_flaggenIsBuilder) {
+            roleBanner.className = 'flaggen-role-banner flaggen-role-builder';
+            roleBanner.textContent = '🔨 Du bist der Baumeister für dein Team! Wähle Elemente rechts aus und bewege sie.';
+        } else {
+            const builderPlayer = state.players[teamBuilderId];
+            roleBanner.className = 'flaggen-role-banner flaggen-role-spectator';
+            roleBanner.textContent = `👀 ${builderPlayer ? builderPlayer.name : 'Dein Partner'} baut die Flagge. Du schaust live zu!`;
+        }
+
+        // Show/Hide Build vs Revealed View
+        const buildView = document.getElementById('flaggenBuildView');
+        const revealedView = document.getElementById('flaggenRevealedView');
+
+        if (game.revealed) {
+            buildView.style.display = 'none';
+            revealedView.style.display = 'grid';
+
+            // Render Revealed View
+            const col1 = (teams[t1] || {}).color || '#9b59b6';
+            const col2 = (teams[t2] || {}).color || '#2ecc71';
+
+            const title1 = document.getElementById('flaggenRevTeam1Title');
+            const title2 = document.getElementById('flaggenRevTeam2Title');
+            if (title1) { title1.textContent = t1; title1.style.color = col1; }
+            if (title2) { title2.textContent = t2; title2.style.color = col2; }
+
+            document.getElementById('flaggenRevCountryName').textContent = game.country || '-';
+            const targetEl = document.getElementById('flaggenRevTargetFlag');
+            if (targetEl && game.targetFlag) targetEl.innerHTML = game.targetFlag;
+
+            const boards = game.boards || {};
+            renderStaticBoard(document.getElementById('flaggenRevBoard1'), (boards[t1] || {}).placements || [], elements);
+            renderStaticBoard(document.getElementById('flaggenRevBoard2'), (boards[t2] || {}).placements || [], elements);
+
+        } else {
+            buildView.style.display = 'grid';
+            revealedView.style.display = 'none';
+
+            // Controls visibility
+            const clearBtn = document.getElementById('flaggenClearBtn');
+            if (clearBtn) {
+                clearBtn.style.display = (_flaggenIsBuilder && !_flaggenIsLocked) ? 'inline-block' : 'none';
+            }
+
+            // Sync placements for my team
+            const myBoard = (game.boards && game.boards[myTeam]) || {};
+            // If not builder or incoming server update has new count, sync local placements
+            if (!_flaggenIsBuilder || myBoard.placements) {
+                _flaggenMyPlacements = myBoard.placements || [];
+            }
+
+            renderMyBoard();
+            renderPool(elements);
+        }
+    };
+</script>

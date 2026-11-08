@@ -1,0 +1,303 @@
+<style>
+    .bingo-spec-container {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+    .bingo-spec-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid #2a2f40;
+    }
+    .bingo-spec-scores {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 0;
+    }
+    .bingo-spec-score-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 6px;
+        background: #171922;
+        font-size: 0.95rem;
+        font-weight: bold;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+    }
+    .bingo-spec-timer {
+        font-size: 1.6rem;
+        font-weight: bold;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 2px;
+        padding: 4px 14px;
+        border-radius: 8px;
+        background: #171922;
+        border: 2px solid #3d4763;
+        display: inline-block;
+        text-align: center;
+    }
+    .bingo-spec-timer.running { border-color: #2ed573; color: #2ed573; }
+    .bingo-spec-timer.stopped { border-color: #ff6b6b; color: #ff6b6b; }
+    
+    .bingo-spec-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+    .bingo-spec-topic {
+        font-size: 1.05rem;
+        font-weight: bold;
+        padding: 6px 14px;
+        border-radius: 6px;
+        background: #171922;
+        border-left: 4px solid #f39c12;
+        color: #f39c12;
+        word-break: break-word;
+        flex: 1 1 300px;
+    }
+    .bingo-spec-topic.hidden {
+        color: #576574;
+        border-color: #3d4763;
+        background: #171922;
+    }
+    .bingo-spec-speaker {
+        font-size: 0.9rem;
+        color: #a4b0be;
+        background: #171922;
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid #2a2f40;
+    }
+
+    .bingo-spec-boards {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+        margin-top: 4px;
+    }
+    .bingo-spec-board {
+        padding: 10px 12px;
+        border: 1px solid #303646;
+        border-radius: 8px;
+        background: #171922;
+        display: flex;
+        flex-direction: column;
+    }
+    .bingo-spec-board-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .bingo-spec-board-header h4 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: bold;
+    }
+    .bingo-spec-marked-count {
+        font-size: 0.8rem;
+        color: #a4b0be;
+        font-weight: normal;
+    }
+    .bingo-spec-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    .bingo-spec-cell {
+        aspect-ratio: 1.5;
+        min-height: 48px;
+        max-height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 4px 6px;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border: 1.5px solid #3d4763;
+        background: #1c202c;
+        word-break: break-word;
+        line-height: 1.2;
+        transition: all 0.15s;
+    }
+    .bingo-spec-cell.marked {
+        background: #19462e !important;
+        border-color: #2ed573 !important;
+        color: #a4f5c5 !important;
+    }
+    .bingo-spec-cell.empty {
+        color: #4a5676;
+        border-style: dashed;
+        border-color: #2c3345;
+    }
+    @media (max-width: 768px) {
+        .bingo-spec-boards { grid-template-columns: 1fr; }
+        .bingo-spec-header { flex-direction: column; align-items: stretch; }
+    }
+</style>
+
+<div class="bingo-spec-container">
+    <div class="bingo-spec-header">
+        <h3 style="margin: 0; font-size: 1.25rem;">Referat Bingo</h3>
+        <div id="bingoSpecTimer" class="bingo-spec-timer" style="display:none;">02:00</div>
+        <div id="bingoSpecScores" class="bingo-spec-scores"></div>
+    </div>
+    <div id="bingoSpecMeta" class="bingo-spec-meta" style="display:none;">
+        <div id="bingoSpecTopic" class="bingo-spec-topic hidden"></div>
+        <div id="bingoSpecSpeaker" class="bingo-spec-speaker"></div>
+    </div>
+    <div id="bingoSpecContent"></div>
+</div>
+
+<script>
+    function _specFormatTime(s) { return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+
+    window.onSpectatorStateUpdate = function(state) {
+        const bingo = state.referatBingo || {};
+        const teams = state.teams || {};
+        const players = state.players || {};
+        const phase = bingo.phase || 'IDLE';
+
+        // Scores
+        const scoresEl = document.getElementById('bingoSpecScores');
+        if (scoresEl) { 
+            scoresEl.innerHTML = ''; 
+            const scores = bingo.scores || {}; 
+            Object.keys(teams).forEach(t => { 
+                const color = (teams[t]||{}).color || '#fff'; 
+                const box = document.createElement('div'); 
+                box.className = 'bingo-spec-score-box'; 
+                box.style.borderLeft = '4px solid ' + color; 
+                box.innerHTML = '<span style="color:'+color+'">' + t + ':</span> <span>' + (scores[t]||0) + ' Pkt.</span>'; 
+                scoresEl.appendChild(box); 
+            }); 
+        }
+
+        // Timer
+        const timerEl = document.getElementById('bingoSpecTimer');
+        if (timerEl) { 
+            const show = phase === 'PLAYING'; 
+            timerEl.style.display = show ? 'inline-block' : 'none'; 
+            if (show) {
+                const timer = bingo.timer || { remaining: 120, running: false }; 
+                timerEl.innerText = _specFormatTime(timer.remaining); 
+                timerEl.className = 'bingo-spec-timer' + (timer.running ? ' running' : (timer.remaining === 0 ? ' stopped' : ''));
+            } 
+        }
+
+        // Meta (Topic & Speaker)
+        const metaEl = document.getElementById('bingoSpecMeta');
+        const topicEl = document.getElementById('bingoSpecTopic');
+        const speakerEl = document.getElementById('bingoSpecSpeaker');
+        if (metaEl && topicEl && speakerEl) {
+            const show = phase !== 'IDLE';
+            metaEl.style.display = show ? 'flex' : 'none';
+            if (show) {
+                topicEl.className = 'bingo-spec-topic'; 
+                const topicStatus = bingo.topicRevealed ? '' : ' <span style="font-size:0.75rem;opacity:0.7;font-weight:normal;">(für Referent noch verdeckt)</span>';
+                topicEl.innerHTML = '<span style="font-size:0.8rem;opacity:0.75;text-transform:uppercase;letter-spacing:1px;margin-right:6px;">Thema:</span> ' + (bingo.topic || '') + topicStatus;
+
+                const referatPlayer = players[bingo.referatPlayerId];
+                const refColor = (teams[bingo.referatTeam]||{}).color || '#fff';
+                if (referatPlayer) {
+                    speakerEl.innerHTML = 'Referat von: <strong style="color:' + refColor + '">' + referatPlayer.name + '</strong> (' + bingo.referatTeam + ')';
+                } else {
+                    speakerEl.innerText = '';
+                }
+            }
+        }
+
+        const content = document.getElementById('bingoSpecContent');
+        if (!content) return;
+
+        if (phase === 'IDLE') { 
+            content.innerHTML = '<div style="text-align:center;padding:28px 10px;color:#a4b0be;"><h3 style="margin:0 0 4px;font-size:1.15rem;">Warte auf das Spiel...</h3><p style="margin:0;font-size:0.85rem;">Der Admin wählt Thema und Spieler aus.</p></div>'; 
+            return; 
+        }
+
+        const refColor = (teams[bingo.referatTeam]||{}).color || '#fff';
+        const oppColor = (teams[bingo.opposingTeam]||{}).color || '#fff';
+        const partnerPlayer = Object.values(players).find(p => p.id !== bingo.referatPlayerId && p.team === bingo.referatTeam);
+
+        content.innerHTML = '';
+
+        if (phase === 'PREPARING') { 
+            const s = document.createElement('div'); 
+            s.style.cssText = 'color:#6fcf97;font-size:0.85rem;margin-bottom:6px;font-weight:600;'; 
+            const pf = (bingo.partnerWords||[]).filter(w => w).length; 
+            const of2 = (bingo.opposingWords||[]).filter(w => w).length; 
+            s.innerHTML = '⏳ Teams bereiten Begriffe vor... Partner: ' + pf + '/9 | ' + (bingo.opposingTeam||'Gegner') + ': ' + of2 + '/9 ausgefüllt'; 
+            content.appendChild(s); 
+        }
+
+        const boards = document.createElement('div'); 
+        boards.className = 'bingo-spec-boards';
+
+        // Partner Board
+        const pBoard = document.createElement('div'); 
+        pBoard.className = 'bingo-spec-board';
+        const pTitle = (partnerPlayer ? partnerPlayer.name : 'Teampartner') + ' (' + (bingo.referatTeam||'?') + ')';
+        const pw = bingo.partnerWords || Array(9).fill(''); 
+        const pm = bingo.partnerMarked || Array(9).fill(false);
+        const pMarkedCount = pm.filter(Boolean).length;
+        const pTotalFilled = pw.filter(w => w).length;
+        
+        pBoard.innerHTML = '<div class="bingo-spec-board-header">' +
+            '<h4 style="color:' + refColor + ';">' + pTitle + '</h4>' +
+            '<span class="bingo-spec-marked-count">' + pMarkedCount + ' / ' + pTotalFilled + ' markiert</span>' +
+            '</div>';
+
+        const pg = document.createElement('div'); 
+        pg.className = 'bingo-spec-grid';
+        pw.forEach((w, i) => { 
+            const c = document.createElement('div'); 
+            c.className = 'bingo-spec-cell' + (pm[i] ? ' marked' : '') + ((!w) ? ' empty' : ''); 
+            c.innerText = (phase === 'PREPARING' ? (w || '...') : (w || '–')); 
+            pg.appendChild(c); 
+        });
+        pBoard.appendChild(pg);
+        boards.appendChild(pBoard);
+
+        // Opposing Board
+        const oBoard = document.createElement('div'); 
+        oBoard.className = 'bingo-spec-board';
+        const ow = bingo.opposingWords || Array(9).fill(''); 
+        const om = bingo.opposingMarked || Array(9).fill(false);
+        const oMarkedCount = om.filter(Boolean).length;
+        const oTotalFilled = ow.filter(w => w).length;
+
+        oBoard.innerHTML = '<div class="bingo-spec-board-header">' +
+            '<h4 style="color:' + oppColor + ';">Gegner: ' + (bingo.opposingTeam||'?') + '</h4>' +
+            '<span class="bingo-spec-marked-count">' + oMarkedCount + ' / ' + oTotalFilled + ' markiert</span>' +
+            '</div>';
+
+        const og = document.createElement('div'); 
+        og.className = 'bingo-spec-grid';
+        ow.forEach((w, i) => { 
+            const c = document.createElement('div'); 
+            c.className = 'bingo-spec-cell' + (om[i] ? ' marked' : '') + ((!w) ? ' empty' : ''); 
+            c.innerText = (phase === 'PREPARING' ? (w || '...') : (w || '–')); 
+            og.appendChild(c); 
+        });
+        oBoard.appendChild(og);
+        boards.appendChild(oBoard);
+
+        content.appendChild(boards);
+    };
+</script>

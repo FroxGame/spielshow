@@ -1,0 +1,42 @@
+<style>
+    .diktat-player-score { display:flex; justify-content:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+    .diktat-player-score span { padding:6px 11px; border-radius:6px; background:#2c2c3a; font-weight:bold; }
+    #diktatText { width:100%; min-height:150px; box-sizing:border-box; padding:12px; font:inherit; resize:vertical; }
+    .diktat-submission { padding:10px; margin:8px 0; border:1px solid #566078; border-radius:7px; }
+    .diktat-word-wrong { color:#ff6b6b; font-weight:bold; }
+</style>
+
+<div id="diktatPlayerScore" class="diktat-player-score"></div>
+<div class="card">
+    <h2>Diktat</h2>
+    <p id="diktatPlayerStatus">Warte auf die nächste Runde...</p>
+    <textarea id="diktatText" maxlength="500" placeholder="Schreibe hier den vorgelesenen Satz..."></textarea>
+    <div id="diktatPlayerResults"></div>
+</div>
+
+<script>
+    function renderDiktatWords(answer) {
+        return (answer.words || []).map(word => `<span class="${word.correct ? '' : 'diktat-word-wrong'}">${word.text}</span>`).join(' ');
+    }
+
+    window.onDiktatPlayerUpdate = function(game) {
+        const status = document.getElementById('diktatPlayerStatus');
+        const input = document.getElementById('diktatText');
+        const results = document.getElementById('diktatPlayerResults');
+        const scores = document.getElementById('diktatPlayerScore');
+        if (!status || !input || !results || !scores) return;
+
+        scores.innerHTML = Object.entries(game.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points}</span>`).join('');
+        input.value = game.ownText || '';
+        input.disabled = game.phase !== 'WRITING';
+        status.innerText = game.round ? `Runde ${game.round} | ${game.phase}` : 'Warte auf die nächste Runde...';
+        results.innerHTML = game.phase === 'REVEALED'
+            ? `<h3>${game.originalSentence}</h3>${game.players.map(answer => `<div class="diktat-submission"><b>${answer.name} (${answer.team})</b><br>${renderDiktatWords(answer)}</div>`).join('')}`
+            : '';
+    };
+
+    document.getElementById('diktatText').addEventListener('input', event => {
+        socket.emit('updateDiktatText', event.target.value);
+    });
+</script>

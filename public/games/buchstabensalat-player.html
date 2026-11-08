@@ -1,0 +1,98 @@
+<style>
+    .bsalat-player-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        box-sizing: border-box;
+        padding: 20px 10px;
+    }
+    .bsalat-category-box {
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #a4b0be;
+        font-weight: bold;
+        margin-bottom: 8px;
+    }
+    .bsalat-answer-box {
+        font-size: 2.8rem;
+        font-family: monospace;
+        letter-spacing: 0.18em;
+        color: #ffd166;
+        background: #171922;
+        border: 2px solid #303646;
+        border-radius: 14px;
+        padding: 28px 40px;
+        text-align: center;
+        word-break: break-word;
+        min-width: 320px;
+        min-height: 90px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+        transition: color 0.3s;
+    }
+    .bsalat-status {
+        margin-top: 16px;
+        font-size: 1rem;
+        color: #a4b0be;
+        text-align: center;
+    }
+    .bsalat-idle-hint {
+        font-size: 1.1rem;
+        color: #576574;
+        text-align: center;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="bsalat-player-container">
+    <div id="bsalatPlayerCategory" class="bsalat-category-box"></div>
+    <div id="bsalatPlayerAnswer" class="bsalat-answer-box">— — —</div>
+    <div id="bsalatPlayerStatus" class="bsalat-status"></div>
+    <div id="bsalatPlayerIdleHint" class="bsalat-idle-hint">Warte auf den Start der nächsten Runde...</div>
+</div>
+
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const game = state.buchstabensalatGame || {};
+        const phase = game.phase || 'IDLE';
+
+        const catEl = document.getElementById('bsalatPlayerCategory');
+        const answerEl = document.getElementById('bsalatPlayerAnswer');
+        const statusEl = document.getElementById('bsalatPlayerStatus');
+        const idleHint = document.getElementById('bsalatPlayerIdleHint');
+
+        if (!catEl) return;
+
+        if (phase === 'IDLE') {
+            catEl.textContent = '';
+            answerEl.textContent = '— — —';
+            answerEl.style.color = '#ffd166';
+            statusEl.textContent = '';
+            idleHint.style.display = 'block';
+            return;
+        }
+
+        idleHint.style.display = 'none';
+        catEl.textContent = '🏷 Kategorie: ' + (game.category || '');
+
+        if (phase === 'REVEALED') {
+            answerEl.textContent = game.answer || '';
+            answerEl.style.color = '#2ed573';
+            statusEl.textContent = '✅ Auflösung!';
+        } else {
+            answerEl.textContent = game.revealed || '…';
+            answerEl.style.color = '#ffd166';
+            if (game.order && game.order.length > 0) {
+                statusEl.textContent = `${game.step} von ${game.order.length} Buchstaben aufgedeckt`;
+            } else {
+                statusEl.textContent = '';
+            }
+        }
+    };
+</script>

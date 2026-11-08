@@ -1,0 +1,50 @@
+<style>
+    .partner-spectator-score { display:flex; justify-content:center; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+    .partner-spectator-score span { padding:7px 12px; border-radius:6px; background:#2c2f3c; font-weight:bold; }
+    .partner-spectator-teams { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .partner-spectator-team { padding:12px; border:1px solid #566078; border-radius:7px; }
+    .partner-spectator-question { padding:10px; margin-top:8px; border:1px solid #566078; border-radius:6px; background:#262b3a; }
+    .partner-result-correct { color:#2ed573; }
+    .partner-result-wrong { color:#ff6b6b; }
+    @media (max-width:700px) { .partner-spectator-teams { grid-template-columns:1fr; } }
+</style>
+
+<div id="partnerSpectatorScore" class="partner-spectator-score"></div>
+<section class="card">
+    <h2>Ich weiß, was mein Partner weiß</h2>
+    <p id="partnerSpectatorStatus">Keine Runde aktiv.</p>
+    <div id="partnerSpectatorQuestions" class="partner-spectator-teams"></div>
+</section>
+
+<script>
+    window.onPartnerSpectatorUpdate = function(game) {
+        const score = document.getElementById('partnerSpectatorScore');
+        const status = document.getElementById('partnerSpectatorStatus');
+        const questions = document.getElementById('partnerSpectatorQuestions');
+        if (!score || !status || !questions) return;
+
+        score.innerHTML = Object.entries(game.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points}</span>`).join('');
+        status.innerText = game.round ? `Runde ${game.round} / 4 | ${game.phase}` : 'Keine Runde aktiv.';
+        questions.innerHTML = '';
+
+        Object.entries(game.teams || {}).forEach(([team, teamGame]) => {
+            const panel = document.createElement('div');
+            panel.className = 'partner-spectator-team';
+            panel.innerHTML = `<h3>${team}</h3><p>${teamGame.raterName} verteilt Punkte | ${teamGame.answererName} antwortet</p>`;
+            game.questions.forEach((question, index) => {
+                const result = teamGame.results[index];
+                const item = document.createElement('div');
+                item.className = 'partner-spectator-question';
+                item.innerHTML = `<strong>${index + 1}. ${question.question}</strong><br>
+                    Punkte: ${teamGame.allocations[index] ?? '-'} | Frage ${teamGame.revealedIndexes.includes(index) ? 'freigegeben' : 'noch verborgen'}`;
+                if (result) {
+                    item.innerHTML += `<br><span class="${result.correct ? 'partner-result-correct' : 'partner-result-wrong'}">
+                        ${result.correct ? `Richtig (+${result.points})` : 'Falsch'}</span>`;
+                }
+                panel.appendChild(item);
+            });
+            questions.appendChild(panel);
+        });
+    };
+</script>

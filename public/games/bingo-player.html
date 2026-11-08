@@ -1,0 +1,213 @@
+<style>
+    .bingo-player-scores { display:flex; justify-content:center; flex-wrap:wrap; gap:14px; margin:0 auto 14px; }
+    .bingo-player-score-box { display:inline-flex; align-items:center; gap:8px; padding:5px 14px; border-radius:6px; background:#1c202c; font-size:1.05rem; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
+    .bingo-timer { font-size:2rem; font-weight:bold; font-variant-numeric:tabular-nums; letter-spacing:2px; padding:8px 18px; border-radius:8px; background:#1c202c; border:2px solid #3d4763; display:inline-block; text-align:center; margin-bottom:12px; }
+    .bingo-timer.running { border-color:#2ed573; color:#2ed573; }
+    .bingo-timer.stopped { border-color:#ff6b6b; color:#ff6b6b; }
+    .bingo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:12px 0; width:100%; max-width:480px; }
+    .bingo-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; text-align:center; padding:10px 6px; border-radius:10px; font-size:0.95rem; font-weight:bold; border:2px solid #3d4763; background:#1c202c; transition:all 0.18s; user-select:none; word-break:break-word; line-height:1.2; cursor:default; }
+    .bingo-cell.clickable { cursor:pointer; }
+    .bingo-cell.clickable:hover { border-color:#5ba3f5; background:#1f2a3e; }
+    .bingo-cell.marked { background:#19462e !important; border-color:#2ed573 !important; color:#a4f5c5 !important; }
+    .bingo-input-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0; width:100%; max-width:480px; }
+    .bingo-input-cell { padding:12px 8px; border-radius:8px; border:2px solid #4a5676; background:#1c202c; color:#fff; font-size:0.95rem; text-align:center; font-family:inherit; width:100%; box-sizing:border-box; transition:border-color 0.15s; }
+    .bingo-input-cell:focus { outline:none; border-color:#5ba3f5; }
+    .bingo-input-cell.filled { border-color:#2ed573; }
+    .bingo-waiting { text-align:center; padding:40px 20px; color:#a4b0be; }
+    .bingo-waiting h3 { font-size:1.4rem; margin-bottom:10px; }
+    .bingo-topic-reveal { font-size:1.6rem; font-weight:bold; padding:20px 24px; border-radius:12px; background:#1c202c; border:3px solid #f39c12; color:#f39c12; text-align:center; margin:16px 0; word-break:break-word; }
+    .bingo-progress { font-size:0.9rem; color:#a4b0be; margin-top:6px; }
+    .bingo-words-complete { color:#2ed573 !important; }
+</style>
+
+<div style="width:100%; box-sizing:border-box; display:flex; flex-direction:column; align-items:center;">
+    <h2 style="margin:0 0 10px; font-size:1.3rem; text-align:center;">Referat Bingo</h2>
+    <div id="bingoPlayerScores" class="bingo-player-scores"></div>
+    <div id="bingoTimerEl" class="bingo-timer" style="display:none;">02:00</div>
+    <div id="bingoPlayerContent" style="width:100%; max-width:500px;"></div>
+</div>
+
+<script>
+    function _bingoFormatTime(s) { return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
+    let _bingoWordsLocal = Array(9).fill('');
+    let _bingoLastRole = null;
+
+    function _sendBingoWords(role) {
+        if (typeof socket !== 'undefined') socket.emit('playerUpdateBingoWords', { role, words: _bingoWordsLocal });
+    }
+
+    function _renderBingoInputGrid(role, savedWords) {
+        const container = document.getElementById('bingoPlayerContent');
+        if (!container) return;
+        if (_bingoLastRole !== role) {
+            _bingoWordsLocal = (savedWords || Array(9).fill('')).slice();
+            _bingoLastRole = role;
+            container.innerHTML = '';
+            const info = document.createElement('p');
+            info.style.cssText = 'color:#a4b0be; margin:0 0 6px; font-size:0.9rem;';
+            info.innerText = role === 'partner' ? 'Schreibe 9 Begriffe auf, die du im Referat erwartest:' : 'Schreibe gemeinsam mit deinem Team 9 Begriffe auf:';
+            container.appendChild(info);
+            const grid = document.createElement('div');
+            grid.className = 'bingo-input-grid'; grid.id = 'bingoInputGrid';
+            for (let i = 0; i < 9; i++) {
+                const inp = document.createElement('input');
+                inp.type = 'text'; inp.className = 'bingo-input-cell' + (_bingoWordsLocal[i] ? ' filled' : '');
+                inp.maxLength = 50; inp.placeholder = 'Begriff ' + (i+1); inp.value = _bingoWordsLocal[i] || ''; inp.dataset.idx = i;
+                inp.addEventListener('input', () => { 
+                    const idx = parseInt(inp.dataset.idx); 
+                    _bingoWordsLocal[idx] = inp.value.trim(); 
+                    inp.classList.toggle('filled', !!inp.value.trim()); 
+                    _sendBingoWords(role); 
+                    const p = document.getElementById('bingoInputProgress'); 
+                    if (p) { 
+                        const f = _bingoWordsLocal.filter(w=>w).length; 
+                        p.innerText = f + ' / 9 ausgefüllt'; 
+                        p.className = 'bingo-progress' + (f===9?' bingo-words-complete':''); 
+                    } 
+                });
+                grid.appendChild(inp);
+            }
+            container.appendChild(grid);
+            const progress = document.createElement('p'); progress.className = 'bingo-progress'; progress.id = 'bingoInputProgress';
+            const filled = _bingoWordsLocal.filter(w=>w).length;
+            progress.innerText = filled + ' / 9 ausgefüllt';
+            if (filled === 9) progress.classList.add('bingo-words-complete');
+            container.appendChild(progress);
+        } else {
+            const grid = document.getElementById('bingoInputGrid');
+            if (grid && savedWords) { 
+                const inputs = grid.querySelectorAll('.bingo-input-cell'); 
+                savedWords.forEach((w,i) => { 
+                    if (inputs[i] && document.activeElement !== inputs[i]) { 
+                        inputs[i].value = w||''; 
+                        inputs[i].classList.toggle('filled',!!w); 
+                        _bingoWordsLocal[i] = w||''; 
+                    } 
+                }); 
+            }
+            const p = document.getElementById('bingoInputProgress');
+            if (p) { 
+                const f = _bingoWordsLocal.filter(w=>w).length; 
+                p.innerText = f + ' / 9 ausgefüllt'; 
+                p.className = 'bingo-progress' + (f===9?' bingo-words-complete':''); 
+            }
+        }
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        const bingo = state.referatBingo || {};
+        const me = state.players ? state.players[socket.id] : null;
+        const teams = state.teams || {};
+        const phase = bingo.phase || 'IDLE';
+
+        const scoresEl = document.getElementById('bingoPlayerScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = bingo.scores || {};
+            Object.keys(teams).forEach(t => { 
+                const color = (teams[t]||{}).color||'#fff'; 
+                const box = document.createElement('div'); 
+                box.className='bingo-player-score-box'; 
+                box.style.borderLeft='5px solid '+color; 
+                box.innerHTML='<span style="color:'+color+'">'+t+':</span> <span>'+(scores[t]||0)+' Pkt.</span>'; 
+                scoresEl.appendChild(box); 
+            });
+        }
+
+        const timerEl = document.getElementById('bingoTimerEl');
+        if (timerEl) {
+            const timer = bingo.timer || { remaining:120, running:false };
+            timerEl.style.display = (phase==='PLAYING') ? 'inline-block' : 'none';
+            timerEl.innerText = _bingoFormatTime(timer.remaining);
+            timerEl.className = 'bingo-timer' + (timer.running ? ' running' : (timer.remaining===0 ? ' stopped' : ''));
+        }
+
+        const content = document.getElementById('bingoPlayerContent');
+        if (!content) return;
+
+        if (!me || phase==='IDLE') {
+            content.innerHTML = '<div class="bingo-waiting"><h3>Warte auf das Spiel...</h3><p>Der Admin startet gleich eine Runde.</p></div>';
+            _bingoLastRole = null; 
+            return;
+        }
+
+        const isReferat = me.id === bingo.referatPlayerId;
+        const isPartner = me.team === bingo.referatTeam && !isReferat;
+        const isOpposing = me.team === bingo.opposingTeam;
+
+        if (phase === 'PREPARING') {
+            if (isReferat) {
+                if (_bingoLastRole !== 'referat') { 
+                    _bingoLastRole='referat'; 
+                    content.innerHTML = '<div class="bingo-waiting"><h3>Du hältst das Referat!</h3><p>Der Admin wird dir gleich dein Thema verraten.</p><p style="color:#a4b0be;font-size:0.85rem;margin-top:10px;">Dein Team und das gegnerische Team bereiten sich vor...</p></div>'; 
+                }
+            } else if (isPartner) {
+                _renderBingoInputGrid('partner', bingo.partnerWords);
+            } else if (isOpposing) {
+                _renderBingoInputGrid('opposing', bingo.opposingWords);
+            }
+            return;
+        }
+
+        if (phase === 'PLAYING') {
+            if (isReferat) {
+                if (!bingo.topicRevealed) {
+                    if (_bingoLastRole !== 'referat-waiting') { 
+                        _bingoLastRole='referat-waiting'; 
+                        content.innerHTML = '<div class="bingo-waiting"><h3>Gleich geht es los!</h3><p>Warte auf das Startzeichen des Admins...</p></div>'; 
+                    }
+                } else {
+                    if (_bingoLastRole !== 'referat-revealed') {
+                        _bingoLastRole='referat-revealed'; 
+                        content.innerHTML = '';
+                        const topicEl = document.createElement('div'); 
+                        topicEl.className='bingo-topic-reveal';
+                        topicEl.innerHTML = '<div style="font-size:1rem;margin-bottom:8px;color:#a4b0be;">Dein Thema:</div><div>'+bingo.topic+'</div>';
+                        content.appendChild(topicEl);
+                    }
+                }
+                return;
+            }
+            const role = isPartner ? 'partner' : 'opposing';
+            const words = isPartner ? (bingo.partnerWords||[]) : (bingo.opposingWords||[]);
+            const marked = isPartner ? (bingo.partnerMarked||[]) : (bingo.opposingMarked||[]);
+            if (_bingoLastRole !== 'playing-'+role) {
+                _bingoLastRole = 'playing-'+role;
+                content.innerHTML = '';
+                const info = document.createElement('p'); 
+                info.style.cssText='color:#a4b0be;margin:0 0 8px;font-size:0.9rem;'; 
+                info.innerText='Klicke auf einen Begriff, wenn er im Referat gesagt wurde:'; 
+                content.appendChild(info);
+                const grid = document.createElement('div'); 
+                grid.className='bingo-grid'; 
+                grid.id='bingoPlayGrid';
+                words.forEach((w,i) => { 
+                    const cell=document.createElement('div'); 
+                    cell.className='bingo-cell clickable'+(marked[i]?' marked':''); 
+                    cell.innerText=w||'?'; 
+                    cell.onclick=()=>{ 
+                        if(typeof socket!=='undefined') socket.emit('playerToggleBingoMark',{role,index:i}); 
+                    }; 
+                    grid.appendChild(cell); 
+                });
+                content.appendChild(grid);
+                const cnt=document.createElement('p'); 
+                cnt.id='bingoMarkedCount'; 
+                cnt.style.cssText='color:#a4b0be;font-size:0.9rem;margin-top:6px;'; 
+                cnt.innerText=marked.filter(Boolean).length+' / '+words.filter(w=>w).length+' markiert'; 
+                content.appendChild(cnt);
+            } else {
+                const grid=document.getElementById('bingoPlayGrid');
+                if(grid){ 
+                    const cells=grid.querySelectorAll('.bingo-cell'); 
+                    cells.forEach((cell,i)=>{ 
+                        cell.className='bingo-cell clickable'+(marked[i]?' marked':''); 
+                    }); 
+                }
+                const cnt=document.getElementById('bingoMarkedCount');
+                if(cnt) cnt.innerText=marked.filter(Boolean).length+' / '+words.filter(w=>w).length+' markiert';
+            }
+        }
+    };
+</script>
+

@@ -1,0 +1,52 @@
+{
+    "Zeichentrick-/ Animationsfilme und ihre Studios": {
+        "categories": ["DreamWorks", "Pixar", "Universal", "Disney"],
+        "terms": [
+            { "term": "Ab durch die Hecke", "category": "DreamWorks" },
+            { "term": "Ich - Einfach unverbesserlich", "category": "Universal" },
+            { "term": "WALL E", "category": "Pixar" },
+            { "term": "Shrek - Der tollkühne Held", "category": "DreamWorks" },
+            { "term": "Ratatouille", "category": "Pixar" },
+            { "term": "Der Schatzplanet", "category": "Disney" },
+            { "term": "Der Weg nach El Dorado", "category": "DreamWorks" },
+            { "term": "Ein Königreich für ein Lama", "category": "Disney" },
+            { "term": "Atlantis", "category": "Disney" },
+            { "term": "Soul", "category": "Pixar" },
+            { "term": "Der Prinz von Ägypten", "category": "DreamWorks" },
+            { "term": "Fantasia", "category": "Disney" },
+            { "term": "Der Super Mario Bros. Film", "category": "Universal" },
+            { "term": "Madagascar", "category": "DreamWorks" },
+            { "term": "Toy Story", "category": "Pixar" },
+            { "term": "Winnieh Puuh", "category": "Disney" },
+            { "term": "The Boss Baby", "category": "DreamWorks" },
+            { "term": "Das große Krabbeln", "category": "Pixar" },
+            { "term": "Die Hexe und der Zauberer", "category": "Disney" },
+            { "term": "In einem Land vor unserer Zeit", "category": "Universal" }
+        ]
+    },
+    "Items in Spielen": {
+        "categories": ["Minecraft", "Factorio", "Terraria", "Satisfactory"],
+        "terms": [
+            { "term": "Förderband-Splitter", "category": "Satisfactory" },
+            { "term": "Uralter Schrott", "category": "Minecraft" },
+            { "term": "Aktivatorschiene", "category": "Minecraft" },
+            { "term": "Produktivitätsmodul", "category": "Factorio" },
+            { "term": "Heizkessel", "category": "Factorio" },
+            { "term": "Turbodraht", "category": "Satisfactory" },
+            { "term": "Uranversetzter Brennstoff", "category": "Factorio" },
+            { "term": "Glitzernder Schleimball", "category": "Terraria" },
+            { "term": "Handy", "category": "Terraria" },
+            { "term": "Teilerfließband", "category": "Factorio" },
+            { "term": "Sprengstoff", "category": "Factorio" },
+            { "term": "Tresor", "category": "Minecraft" },
+            { "term": "Unheilvolle Flasche", "category": "Minecraft" },
+            { "term": "Kobalt Erz", "category": "Terraria" },
+            { "term": "Uran 235", "category": "Factorio" },
+            { "term": "Schwarze Perle", "category": "Terraria" },
+            { "term": "Alien Protein", "category": "Satisfactory" },
+            { "term": "Uranbrennstab", "category": "Satisfactory" },
+            { "term": "Konfetti", "category": "Terraria" },
+            { "term": "Pinsel", "category": "Minecraft" }
+        ]
+    }
+}

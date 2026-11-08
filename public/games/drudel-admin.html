@@ -1,0 +1,76 @@
+<style>
+    .drudel-admin-actions,
+    .drudel-admin-scores { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+</style>
+
+<div class="card">
+    <h2>Drudel</h2>
+    <p id="drudelAdminStatus">Noch kein Bild ausgewählt.</p>
+    <div class="drudel-admin-actions">
+        <button onclick="nextDrudelImage()">Nächstes Bild</button>
+        <button onclick="lockDrudelBuzzer()">Buzzer locken</button>
+        <button onclick="resetDrudelBuzzer()">Buzzer zurücksetzen</button>
+        <button onclick="revealDrudelName()">Drudel-Lösung aufdecken</button>
+    </div>
+    <div id="drudelAdminScores" class="drudel-admin-scores"></div>
+    <div id="drudelAdminWinner"></div>
+</div>
+
+<script>
+    let lastDrudelAdminBuzzerWinner = null;
+
+    function playDrudelAdminBuzzerSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(880, context.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.18, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.22);
+    }
+
+    window.nextDrudelImage = () => socket.emit('adminNextDrudelImage');
+    window.lockDrudelBuzzer = () => socket.emit('adminLockDrudelBuzzer');
+    window.resetDrudelBuzzer = () => socket.emit('adminResetDrudelBuzzer');
+    window.revealDrudelName = () => socket.emit('adminRevealDrudelName');
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.drudelGame || {};
+        const status = document.getElementById('drudelAdminStatus');
+        const scores = document.getElementById('drudelAdminScores');
+        const winner = document.getElementById('drudelAdminWinner');
+        if (!status || !scores || !winner) return;
+        if (game.buzzerWinner && game.buzzerWinner !== lastDrudelAdminBuzzerWinner) {
+            playDrudelAdminBuzzerSound();
+            lastDrudelAdminBuzzerWinner = game.buzzerWinner;
+        }
+        if (!game.buzzerWinner) lastDrudelAdminBuzzerWinner = null;
+
+        status.innerText = game.buzzerWinner
+            ? `Gebuzzert: ${game.buzzerWinner}`
+            : game.buzzerLocked ? 'Buzzer ist gesperrt.' : 'Buzzer ist offen.';
+        scores.innerHTML = '';
+        Object.entries(game.scores || {}).forEach(([team, points]) => {
+            const score = document.createElement('div');
+            score.innerHTML = `<b>${team}: ${points} / 5</b>`;
+            const minus = document.createElement('button');
+            minus.innerText = '-1';
+            minus.onclick = () => socket.emit('adminAddDrudelPoint', { team, amount: -1 });
+            const plus = document.createElement('button');
+            plus.innerText = '+1';
+            plus.onclick = () => socket.emit('adminAddDrudelPoint', { team, amount: 1 });
+            score.appendChild(minus);
+            score.appendChild(plus);
+            scores.appendChild(score);
+        });
+        winner.innerText = game.revealedName ? game.revealedName : '';
+        if (game.winnerTeam) winner.innerText += ` ${game.winnerTeam} gewinnt mit 5 Punkten.`;
+    };
+</script>

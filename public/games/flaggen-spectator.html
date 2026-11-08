@@ -1,0 +1,390 @@
+<style>
+    .flaggen-spec-container {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+    .flaggen-spec-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin-bottom: 14px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #2a2f40;
+    }
+    .flaggen-spec-scores {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .flaggen-spec-score-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 6px;
+        background: #171922;
+        font-size: 1.1rem;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .flaggen-spec-country {
+        font-size: 1.4rem;
+        font-weight: bold;
+        padding: 8px 22px;
+        border-radius: 8px;
+        background: #171922;
+        border-left: 5px solid #ffd166;
+        color: #ffd166;
+    }
+
+    /* Main Showcase: Left Board | Center Pool/Target | Right Board (Just like screenshot!) */
+    .flaggen-showcase-grid {
+        display: grid;
+        grid-template-columns: 1fr minmax(260px, 340px) 1fr;
+        gap: 20px;
+        width: 100%;
+        align-items: center;
+        margin-top: 10px;
+    }
+
+    .flaggen-spec-board-wrap {
+        background: #171922;
+        border: 1px solid #303646;
+        border-radius: 14px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    .flaggen-spec-board-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        width: 100%;
+        margin-bottom: 12px;
+    }
+    .flaggen-spec-board-header h3 {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: bold;
+    }
+    .flaggen-spec-builder-tag {
+        font-size: 0.9rem;
+        color: #a4b0be;
+    }
+
+    /* The Flag Canvas (Matches Screenshot: Heavy White Border, 3:2, Rounded Corners) */
+    .flaggen-spec-canvas {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        background: #11131a;
+        border: 6px solid #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.7), 0 0 25px rgba(255,255,255,0.15);
+    }
+    .flaggen-spec-hidden-curtain {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, #1e2538 0%, #11131a 80%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        color: #a4b0be;
+        font-size: 1.2rem;
+        font-weight: bold;
+        text-align: center;
+        padding: 20px;
+        z-index: 50;
+    }
+
+    /* Center Section (Pool during build, Target Flag on reveal) */
+    .flaggen-center-box {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #171922;
+        border: 1px solid #303646;
+        border-radius: 14px;
+        padding: 16px;
+        min-height: 280px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
+    }
+    .flaggen-center-pool {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        align-items: center;
+    }
+    .flaggen-center-tile {
+        background: #202431;
+        border: 3px solid #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    .flaggen-center-tile.tile-horiz {
+        width: 105px;
+        height: 34px;
+    }
+    .flaggen-center-tile.tile-vert {
+        width: 36px;
+        height: 84px;
+    }
+    .flaggen-center-tile.tile-sym {
+        width: 58px;
+        height: 46px;
+    }
+    .flaggen-center-tile.tile-fld {
+        width: 75px;
+        height: 50px;
+    }
+
+    /* Target Flag Display upon reveal */
+    .flaggen-center-target-wrap {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .flaggen-spec-target-flag {
+        width: 100%;
+        max-width: 280px;
+        aspect-ratio: 3 / 2;
+        border: 4px solid #ffd166;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-top: 10px;
+        background: #111;
+        box-shadow: 0 6px 24px rgba(255, 209, 102, 0.35);
+    }
+
+    @media (max-width: 900px) {
+        .flaggen-showcase-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="flaggen-spec-container">
+    <div class="flaggen-spec-header">
+        <h2 style="margin: 0; font-size: 1.5rem;">🚩 Flaggen bauen</h2>
+        <div id="flaggenSpecCountry" class="flaggen-spec-country" style="display: none;">-</div>
+        <div id="flaggenSpecScores" class="flaggen-spec-scores"></div>
+    </div>
+
+    <!-- 3-Column Showcase: Team 1 | Center | Team 2 -->
+    <div class="flaggen-showcase-grid">
+        <!-- Team 1 -->
+        <div class="flaggen-spec-board-wrap">
+            <div class="flaggen-spec-board-header">
+                <h3 id="flaggenSpecT1Name" style="color: #9b59b6;">Team 1</h3>
+                <span id="flaggenSpecT1Builder" class="flaggen-spec-builder-tag"></span>
+            </div>
+            <div id="flaggenSpecCanvas1" class="flaggen-spec-canvas">
+                <div id="flaggenCurtain1" class="flaggen-spec-hidden-curtain">
+                    <span style="font-size: 2.2rem;">🔨</span>
+                    <span>Team baut gerade...</span>
+                    <span style="font-size: 0.85rem; font-weight: normal; opacity: 0.7;">Wird nach der Runde aufgedeckt</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Elements Pool or Official Flag -->
+        <div class="flaggen-center-box">
+            <div id="flaggenCenterTitle" style="font-size: 0.85rem; color: #a4b0be; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Elemente-Pool</div>
+            
+            <!-- When Building: Show Pool of Elements -->
+            <div id="flaggenCenterPool" class="flaggen-center-pool"></div>
+
+            <!-- When Revealed: Show Official Target Flag -->
+            <div id="flaggenCenterTarget" class="flaggen-center-target-wrap" style="display: none;">
+                <div style="font-size: 0.95rem; font-weight: bold; color: #ffd166;">Offizielles Original</div>
+                <div id="flaggenSpecTargetFlag" class="flaggen-spec-target-flag"></div>
+            </div>
+        </div>
+
+        <!-- Team 2 -->
+        <div class="flaggen-spec-board-wrap">
+            <div class="flaggen-spec-board-header">
+                <h3 id="flaggenSpecT2Name" style="color: #2ecc71;">Team 2</h3>
+                <span id="flaggenSpecT2Builder" class="flaggen-spec-builder-tag"></span>
+            </div>
+            <div id="flaggenSpecCanvas2" class="flaggen-spec-canvas">
+                <div id="flaggenCurtain2" class="flaggen-spec-hidden-curtain">
+                    <span style="font-size: 2.2rem;">🔨</span>
+                    <span>Team baut gerade...</span>
+                    <span style="font-size: 0.85rem; font-weight: normal; opacity: 0.7;">Wird nach der Runde aufgedeckt</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function renderSpecPieces(container, placements, elements) {
+        if (!container) return;
+        // Keep curtain if present, remove existing pieces
+        const pieces = container.querySelectorAll('.flaggen-spec-piece');
+        pieces.forEach(p => p.remove());
+
+        if (!placements || !placements.length) return;
+
+        const elemMap = new Map();
+        (elements || []).forEach(e => elemMap.set(e.id, e));
+
+        const sorted = [...placements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+        sorted.forEach(p => {
+            const def = elemMap.get(p.elementId);
+            if (!def) return;
+
+            const el = document.createElement('div');
+            el.className = 'flaggen-spec-piece';
+            el.style.position = 'absolute';
+            el.style.left = (p.x * 100) + '%';
+            el.style.top = (p.y * 100) + '%';
+            el.style.width = (def.defaultWidth || 40) + '%';
+            el.style.height = (def.defaultHeight || 40) + '%';
+            el.style.zIndex = p.zIndex || 1;
+            el.style.transform = `translate(-50%, -50%) rotate(${p.rotation || 0}deg)`;
+            el.style.pointerEvents = 'none';
+            el.innerHTML = def.svg || `<div style="width:100%;height:100%;background:${def.color || '#fff'};"></div>`;
+            container.appendChild(el);
+        });
+    }
+
+    function renderCenterPool(elements) {
+        const poolEl = document.getElementById('flaggenCenterPool');
+        if (!poolEl) return;
+        poolEl.innerHTML = '';
+
+        elements.forEach(el => {
+            const tile = document.createElement('div');
+            let cls = 'tile-sym';
+            if (el.type === 'stripe-horizontal') cls = 'tile-horiz';
+            else if (el.type === 'stripe-vertical') cls = 'tile-vert';
+            else if (el.type === 'field') cls = 'tile-fld';
+
+            tile.className = `flaggen-center-tile ${cls}`;
+            tile.title = el.name;
+            tile.innerHTML = el.svg || `<div style="width:100%;height:100%;background:${el.color || '#fff'};"></div>`;
+            poolEl.appendChild(tile);
+        });
+    }
+
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.flaggenGame || {};
+        const teams = state.teams || {};
+        const teamNames = Object.keys(teams);
+        const t1 = teamNames[0] || 'Team 1';
+        const t2 = teamNames[1] || 'Team 2';
+        const players = state.players || {};
+        const phase = game.phase || 'IDLE';
+
+        // Scores
+        const scoresEl = document.getElementById('flaggenSpecScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = game.scores || {};
+            teamNames.forEach(team => {
+                const col = (teams[team] || {}).color || '#fff';
+                const box = document.createElement('div');
+                box.className = 'flaggen-spec-score-box';
+                box.style.borderLeft = '4px solid ' + col;
+                box.innerHTML = `<span style="color:${col}">${team}:</span> <span>${scores[team] || 0} Pkt.</span>`;
+                scoresEl.appendChild(box);
+            });
+        }
+
+        // Country header
+        const countryEl = document.getElementById('flaggenSpecCountry');
+        if (countryEl) {
+            if (phase === 'PLAYING') {
+                countryEl.style.display = 'block';
+                const timerText = game.duration > 0 ? ` [⏱️ ${game.remaining}s]` : '';
+                countryEl.textContent = `Aufgabe: ${game.country || '-'}${timerText}`;
+            } else {
+                countryEl.style.display = 'none';
+            }
+        }
+
+        // Team names and builder tags
+        const col1 = (teams[t1] || {}).color || '#9b59b6';
+        const col2 = (teams[t2] || {}).color || '#2ecc71';
+
+        const t1Title = document.getElementById('flaggenSpecT1Name');
+        const t2Title = document.getElementById('flaggenSpecT2Name');
+        if (t1Title) { t1Title.textContent = t1; t1Title.style.color = col1; }
+        if (t2Title) { t2Title.textContent = t2; t2Title.style.color = col2; }
+
+        const b1Id = (game.builders || {})[t1];
+        const b2Id = (game.builders || {})[t2];
+        const p1 = b1Id ? players[b1Id] : null;
+        const p2 = b2Id ? players[b2Id] : null;
+
+        const tag1 = document.getElementById('flaggenSpecT1Builder');
+        const tag2 = document.getElementById('flaggenSpecT2Builder');
+        if (tag1) tag1.textContent = p1 ? `Baumeister: ${p1.name}` : '';
+        if (tag2) tag2.textContent = p2 ? `Baumeister: ${p2.name}` : '';
+
+        // Center elements pool vs target flag
+        const centerTitle = document.getElementById('flaggenCenterTitle');
+        const centerPool = document.getElementById('flaggenCenterPool');
+        const centerTarget = document.getElementById('flaggenCenterTarget');
+        const targetFlagEl = document.getElementById('flaggenSpecTargetFlag');
+
+        const elements = game.elements || [];
+        const boards = game.boards || {};
+
+        const c1 = document.getElementById('flaggenSpecCanvas1');
+        const c2 = document.getElementById('flaggenSpecCanvas2');
+        const curtain1 = document.getElementById('flaggenCurtain1');
+        const curtain2 = document.getElementById('flaggenCurtain2');
+
+        if (game.revealed) {
+            // REVEALED MODE:
+            // 1. Hide curtains
+            if (curtain1) curtain1.style.display = 'none';
+            if (curtain2) curtain2.style.display = 'none';
+
+            // 2. Center shows official target flag
+            if (centerTitle) centerTitle.textContent = game.country || 'Original-Flagge';
+            if (centerPool) centerPool.style.display = 'none';
+            if (centerTarget) centerTarget.style.display = 'flex';
+            if (targetFlagEl && game.targetFlag) targetFlagEl.innerHTML = game.targetFlag;
+
+            // 3. Render both teams' built flags
+            renderSpecPieces(c1, (boards[t1] || {}).placements || [], elements);
+            renderSpecPieces(c2, (boards[t2] || {}).placements || [], elements);
+
+        } else {
+            // BUILDING MODE:
+            // 1. Show curtains over boards (so spectators & opponents can't see prematurely)
+            if (curtain1) curtain1.style.display = 'flex';
+            if (curtain2) curtain2.style.display = 'flex';
+
+            // 2. Center shows available elements pool
+            if (centerTitle) centerTitle.textContent = 'Elemente-Pool';
+            if (centerPool) centerPool.style.display = 'flex';
+            if (centerTarget) centerTarget.style.display = 'none';
+
+            renderCenterPool(elements);
+        }
+    };
+</script>

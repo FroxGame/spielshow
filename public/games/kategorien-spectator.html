@@ -1,0 +1,232 @@
+<style>
+    .category-spectator-scores {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin: 0 auto 14px;
+    }
+    .category-spectator-score-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 16px;
+        border-radius: 6px;
+        background: #171922;
+        font-size: 1.15rem;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .category-spectator-categories {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 14px 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .category-spectator-category {
+        min-height: 140px;
+        padding: 10px 12px;
+        border: 1px solid #4a5676;
+        border-radius: 6px;
+        background: #171922;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    .category-spectator-category h3 {
+        margin: 0 0 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #3d4763;
+        font-size: 1.1rem;
+        word-break: break-word;
+    }
+    .category-spectator-category-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-content: flex-start;
+        flex-grow: 1;
+        min-width: 0;
+    }
+    .category-spectator-term {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 13px;
+        border-radius: 6px;
+        font-size: 1rem;
+        font-weight: 600;
+        background: #252a38;
+        border: 1px solid #48526e;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .category-spectator-term-text {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        flex: 1 1 auto;
+    }
+    .category-spectator-team-tag {
+        font-size: 0.78rem;
+        font-weight: bold;
+        padding: 1px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        line-height: 1.3;
+    }
+    .category-spectator-unassigned {
+        margin-top: 14px;
+        padding: 12px;
+        border: 1px dashed #4a5676;
+        border-radius: 6px;
+        background: #14161f;
+        text-align: left;
+        box-sizing: border-box;
+        width: 100%;
+    }
+    .category-spectator-unassigned h4 {
+        margin: 0 0 10px 0;
+        font-size: 1rem;
+        color: #a4b0be;
+    }
+    .category-spectator-unassigned-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .category-correct {
+        background: #19462e !important;
+        border-color: #2ed573 !important;
+        color: #a4f5c5 !important;
+    }
+    .category-wrong {
+        background: #4a1f26 !important;
+        border-color: #ff6b6b !important;
+        color: #ffb8b8 !important;
+    }
+    @media (max-width: 900px) {
+        .category-spectator-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 600px) {
+        .category-spectator-categories { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div style="width: 100%; box-sizing: border-box;">
+    <h2 style="margin: 0 0 10px 0; font-size: 1.45rem;">Begriffe Kategorien zuordnen</h2>
+    <div id="categorySpectatorScores" class="category-spectator-scores"></div>
+    <p id="categorySpectatorStatus" style="margin: 0 0 10px 0; color: #a4b0be; font-size: 1rem;">Warte auf eine Runde...</p>
+    <div id="categorySpectatorCategories" class="category-spectator-categories"></div>
+    <div id="categorySpectatorUnassigned" class="category-spectator-unassigned" style="display: none;">
+        <h4>Noch nicht zugeordnet:</h4>
+        <div id="categorySpectatorUnassignedItems" class="category-spectator-unassigned-items"></div>
+    </div>
+</div>
+
+<script>
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.categoryGame || {};
+        const status = document.getElementById('categorySpectatorStatus');
+        const scoresBoard = document.getElementById('categorySpectatorScores');
+        const categories = document.getElementById('categorySpectatorCategories');
+        const unassigned = document.getElementById('categorySpectatorUnassigned');
+        const unassignedItems = document.getElementById('categorySpectatorUnassignedItems');
+        if (!status || !categories || !unassigned || !unassignedItems) return;
+
+        status.innerText = game.roundName ? `Runde: ${game.roundName}` : 'Warte auf eine Runde...';
+
+        // Render Scores (Points)
+        if (scoresBoard) {
+            scoresBoard.innerHTML = '';
+            const scores = game.scores || {};
+            const teams = state.teams || {};
+            Object.keys(teams).forEach(teamName => {
+                const teamData = teams[teamName] || {};
+                const color = teamData.color || '#fff';
+                const pts = scores[teamName] || 0;
+
+                const box = document.createElement('div');
+                box.className = 'category-spectator-score-box';
+                box.style.borderLeft = `5px solid ${color}`;
+                box.innerHTML = `<span style="color: ${color};">${teamName}:</span> <span>${pts} Pkt.</span>`;
+                scoresBoard.appendChild(box);
+            });
+        }
+
+        if (!game.roundName || game.phase !== 'PLAYING') {
+            categories.innerHTML = '';
+            unassignedItems.innerHTML = '';
+            unassigned.style.display = 'none';
+            return;
+        }
+
+        unassigned.style.display = 'block';
+        categories.innerHTML = '';
+        unassignedItems.innerHTML = '';
+
+        const categoryItemContainers = {};
+        (game.categories || []).forEach(category => {
+            const column = document.createElement('section');
+            column.className = 'category-spectator-category';
+            column.innerHTML = `<h3>${category}</h3>`;
+            const items = document.createElement('div');
+            items.className = 'category-spectator-category-items';
+            column.appendChild(items);
+            categoryItemContainers[category] = items;
+            categories.appendChild(column);
+        });
+
+        const assignments = game.assignments || {};
+        const assignedTeams = game.assignedTeams || {};
+        const revealed = game.revealed || {};
+        const results = game.results || {};
+        const teams = state.teams || {};
+
+        (game.terms || []).forEach(entry => {
+            const card = document.createElement('div');
+            card.className = 'category-spectator-term';
+
+            const termText = document.createElement('span');
+            termText.className = 'category-spectator-term-text';
+            termText.innerText = entry.term;
+            card.appendChild(termText);
+
+            const assignment = assignments[entry.term];
+            const isRevealed = Boolean(revealed[entry.term]);
+            const result = results[entry.term];
+            const termTeam = assignedTeams[entry.term];
+            const teamColor = termTeam && teams[termTeam] ? teams[termTeam].color : null;
+
+            if (assignment && categoryItemContainers[assignment]) {
+                if (termTeam && teamColor) {
+                    card.style.borderLeft = `5px solid ${teamColor}`;
+                    const teamTag = document.createElement('span');
+                    teamTag.className = 'category-spectator-team-tag';
+                    teamTag.style.background = teamColor + '33';
+                    teamTag.style.color = teamColor;
+                    teamTag.style.border = `1px solid ${teamColor}`;
+                    teamTag.innerText = termTeam;
+                    card.appendChild(teamTag);
+                }
+
+                if (isRevealed && result !== undefined) {
+                    card.classList.add(result ? 'category-correct' : 'category-wrong');
+                    const badge = document.createElement('span');
+                    badge.style.marginLeft = '4px';
+                    badge.style.fontWeight = 'bold';
+                    badge.innerText = result ? '✓' : '✗';
+                    card.appendChild(badge);
+                }
+                categoryItemContainers[assignment].appendChild(card);
+            } else {
+                unassignedItems.appendChild(card);
+            }
+        });
+    };
+</script>

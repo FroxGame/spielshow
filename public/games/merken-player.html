@@ -1,0 +1,43 @@
+<style>
+    .merken-player { width: 100%; max-width: 1100px; margin: auto; }
+    .merken-player-status { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+    .merken-player-badge { padding: 7px 12px; border-radius: 6px; background: #1c202c; }
+    .merken-player-grid { display: grid; grid-template-columns: repeat(6, minmax(70px, 1fr)); gap: 8px; }
+    .merken-player-card { min-height: 82px; display: grid; place-items: center; border: 1px solid #3d4763; border-radius: 8px; background: #27304a; color: #fff; }
+    .merken-player-card.face { background: #18213a; border-color: #f5c542; }
+    .merken-player-card.revealed { border-color: #2ed573; background: #173c2b; }
+    .merken-player-icon { font-size: 2rem; }
+    .merken-player-back { font-size: 1.8rem; color: #7383a8; }
+    @media (max-width: 700px) { .merken-player-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+<div class="card merken-player">
+    <h2>Merken</h2>
+    <div id="merkenPlayerStatus" class="merken-player-status"></div>
+    <div id="merkenPlayerGrid" class="merken-player-grid"></div>
+</div>
+
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const game = state.merkenGame || {};
+        const status = document.getElementById('merkenPlayerStatus');
+        const grid = document.getElementById('merkenPlayerGrid');
+        if (!status || !grid) return;
+        const scores = Object.entries(game.scores || {}).map(([team, score]) => `${team}: ${score} / 7`).join(' · ');
+        const phase = game.phase === 'MEMORIZING'
+            ? `Merken: ${game.remaining || 0} Sekunden`
+            : game.phase === 'PLAYING' ? 'Abfrage läuft' : game.phase === 'FINISHED' ? 'Spiel beendet' : 'Warte auf den Start';
+        status.innerHTML = `<span class="merken-player-badge">${phase}</span><span class="merken-player-badge">${scores}</span>`;
+        const showFaces = game.phase === 'MEMORIZING';
+        grid.innerHTML = '';
+        (game.cards || []).forEach(card => {
+            const isRevealed = (game.revealedCards || []).includes(card.id);
+            const item = document.createElement('div');
+            item.className = 'merken-player-card' + ((showFaces || isRevealed) ? ' face' : '') + (isRevealed ? ' revealed' : '');
+            item.innerHTML = showFaces || isRevealed
+                ? `<span class="merken-player-icon">${card.icon}</span><small>${card.id}</small>`
+                : `<span class="merken-player-back">?</span><small>${card.id}</small>`;
+            grid.appendChild(item);
+        });
+    };
+</script>

@@ -1,0 +1,345 @@
+<style>
+    .karte-spec-wrapper {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        background: #141c2b;
+    }
+    #specMap {
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: 1;
+        background: #141c2b;
+    }
+    .karte-spec-hud-top {
+        position: absolute;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        pointer-events: none;
+        width: 90%;
+        max-width: 800px;
+    }
+    .karte-spec-hud-item {
+        pointer-events: auto;
+    }
+    .karte-spec-target-card {
+        background: rgba(23, 25, 34, 0.94);
+        backdrop-filter: blur(8px);
+        padding: 10px 32px;
+        border-radius: 35px;
+        border: 2.5px solid #2ed573;
+        box-shadow: 0 4px 25px rgba(0,0,0,0.7);
+        text-align: center;
+    }
+    .karte-spec-target-title {
+        font-size: 0.8rem;
+        color: #a4b0be;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+    }
+    .karte-spec-target-name {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #2ed573;
+    }
+    .karte-spec-scores {
+        display: flex;
+        gap: 16px;
+    }
+    .karte-spec-score-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 18px;
+        border-radius: 20px;
+        background: rgba(23, 25, 34, 0.94);
+        font-size: 1.15rem;
+        font-weight: bold;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    }
+    .karte-spec-bottom-bar {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        display: flex;
+        gap: 20px;
+        pointer-events: auto;
+        width: 90%;
+        max-width: 750px;
+    }
+    .karte-spec-distance-card {
+        flex: 1 1 250px;
+        padding: 10px 20px;
+        border-radius: 12px;
+        background: rgba(23, 25, 34, 0.94);
+        backdrop-filter: blur(6px);
+        border: 1px solid #303646;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 1.05rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+    }
+    .karte-spec-waiting {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        color: #a4b0be;
+    }
+</style>
+
+<div id="karteSpecRoot" style="width: 100vw; height: 100vh;">
+    <div id="karteSpecWaiting" class="karte-spec-waiting">
+        <h2>Wo ist das auf der Karte?</h2>
+        <p>Warte auf die nächste Runde...</p>
+    </div>
+    <div id="karteSpecActive" class="karte-spec-wrapper" style="display: none;">
+        <div id="specMap"></div>
+        <div class="karte-spec-hud-top">
+            <div class="karte-spec-hud-item karte-spec-target-card">
+                <div class="karte-spec-target-title">Zielort</div>
+                <div id="karteSpecTargetName" class="karte-spec-target-name">-</div>
+                <div id="karteSpecAnswer" style="font-size: 1.3rem; font-weight: bold; color: #fff; margin-top: 6px; display: none;"></div>
+            </div>
+            <div id="karteSpecScores" class="karte-spec-hud-item karte-spec-scores"></div>
+        </div>
+        <div id="karteSpecDistanceBar" class="karte-spec-bottom-bar"></div>
+    </div>
+</div>
+
+<script>
+    let _specMap = null;
+    let _specTargetMarker = null;
+    let _specMarker1 = null;
+    let _specMarker2 = null;
+    let _specLine1 = null;
+    let _specLine2 = null;
+
+    function initSpecMap() {
+        if (_specMap) {
+            _specMap.invalidateSize();
+            return;
+        }
+        const container = document.getElementById('specMap');
+        if (!container || typeof L === 'undefined') return;
+
+        _specMap = L.map('specMap', {
+            center: [51.5, 12.0],
+            zoom: 4,
+            minZoom: 3,
+            maxZoom: 10,
+            zoomControl: false,
+            attributionControl: false
+        });
+
+        // Reine Landmassen ohne Ländergrenzen und ohne Beschriftung!
+        if (window.EUROPE_LAND_GEOJSON) {
+            L.geoJSON(window.EUROPE_LAND_GEOJSON, {
+                style: {
+                    fillColor: '#2b394f',
+                    fillOpacity: 1,
+                    color: '#415573',
+                    weight: 1.2
+                }
+            }).addTo(_specMap);
+        }
+
+        setTimeout(() => { if (_specMap) _specMap.invalidateSize(); }, 200);
+    }
+
+    function createSpecPin(color, label) {
+        return L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;"><span style="transform: rotate(45deg); font-size: 13px; font-weight: bold; color: #fff;">${label || ''}</span></div>`,
+            iconSize: [28, 28],
+            iconAnchor: [14, 28]
+        });
+    }
+
+    function calcDistanceKm(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return Math.round(R * c);
+    }
+
+    window.onSpectatorStateUpdate = function(state) {
+        const kg = state.karteGame || {};
+        const teams = state.teams || {};
+        const phase = kg.phase || 'IDLE';
+
+        const waitEl = document.getElementById('karteSpecWaiting');
+        const actEl = document.getElementById('karteSpecActive');
+
+        if (phase === 'IDLE') {
+            if (waitEl) waitEl.style.display = 'flex';
+            if (actEl) actEl.style.display = 'none';
+            if (_specMap) {
+                _specMap.remove();
+                _specMap = null;
+                _specTargetMarker = null;
+                _specMarker1 = null;
+                _specMarker2 = null;
+                _specLine1 = null;
+                _specLine2 = null;
+            }
+            return;
+        }
+
+        if (waitEl) waitEl.style.display = 'none';
+        if (actEl) actEl.style.display = 'block';
+
+        initSpecMap();
+
+        // Target Name & Answer
+        const target = kg.target || {};
+        const tn = document.getElementById('karteSpecTargetName');
+        if (tn) tn.innerText = target.name || '-';
+
+        const ansEl = document.getElementById('karteSpecAnswer');
+        const rev = kg.revealed || {};
+        if (ansEl) {
+            if (rev['target'] && target.answer) {
+                ansEl.style.display = 'block';
+                ansEl.innerHTML = '<span style="color:#a4b0be;font-size:0.9rem;text-transform:uppercase;letter-spacing:1px;margin-right:6px;">Antwort:</span> ' + target.answer;
+            } else {
+                ansEl.style.display = 'none';
+            }
+        }
+
+        // Scores (x / 7)
+        const scoresEl = document.getElementById('karteSpecScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = kg.scores || {};
+            Object.keys(teams).forEach(t => {
+                const color = (teams[t] || {}).color || '#fff';
+                const box = document.createElement('div');
+                box.className = 'karte-spec-score-box';
+                box.style.borderLeft = '5px solid ' + color;
+                box.innerHTML = `<span style="color:${color};">${t}:</span> <span>${scores[t] || 0} / 7</span>`;
+                scoresEl.appendChild(box);
+            });
+        }
+
+        if (!_specMap || target.lat === undefined) return;
+
+        // Spectator ALWAYS sees the target marker!
+        if (!_specTargetMarker) {
+            _specTargetMarker = L.marker([target.lat, target.lng], {
+                icon: L.divIcon({
+                    className: 'target-pin',
+                    html: '<div style="background:#2ed573; width:32px; height:32px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 16px #2ed573; display:flex; align-items:center; justify-content:center; color:#000; font-weight:bold; font-size:16px;">🎯</div>',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 16]
+                })
+            }).addTo(_specMap);
+        } else {
+            _specTargetMarker.setLatLng([target.lat, target.lng]);
+        }
+
+        const revealedState = kg.revealed || {};
+        const guesses = kg.guesses || {};
+        const teamNames = Object.keys(teams);
+        const firstTeam = teamNames[0] || 'Team 1';
+        const secondTeam = teamNames[1] || 'Team 2';
+        const col1 = (teams[firstTeam] || {}).color || '#9b59b6';
+        const col2 = (teams[secondTeam] || {}).color || '#2ecc71';
+        const distBar = document.getElementById('karteSpecDistanceBar');
+        if (distBar) distBar.innerHTML = '';
+
+        // Team 1 Pin (Spectator sees it ALWAYS as soon as placed!)
+        if (guesses[firstTeam]) {
+            const g1 = guesses[firstTeam];
+            if (!_specMarker1) {
+                _specMarker1 = L.marker([g1.lat, g1.lng], { icon: createSpecPin(col1, '1') }).addTo(_specMap);
+            } else {
+                _specMarker1.setLatLng([g1.lat, g1.lng]);
+            }
+
+            // Line and Distance only when target is revealed or distances revealed
+            if (revealedState['target'] || revealedState['distances'] || revealedState[firstTeam]) {
+                if (!_specLine1) {
+                    _specLine1 = L.polyline([[g1.lat, g1.lng], [target.lat, target.lng]], {
+                        color: col1,
+                        weight: 3.5,
+                        dashArray: '6, 8'
+                    }).addTo(_specMap);
+                } else {
+                    _specLine1.setLatLngs([[g1.lat, g1.lng], [target.lat, target.lng]]);
+                }
+
+                const dist1 = calcDistanceKm(g1.lat, g1.lng, target.lat, target.lng);
+                if (distBar) {
+                    const card1 = document.createElement('div');
+                    card1.className = 'karte-spec-distance-card';
+                    card1.style.borderLeft = '6px solid ' + col1;
+                    card1.innerHTML = `<span style="font-weight:bold;color:${col1};font-size:1.1rem;">${firstTeam}</span><span><strong>${dist1.toLocaleString('de-DE')} km</strong> entfernt</span>`;
+                    distBar.appendChild(card1);
+                }
+            } else if (_specLine1) {
+                _specMap.removeLayer(_specLine1);
+                _specLine1 = null;
+            }
+        } else {
+            if (_specMarker1) { _specMap.removeLayer(_specMarker1); _specMarker1 = null; }
+            if (_specLine1) { _specMap.removeLayer(_specLine1); _specLine1 = null; }
+        }
+
+        // Team 2 Pin (Spectator sees it ALWAYS as soon as placed!)
+        if (guesses[secondTeam]) {
+            const g2 = guesses[secondTeam];
+            if (!_specMarker2) {
+                _specMarker2 = L.marker([g2.lat, g2.lng], { icon: createSpecPin(col2, '2') }).addTo(_specMap);
+            } else {
+                _specMarker2.setLatLng([g2.lat, g2.lng]);
+            }
+
+            // Line and Distance only when target is revealed or distances revealed
+            if (revealedState['target'] || revealedState['distances'] || revealedState[secondTeam]) {
+                if (!_specLine2) {
+                    _specLine2 = L.polyline([[g2.lat, g2.lng], [target.lat, target.lng]], {
+                        color: col2,
+                        weight: 3.5,
+                        dashArray: '6, 8'
+                    }).addTo(_specMap);
+                } else {
+                    _specLine2.setLatLngs([[g2.lat, g2.lng], [target.lat, target.lng]]);
+                }
+
+                const dist2 = calcDistanceKm(g2.lat, g2.lng, target.lat, target.lng);
+                if (distBar) {
+                    const card2 = document.createElement('div');
+                    card2.className = 'karte-spec-distance-card';
+                    card2.style.borderLeft = '6px solid ' + col2;
+                    card2.innerHTML = `<span style="font-weight:bold;color:${col2};font-size:1.1rem;">${secondTeam}</span><span><strong>${dist2.toLocaleString('de-DE')} km</strong> entfernt</span>`;
+                    distBar.appendChild(card2);
+                }
+            } else if (_specLine2) {
+                _specMap.removeLayer(_specLine2);
+                _specLine2 = null;
+            }
+        } else {
+            if (_specMarker2) { _specMap.removeLayer(_specMarker2); _specMarker2 = null; }
+            if (_specLine2) { _specMap.removeLayer(_specLine2); _specLine2 = null; }
+        }
+    };
+</script>

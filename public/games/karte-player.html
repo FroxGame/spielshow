@@ -1,0 +1,870 @@
+<style>
+
+    .karte-player-wrapper {
+
+        position: relative;
+
+        width: 100vw;
+
+        height: 100vh;
+
+        overflow: hidden;
+
+        background: #141c2b;
+
+    }
+
+    #playerMap {
+
+        width: 100%;
+
+        height: 100%;
+
+        position: absolute;
+
+        top: 0;
+
+        left: 0;
+
+        z-index: 1;
+
+        cursor: crosshair;
+
+        background: #141c2b;
+
+    }
+
+    .karte-player-hud {
+
+        position: absolute;
+
+        top: 14px;
+
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        z-index: 1000;
+
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: center;
+
+        gap: 8px;
+
+        pointer-events: none;
+
+        width: 90%;
+
+        max-width: 600px;
+
+    }
+
+    .karte-hud-item {
+
+        pointer-events: auto;
+
+    }
+
+    .karte-target-card {
+
+        background: rgba(28, 32, 44, 0.92);
+
+        backdrop-filter: blur(8px);
+
+        padding: 8px 24px;
+
+        border-radius: 30px;
+
+        border: 2px solid #2ed573;
+
+        box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+
+        text-align: center;
+
+    }
+
+    .karte-target-title {
+
+        font-size: 0.75rem;
+
+        color: #a4b0be;
+
+        text-transform: uppercase;
+
+        letter-spacing: 1px;
+
+    }
+
+    .karte-target-name {
+
+        font-size: 1.4rem;
+
+        font-weight: bold;
+
+        color: #2ed573;
+
+    }
+
+    .karte-hud-scores {
+
+        display: flex;
+
+        gap: 10px;
+
+    }
+
+    .karte-hud-score-pill {
+
+        background: rgba(28, 32, 44, 0.92);
+
+        padding: 4px 14px;
+
+        border-radius: 16px;
+
+        font-weight: bold;
+
+        font-size: 0.95rem;
+
+        box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+
+    }
+
+    .karte-player-bottom-bar {
+
+        position: absolute;
+
+        bottom: 24px;
+
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        z-index: 1000;
+
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: center;
+
+        gap: 8px;
+
+        pointer-events: auto;
+
+    }
+
+    .karte-lock-btn {
+
+        background: #2ed573;
+
+        color: #000;
+
+        font-weight: bold;
+
+        font-size: 1.15rem;
+
+        padding: 12px 32px;
+
+        border-radius: 30px;
+
+        border: none;
+
+        cursor: pointer;
+
+        box-shadow: 0 4px 15px rgba(46, 213, 115, 0.4);
+
+        transition: all 0.15s;
+
+    }
+
+    .karte-lock-btn:hover { background: #26af5f; transform: scale(1.03); }
+
+    .karte-lock-btn:disabled {
+
+        background: rgba(87, 101, 116, 0.85);
+
+        color: #a4b0be;
+
+        cursor: not-allowed;
+
+        box-shadow: none;
+
+        transform: none;
+
+    }
+
+    .karte-role-hint {
+
+        background: rgba(20, 24, 33, 0.88);
+
+        padding: 6px 16px;
+
+        border-radius: 20px;
+
+        font-size: 0.85rem;
+
+        color: #f1f2f6;
+
+        box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+
+    }
+
+    .karte-player-distance-bar {
+
+        position: absolute;
+
+        bottom: 20px;
+
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        z-index: 1000;
+
+        display: flex;
+
+        gap: 16px;
+
+        pointer-events: auto;
+
+        width: 90%;
+
+        max-width: 650px;
+
+    }
+
+    .karte-player-distance-card {
+
+        flex: 1 1 200px;
+
+        padding: 8px 16px;
+
+        border-radius: 12px;
+
+        background: rgba(23, 25, 34, 0.94);
+
+        backdrop-filter: blur(6px);
+
+        border: 1px solid #303646;
+
+        display: flex;
+
+        justify-content: space-between;
+
+        align-items: center;
+
+        font-size: 0.95rem;
+
+        box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+
+    }
+
+    .karte-waiting-screen {
+
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: center;
+
+        justify-content: center;
+
+        height: 100vh;
+
+        color: #a4b0be;
+
+    }
+
+</style>
+
+
+
+<div id="kartePlayerRoot" style="width: 100vw; height: 100vh;">
+
+    <div id="kartePlayerWaiting" class="karte-waiting-screen">
+
+        <h2>Wo ist das auf der Karte?</h2>
+
+        <p>Warte auf die nächste Runde...</p>
+
+    </div>
+
+    <div id="kartePlayerActive" class="karte-player-wrapper" style="display: none;">
+
+        <div id="playerMap"></div>
+
+        <div class="karte-player-hud">
+
+            <div class="karte-hud-item karte-target-card">
+
+                <div class="karte-target-title">Gesuchter Ort</div>
+
+                <div id="playerTargetText" class="karte-target-name">-</div>
+                <div id="playerAnswerText" style="font-size: 1.15rem; font-weight: bold; color: #fff; margin-top: 4px; display: none;"></div>
+
+            </div>
+
+            <div id="playerScoresHud" class="karte-hud-item karte-hud-scores"></div>
+
+        </div>
+
+        <div class="karte-player-bottom-bar" id="playerBottomControls">
+
+            <div id="playerRoleBadge" class="karte-role-hint"></div>
+
+            <div id="playerLockControls"></div>
+
+        </div>
+
+        <div id="playerDistanceBar" class="karte-player-distance-bar" style="display: none;"></div>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    let _playerMap = null;
+
+    let _teamMarker = null;
+
+    let _targetMarker = null;
+
+    let _otherMarker = null;
+
+    let _line1 = null;
+
+    let _line2 = null;
+
+    let _isPinner = false;
+
+    let _myTeam = null;
+
+
+
+    function calcDistanceKm(lat1, lon1, lat2, lon2) {
+
+        const R = 6371;
+
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+
+                  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        return Math.round(R * c);
+
+    }
+
+
+
+    function createColorPin(color, label) {
+
+        return L.divIcon({
+
+            className: 'custom-pin',
+
+            html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 2.5px solid #fff; box-shadow: 0 3px 8px rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center;"><span style="transform: rotate(45deg); font-size: 11px; font-weight: bold; color: #fff;">${label || ''}</span></div>`,
+
+            iconSize: [24, 24],
+
+            iconAnchor: [12, 24]
+
+        });
+
+    }
+
+
+
+    function initPlayerMap() {
+
+        if (_playerMap) {
+
+            _playerMap.invalidateSize();
+
+            return;
+
+        }
+
+        const container = document.getElementById('playerMap');
+
+        if (!container || typeof L === 'undefined') return;
+
+
+
+        _playerMap = L.map('playerMap', {
+
+            center: [51.5, 12.0],
+
+            zoom: 4,
+
+            minZoom: 3,
+
+            maxZoom: 10,
+
+            zoomControl: false,
+
+            attributionControl: false
+
+        });
+
+
+
+        // Reine Landmassen ohne Ländergrenzen und ohne Beschriftung!
+
+        if (window.EUROPE_LAND_GEOJSON) {
+
+            L.geoJSON(window.EUROPE_LAND_GEOJSON, {
+
+                style: {
+
+                    fillColor: '#2b394f',
+
+                    fillOpacity: 1,
+
+                    color: '#415573',
+
+                    weight: 1.2
+
+                }
+
+            }).addTo(_playerMap);
+
+        }
+
+
+
+        _playerMap.on('click', function(e) {
+
+            if (!_isPinner) return;
+
+            if (window._isLocked) return;
+
+            const { lat, lng } = e.latlng;
+
+            if (typeof socket !== 'undefined') {
+
+                socket.emit('playerSetKarteGuess', { lat, lng });
+
+            }
+
+        });
+
+
+
+        setTimeout(() => { if (_playerMap) _playerMap.invalidateSize(); }, 200);
+
+    }
+
+
+
+    window.lockMyGuess = function() {
+
+        if (typeof socket !== 'undefined') {
+
+            socket.emit('playerLockKarteGuess');
+
+        }
+
+    };
+
+
+
+    window.onModuleStateUpdate = function(state) {
+
+        const kg = state.karteGame || {};
+
+        const me = state.players ? state.players[socket.id] : null;
+
+        const teams = state.teams || {};
+
+        const phase = kg.phase || 'IDLE';
+
+
+
+        const waitingEl = document.getElementById('kartePlayerWaiting');
+
+        const activeEl = document.getElementById('kartePlayerActive');
+
+
+
+        if (!me || phase === 'IDLE') {
+
+            if (waitingEl) waitingEl.style.display = 'flex';
+
+            if (activeEl) activeEl.style.display = 'none';
+
+            if (_playerMap) {
+
+                _playerMap.remove();
+
+                _playerMap = null;
+
+                _teamMarker = null;
+
+                _targetMarker = null;
+
+                _otherMarker = null;
+
+            }
+
+            return;
+
+        }
+
+
+
+        if (waitingEl) waitingEl.style.display = 'none';
+
+        if (activeEl) activeEl.style.display = 'block';
+
+
+
+        initPlayerMap();
+
+
+
+        _myTeam = me.team;
+
+        const pinners = kg.pinners || {};
+
+        _isPinner = pinners[_myTeam] === socket.id;
+
+        const target = kg.target || {};
+
+        const locked = (kg.locked && kg.locked[_myTeam]) || false;
+
+        window._isLocked = locked;
+
+
+
+        // Target Name
+
+        const tt = document.getElementById('playerTargetText');
+
+        if (tt) tt.innerText = target.name || '...';
+
+        const answerText = document.getElementById('playerAnswerText');
+        if (answerText) {
+            const targetRevealed = kg.revealed && kg.revealed.target;
+            answerText.style.display = targetRevealed && target.answer ? 'block' : 'none';
+            answerText.innerText = targetRevealed && target.answer ? target.answer : '';
+        }
+
+
+
+        // HUD Scores
+
+        const scoresHud = document.getElementById('playerScoresHud');
+
+        if (scoresHud) {
+
+            scoresHud.innerHTML = '';
+
+            const scores = kg.scores || {};
+
+            Object.keys(teams).forEach(t => {
+
+                const color = (teams[t] || {}).color || '#fff';
+
+                const pill = document.createElement('div');
+
+                pill.className = 'karte-hud-score-pill';
+
+                pill.style.borderLeft = '4px solid ' + color;
+
+                pill.innerHTML = `<span style="color:${color};">${t}:</span> <span>${scores[t] || 0} / 7</span>`;
+
+                scoresHud.appendChild(pill);
+
+            });
+
+        }
+
+
+
+        // Role & Lock controls
+
+        const roleBadge = document.getElementById('playerRoleBadge');
+
+        if (roleBadge) {
+
+            if (_isPinner) {
+
+                roleBadge.innerHTML = locked 
+
+                    ? '<strong style="color:#2ed573;">🔒 Tipp eingeloggt!</strong>' 
+
+                    : '<strong style="color:#3742fa;">📍 Du setzt den Pin für dein Team</strong> (Klicke auf die Karte)';
+
+            } else {
+
+                roleBadge.innerHTML = '<strong>👀 Dein Partner setzt den Pin.</strong> Du siehst live, wohin er tippt!';
+
+            }
+
+        }
+
+
+
+        const lockControls = document.getElementById('playerLockControls');
+
+        if (lockControls) {
+
+            const hasGuess = kg.guesses && kg.guesses[_myTeam];
+
+            if (_isPinner) {
+
+                lockControls.innerHTML = `
+
+                    <button class="karte-lock-btn" onclick="lockMyGuess()" ${(!hasGuess || locked) ? 'disabled' : ''}>
+
+                        ${locked ? '🔒 Eingeloggt' : 'Tipp einloggen'}
+
+                    </button>
+
+                `;
+
+            } else {
+
+                lockControls.innerHTML = '';
+
+            }
+
+        }
+
+
+
+        // Map Markers
+
+        if (_playerMap) {
+
+            const myColor = (teams[_myTeam] || {}).color || '#3742fa';
+
+            const guess = kg.guesses && kg.guesses[_myTeam];
+
+
+
+            if (guess) {
+
+                if (!_teamMarker) {
+
+                    _teamMarker = L.marker([guess.lat, guess.lng], { icon: createColorPin(myColor, '') }).addTo(_playerMap);
+
+                } else {
+
+                    _teamMarker.setLatLng([guess.lat, guess.lng]);
+
+                }
+
+            } else if (_teamMarker) {
+
+                _playerMap.removeLayer(_teamMarker);
+
+                _teamMarker = null;
+
+            }
+
+
+
+            // Opposing team pin if revealed
+
+            const oppTeam = Object.keys(teams).find(team => team !== _myTeam);
+
+            const oppColor = (teams[oppTeam] || {}).color || '#e74c3c';
+
+            const oppGuess = kg.guesses && kg.guesses[oppTeam];
+
+            const oppRevealed = kg.revealed && kg.revealed[oppTeam];
+
+
+
+            if (oppRevealed && oppGuess) {
+
+                if (!_otherMarker) {
+
+                    _otherMarker = L.marker([oppGuess.lat, oppGuess.lng], { icon: createColorPin(oppColor, '') }).addTo(_playerMap);
+
+                } else {
+
+                    _otherMarker.setLatLng([oppGuess.lat, oppGuess.lng]);
+
+                }
+
+            } else if (_otherMarker) {
+
+                _playerMap.removeLayer(_otherMarker);
+
+                _otherMarker = null;
+
+            }
+
+
+
+            // Target marker if revealed
+
+            const targetRevealed = kg.revealed && kg.revealed.target;
+
+            if (targetRevealed && target.lat !== undefined && target.lng !== undefined) {
+
+                if (!_targetMarker) {
+
+                    _targetMarker = L.marker([target.lat, target.lng], {
+
+                        icon: L.divIcon({
+
+                            className: 'target-pin',
+
+                            html: '<div style="background:#2ed573; width:28px; height:28px; border-radius:50%; border:3px solid #fff; box-shadow:0 0 12px #2ed573; display:flex; align-items:center; justify-content:center; color:#000; font-weight:bold; font-size:15px;">🎯</div>',
+
+                            iconSize: [28, 28],
+
+                            iconAnchor: [14, 14]
+
+                        })
+
+                    }).addTo(_playerMap);
+
+                } else {
+
+                    _targetMarker.setLatLng([target.lat, target.lng]);
+
+                }
+
+            } else if (_targetMarker) {
+
+                _playerMap.removeLayer(_targetMarker);
+
+                _targetMarker = null;
+
+            }
+
+
+
+            // Distances and dashed lines
+
+            const showDistances = kg.revealed && kg.revealed.distances && target.lat !== undefined;
+
+            const distBar = document.getElementById('playerDistanceBar');
+
+            const bottomControls = document.getElementById('playerBottomControls');
+
+
+
+            if (showDistances) {
+
+                if (bottomControls) bottomControls.style.display = 'none';
+
+                if (distBar) {
+
+                    distBar.style.display = 'flex';
+
+                    distBar.innerHTML = '';
+
+                }
+
+
+
+                // Render lines and distance cards for both teams
+
+                Object.keys(teams).forEach((t, teamIndex) => {
+
+                    const tGuess = kg.guesses && kg.guesses[t];
+
+                    const tColor = (teams[t] || {}).color || '#fff';
+
+                    const isMyTeam = t === _myTeam;
+
+                    const isOtherRevealed = isMyTeam || (kg.revealed && kg.revealed[t]);
+
+
+
+                    if (tGuess && isOtherRevealed) {
+
+                        const dist = calcDistanceKm(tGuess.lat, tGuess.lng, target.lat, target.lng);
+
+                        if (distBar) {
+
+                            const card = document.createElement('div');
+
+                            card.className = 'karte-player-distance-card';
+
+                            card.style.borderLeft = '5px solid ' + tColor;
+
+                            card.innerHTML = `<span style="font-weight:bold;color:${tColor};">${t}</span><span><strong>${dist.toLocaleString('de-DE')} km</strong></span>`;
+
+                            distBar.appendChild(card);
+
+                        }
+
+
+
+                        // Dashed line on map
+
+                        if (teamIndex === 0) {
+
+                            if (!_line1) {
+
+                                _line1 = L.polyline([[tGuess.lat, tGuess.lng], [target.lat, target.lng]], {
+
+                                    color: tColor, weight: 3, dashArray: '5, 8'
+
+                                }).addTo(_playerMap);
+
+                            } else {
+
+                                _line1.setLatLngs([[tGuess.lat, tGuess.lng], [target.lat, target.lng]]);
+
+                            }
+
+                        } else {
+
+                            if (!_line2) {
+
+                                _line2 = L.polyline([[tGuess.lat, tGuess.lng], [target.lat, target.lng]], {
+
+                                    color: tColor, weight: 3, dashArray: '5, 8'
+
+                                }).addTo(_playerMap);
+
+                            } else {
+
+                                _line2.setLatLngs([[tGuess.lat, tGuess.lng], [target.lat, target.lng]]);
+
+                            }
+
+                        }
+
+                    }
+
+                });
+
+            } else {
+
+                if (bottomControls) bottomControls.style.display = 'flex';
+
+                if (distBar) distBar.style.display = 'none';
+
+                if (_line1) { _playerMap.removeLayer(_line1); _line1 = null; }
+
+                if (_line2) { _playerMap.removeLayer(_line2); _line2 = null; }
+
+            }
+
+        }
+
+    };
+
+</script>
+

@@ -1,0 +1,308 @@
+<style>
+    .bingo-admin-section { margin-bottom: 18px; }
+    .bingo-admin-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .bingo-admin-label { font-size: 0.85rem; color: #a4b0be; margin-bottom: 4px; display: block; }
+    .bingo-admin-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin-top: 8px;
+    }
+    .bingo-admin-cell {
+        padding: 8px 6px;
+        border-radius: 6px;
+        border: 1px solid #4a5676;
+        background: #1c202c;
+        color: #fff;
+        font-size: 0.9rem;
+        text-align: center;
+        font-family: inherit;
+        word-break: break-word;
+    }
+    .bingo-admin-cell.marked {
+        background: #19462e;
+        border-color: #2ed573;
+        color: #a4f5c5;
+    }
+    .bingo-timer-display {
+        font-size: 2.5rem;
+        font-weight: bold;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 2px;
+        padding: 10px 20px;
+        border-radius: 10px;
+        background: #1c202c;
+        border: 2px solid #3d4763;
+        display: inline-block;
+        min-width: 120px;
+        text-align: center;
+    }
+    .bingo-timer-display.running { border-color: #2ed573; color: #2ed573; }
+    .bingo-timer-display.stopped { border-color: #ff6b6b; color: #ff6b6b; }
+    .bingo-admin-scores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+    .bingo-score-row {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 5px 14px; border-radius: 6px; background: #1c202c;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    }
+    .bingo-score-btn {
+        padding: 3px 9px; font-size: 0.85rem; font-weight: bold;
+        cursor: pointer; border-radius: 4px; border: 1px solid #4a5676;
+        background: #2b3348; color: #fff;
+    }
+    .bingo-score-btn:hover { background: #3e4a68; }
+    .bingo-player-select {
+        padding: 7px 10px; min-width: 200px; background: #1c202c;
+        border: 1px solid #4a5676; border-radius: 6px; color: #fff;
+    }
+    .bingo-words-overview { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 12px; }
+    .bingo-words-card {
+        padding: 12px;
+        border: 1px solid #3d4763;
+        border-radius: 8px;
+        background: #1c202c;
+    }
+    .bingo-words-card h4 { margin: 0 0 10px; font-size: 0.95rem; color: #a4b0be; }
+    .bingo-phase-badge {
+        display: inline-block; padding: 3px 10px;
+        border-radius: 12px; font-size: 0.8rem; font-weight: bold;
+        background: #2f364a; color: #a4b0be;
+    }
+    .bingo-phase-badge.idle { background: #2f364a; color: #a4b0be; }
+    .bingo-phase-badge.preparing { background: #2a3d1f; color: #6fcf97; }
+    .bingo-phase-badge.playing { background: #1f2a45; color: #5ba3f5; }
+    .bingo-topic-display {
+        font-size: 1.1rem; font-weight: bold; padding: 10px 16px;
+        border-radius: 8px; background: #1c202c;
+        border-left: 4px solid #f39c12; color: #f39c12;
+        margin: 8px 0;
+        word-break: break-word;
+    }
+    @media (max-width: 700px) {
+        .bingo-words-overview { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="card">
+    <h2>Referat Bingo</h2>
+    <div id="bingoPhaseBadgeRow" class="bingo-admin-row" style="margin-bottom: 12px;">
+        <span id="bingoPhaseLabel" class="bingo-phase-badge idle">Bereit</span>
+        <span id="bingoReferatPlayerLabel" style="font-size: 0.9rem; color: #a4b0be;"></span>
+    </div>
+    <div id="bingoScores" class="bingo-admin-scores"></div>
+    <div id="bingoSetupSection" class="bingo-admin-section">
+        <div class="bingo-admin-row">
+            <div>
+                <label class="bingo-admin-label">Thema aus Vorlagen wählen:</label>
+                <select id="bingoTopicSelect" class="bingo-player-select" onchange="onSelectBingoTopic(this.value)" style="min-width: 280px; margin-bottom: 6px;">
+                    <option value="">-- Thema auswählen --</option>
+                </select>
+            </div>
+            <div>
+                <label class="bingo-admin-label">Thema des Referats (oder manuell eingeben):</label>
+                <input type="text" id="bingoTopicInput" placeholder="z.B. Die Römer" maxlength="200"
+                    style="padding: 7px 10px; min-width: 280px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-size: 0.95rem; font-family: inherit;">
+            </div>
+        </div>
+        <div class="bingo-admin-row">
+            <div>
+                <label class="bingo-admin-label">Wer hält das Referat?</label>
+                <select id="bingoPlayerSelect" class="bingo-player-select">
+                    <option value="">-- Spieler auswählen --</option>
+                </select>
+            </div>
+            <div>
+                <label class="bingo-admin-label">Timer (Sekunden, Standard: 120):</label>
+                <input type="number" id="bingoTimerInput" value="120" min="30" max="600" step="10"
+                    style="padding: 7px 10px; width: 100px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-size: 0.95rem; font-family: inherit;">
+            </div>
+        </div>
+        <button onclick="startBingo()" style="background: #2ed573; color: #000; font-weight: bold;">Runde starten</button>
+    </div>
+    <div id="bingoActiveSection" style="display: none;">
+        <div id="bingoTopicDisplay" class="bingo-topic-display"></div>
+        <div class="bingo-admin-row" style="gap: 16px; margin: 14px 0;">
+            <div id="bingoTimerDisplay" class="bingo-timer-display">02:00</div>
+            <div style="display:flex; flex-direction:column; gap: 8px;">
+                <div class="bingo-admin-row">
+                    <button onclick="startBingoTimer()">&#9654; Start</button>
+                    <button onclick="stopBingoTimer()">&#9646;&#9646; Pause</button>
+                    <button onclick="resetBingoTimer()">&#8634; Reset</button>
+                </div>
+                <div class="bingo-admin-row">
+                    <span class="bingo-admin-label" style="margin:0;">Neue Dauer (Sek.):</span>
+                    <input type="number" id="bingoNewDurationInput" value="120" min="30" max="600" step="10"
+                        style="padding: 5px 8px; width: 80px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-family: inherit;">
+                    <button onclick="setBingoTimerDuration()" style="padding: 5px 12px; font-size: 0.85rem;">Setzen</button>
+                </div>
+            </div>
+        </div>
+        <div class="bingo-admin-row" style="margin: 10px 0; gap: 10px;">
+            <button id="bingoStartPlayingBtn" onclick="startBingoPlaying()" style="display:none; background: #3742fa; color: #fff; font-weight: bold;">&#9654; Referat starten</button>
+            <button id="bingoRevealTopicBtn" onclick="revealBingoTopic()" style="display:none; background: #f39c12; color: #000; font-weight: bold;">&#127919; Thema aufdecken</button>
+            <button onclick="resetBingo()" style="background: #c0392b; color: #fff;">Spiel zurücksetzen</button>
+        </div>
+        <div id="bingoWordsOverview" class="bingo-words-overview"></div>
+    </div>
+</div>
+
+<script>
+    window.onSelectBingoTopic = function(val) {
+        const inp = document.getElementById('bingoTopicInput');
+        if (inp && val) inp.value = val;
+    };
+
+    function populateBingoTopics(topics) {
+        const select = document.getElementById('bingoTopicSelect');
+        if (!select || !Array.isArray(topics)) return;
+        const cur = select.value;
+        select.innerHTML = '<option value="">-- Thema auswählen --</option>';
+        topics.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t;
+            opt.innerText = t;
+            if (t === cur) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    if (typeof socket !== 'undefined') {
+        socket.off('receiveReferatTopics');
+        socket.on('receiveReferatTopics', (topics) => {
+            populateBingoTopics(topics);
+        });
+        socket.emit('getReferatTopics');
+    }
+    // Also fetch via HTTP endpoint as fallback
+    fetch('/bingo.json').then(r => r.json()).then(topics => {
+        populateBingoTopics(topics);
+    }).catch(() => {});
+
+    window.startBingo = function() {
+        const topic = document.getElementById('bingoTopicInput').value.trim();
+        const referatPlayerId = document.getElementById('bingoPlayerSelect').value;
+        const timerDuration = parseInt(document.getElementById('bingoTimerInput').value) || 120;
+        if (!topic) { alert('Bitte ein Thema eingeben!'); return; };
+        if (!referatPlayerId) { alert('Bitte einen Spieler auswählen!'); return; };
+        if (typeof socket !== 'undefined') socket.emit('adminStartBingo', { topic, referatPlayerId, timerDuration });
+    };
+    window.startBingoPlaying = function() { if (typeof socket !== 'undefined') socket.emit('adminBingoStartPlaying'); };
+    window.revealBingoTopic = function() { if (typeof socket !== 'undefined') socket.emit('adminRevealBingoTopic'); };
+    window.startBingoTimer = function() { if (typeof socket !== 'undefined') socket.emit('adminStartBingoTimer'); };
+    window.stopBingoTimer = function() { if (typeof socket !== 'undefined') socket.emit('adminStopBingoTimer'); };
+    window.resetBingoTimer = function() { if (typeof socket !== 'undefined') socket.emit('adminResetBingoTimer'); };
+    window.setBingoTimerDuration = function() {
+        const val = parseInt(document.getElementById('bingoNewDurationInput').value) || 120;
+        if (typeof socket !== 'undefined') socket.emit('adminSetBingoTimerDuration', val);
+    };
+    window.addBingoPoint = function(team, amount) { if (typeof socket !== 'undefined') socket.emit('adminAddBingoPoint', { team, amount }); };
+    window.resetBingo = function() { if (confirm('Referat Bingo zurücksetzen?') && typeof socket !== 'undefined') socket.emit('adminResetBingo'); };
+
+    function formatTime(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
+
+    window.onModuleStateUpdate = function(state) {
+        const bingo = state.referatBingo || {};
+        const players = state.players || {};
+        const teams = state.teams || {};
+        const phase = bingo.phase || 'IDLE';
+
+        const phaseLabel = document.getElementById('bingoPhaseLabel');
+        if (phaseLabel) {
+            phaseLabel.className = 'bingo-phase-badge ' + phase.toLowerCase();
+            phaseLabel.innerText = { IDLE: 'Bereit', PREPARING: 'Vorbereitung', PLAYING: 'Läuft' }[phase] || phase;
+        }
+        const referatLabel = document.getElementById('bingoReferatPlayerLabel');
+        if (referatLabel) {
+            const rp = bingo.referatPlayerId ? players[bingo.referatPlayerId] : null;
+            referatLabel.innerText = rp ? ('Referent: ' + rp.name + ' (' + rp.team + ')') : '';
+        }
+        if (phase === 'IDLE') {
+            const sel = document.getElementById('bingoPlayerSelect');
+            if (sel) {
+                const cur = sel.value;
+                sel.innerHTML = '<option value="">-- Spieler auswählen --</option>';
+                Object.values(players).forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id; opt.innerText = p.name + ' (' + p.team + ')';
+                    if (p.id === cur) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+            }
+        }
+
+        const scoresEl = document.getElementById('bingoScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = bingo.scores || {};
+            Object.keys(teams).forEach(teamName => {
+                const color = (teams[teamName] || {}).color || '#fff';
+                const row = document.createElement('div');
+                row.className = 'bingo-score-row';
+                row.style.borderLeft = '5px solid ' + color;
+                row.innerHTML = '<span style="font-weight:bold;color:' + color + '">' + teamName + ': ' + (scores[teamName] || 0) + ' Pkt.</span>';
+                const minus = document.createElement('button'); minus.className = 'bingo-score-btn'; minus.innerText = '-1';
+                minus.onclick = () => addBingoPoint(teamName, -1);
+                const plus = document.createElement('button'); plus.className = 'bingo-score-btn'; plus.innerText = '+1';
+                plus.onclick = () => addBingoPoint(teamName, 1);
+                row.appendChild(minus); row.appendChild(plus);
+                scoresEl.appendChild(row);
+            });
+        }
+
+        const setup = document.getElementById('bingoSetupSection');
+        const active = document.getElementById('bingoActiveSection');
+        if (phase === 'IDLE') {
+            if (setup) setup.style.display = 'block';
+            if (active) active.style.display = 'none';
+            return;
+        }
+        if (setup) setup.style.display = 'none';
+        if (active) active.style.display = 'block';
+
+        const topicEl = document.getElementById('bingoTopicDisplay');
+        if (topicEl) topicEl.innerText = 'Thema: ' + (bingo.topic || '');
+
+        const startBtn = document.getElementById('bingoStartPlayingBtn');
+        if (startBtn) startBtn.style.display = (phase === 'PREPARING') ? 'inline-block' : 'none';
+        const revealBtn = document.getElementById('bingoRevealTopicBtn');
+        if (revealBtn) {
+            revealBtn.style.display = (phase === 'PLAYING') ? 'inline-block' : 'none';
+            revealBtn.innerText = bingo.topicRevealed ? 'Thema verdecken' : 'Thema aufdecken';
+        }
+
+        const timer = bingo.timer || { duration: 120, remaining: 120, running: false };
+        const timerDisplay = document.getElementById('bingoTimerDisplay');
+        if (timerDisplay) {
+            timerDisplay.innerText = formatTime(timer.remaining);
+            timerDisplay.className = 'bingo-timer-display' + (timer.running ? ' running' : (timer.remaining === 0 ? ' stopped' : ''));
+        }
+        const newDurInput = document.getElementById('bingoNewDurationInput');
+        if (newDurInput && document.activeElement !== newDurInput) newDurInput.value = timer.duration;
+
+        const overview = document.getElementById('bingoWordsOverview');
+        if (!overview) return;
+        overview.innerHTML = '';
+
+        const partnerPlayerId = Object.keys(players).find(pid => pid !== bingo.referatPlayerId && players[pid] && players[pid].team === bingo.referatTeam);
+        const partnerPlayer = partnerPlayerId ? players[partnerPlayerId] : null;
+
+        const partnerCard = document.createElement('div');
+        partnerCard.className = 'bingo-words-card';
+        partnerCard.innerHTML = '<h4>Begriffe von ' + (partnerPlayer ? partnerPlayer.name : 'Teampartner') + ' (' + (bingo.referatTeam || '?') + ')</h4>';
+        const pg = document.createElement('div'); pg.className = 'bingo-admin-grid';
+        const pw = bingo.partnerWords || Array(9).fill('');
+        const pm = bingo.partnerMarked || Array(9).fill(false);
+        pw.forEach((w, i) => { const c = document.createElement('div'); c.className = 'bingo-admin-cell' + (pm[i] ? ' marked' : ''); c.innerText = w || '–'; pg.appendChild(c); });
+        partnerCard.appendChild(pg); overview.appendChild(partnerCard);
+
+        const opposingCard = document.createElement('div');
+        opposingCard.className = 'bingo-words-card';
+        opposingCard.innerHTML = '<h4>Begriffe von ' + (bingo.opposingTeam || '?') + ' (Gegner)</h4>';
+        const og = document.createElement('div'); og.className = 'bingo-admin-grid';
+        const ow = bingo.opposingWords || Array(9).fill('');
+        const om = bingo.opposingMarked || Array(9).fill(false);
+        ow.forEach((w, i) => { const c = document.createElement('div'); c.className = 'bingo-admin-cell' + (om[i] ? ' marked' : ''); c.innerText = w || '–'; og.appendChild(c); });
+        opposingCard.appendChild(og); overview.appendChild(opposingCard);
+    };
+</script>
+

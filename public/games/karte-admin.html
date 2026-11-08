@@ -1,0 +1,634 @@
+<style>
+
+    .karte-admin-section { margin-bottom: 16px; }
+
+    .karte-admin-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+
+    .karte-admin-label { font-size: 0.85rem; color: #a4b0be; margin-bottom: 4px; display: block; }
+
+    .karte-admin-scores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+
+    .karte-score-row {
+
+        display: inline-flex; align-items: center; gap: 8px;
+
+        padding: 5px 14px; border-radius: 6px; background: #1c202c;
+
+        box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+
+    }
+
+    .karte-score-btn {
+
+        padding: 3px 9px; font-size: 0.85rem; font-weight: bold;
+
+        cursor: pointer; border-radius: 4px; border: 1px solid #4a5676;
+
+        background: #2b3348; color: #fff;
+
+    }
+
+    .karte-score-btn:hover { background: #3e4a68; }
+
+    .karte-select {
+
+        padding: 7px 10px; min-width: 240px; background: #1c202c;
+
+        border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-family: inherit;
+
+    }
+
+    .karte-target-badge {
+
+        font-size: 1.3rem; font-weight: bold; padding: 10px 18px;
+
+        border-radius: 8px; background: #1c202c;
+
+        border-left: 5px solid #2ed573; color: #2ed573;
+
+        display: inline-block; margin-bottom: 10px;
+
+    }
+
+    .karte-status-box {
+
+        padding: 10px 14px; border-radius: 8px; background: #171922; border: 1px solid #303646;
+
+        display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px;
+
+    }
+
+    .karte-reveal-btn {
+
+        padding: 8px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; border: none;
+
+        transition: all 0.15s;
+
+    }
+
+    .karte-reveal-btn.off { background: #34495e; color: #ecf0f1; }
+
+    .karte-reveal-btn.on { background: #27ae60; color: #fff; }
+
+</style>
+
+
+
+<div class="card">
+
+    <h2>Wo ist das auf der Karte?</h2>
+
+    <div id="karteScores" class="karte-admin-scores"></div>
+
+
+
+    <div class="karte-admin-section">
+
+        <div class="karte-admin-row">
+
+            <div>
+
+                <label class="karte-admin-label">Ort aus Vorlagen wählen:</label>
+
+                <select id="kartePlaceSelect" class="karte-select" onchange="onSelectKartePlace(this.value)">
+
+                    <option value="">-- Ort auswählen --</option>
+
+                </select>
+
+            </div>
+
+            <div>
+
+                <label class="karte-admin-label">Ort Name:</label>
+
+                <input type="text" id="karteTargetName" placeholder="z.B. Eiffelturm" maxlength="100"
+
+                    style="padding: 7px 10px; min-width: 180px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-size: 0.95rem;">
+
+            </div>
+
+            <div>
+
+                <label class="karte-admin-label">Breitengrad (Lat):</label>
+
+                <input type="number" step="any" id="karteTargetLat" placeholder="48.8584" style="padding: 7px 10px; width: 100px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff;">
+
+            </div>
+
+            <div>
+
+                <label class="karte-admin-label">Längengrad (Lng):</label>
+
+                <input type="number" step="any" id="karteTargetLng" placeholder="2.2945" style="padding: 7px 10px; width: 100px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff;">
+
+            </div>
+
+        </div>
+
+
+
+        <div class="karte-admin-row">
+
+            <div>
+
+                <label class="karte-admin-label">Pin-Setzer Team 1:</label>
+
+                <select id="kartePinnerTeam1" class="karte-select" onchange="saveKartePinners()">
+
+                    <option value="">-- Spieler wählen --</option>
+
+                </select>
+
+            </div>
+
+            <div>
+
+                <label class="karte-admin-label">Pin-Setzer Team 2:</label>
+
+                <select id="kartePinnerTeam2" class="karte-select" onchange="saveKartePinners()">
+
+                    <option value="">-- Spieler wählen --</option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="karte-admin-row" style="margin-top: 10px; gap: 8px;">
+
+            <button onclick="startKarteRound()" style="background: #2ed573; color: #000; font-weight: bold; font-size: 1rem; padding: 8px 16px;">▶ Runde starten</button>
+
+            <button onclick="nextKartePlaceSequential()" style="background: #3742fa; color: #fff; font-weight: bold;">➡️ Nächster Ort (der Reihe nach)</button>
+
+            <button onclick="resetKarteGame()" style="background: #c0392b; color: #fff;">Spiel zurücksetzen</button>
+
+        </div>
+
+    </div>
+
+
+
+    <div id="karteActiveSection" style="display: none; margin-top: 14px;">
+
+        <span class="karte-admin-label">Aktueller Suchort:</span>
+
+        <div id="karteCurrentTargetDisplay" class="karte-target-badge">-</div>
+
+
+
+        <div class="karte-status-box">
+
+            <div><strong>Status Team 1:</strong> <span id="karteStatusT1">Wartet...</span></div>
+
+            <div><strong>Status Team 2:</strong> <span id="karteStatusT2">Wartet...</span></div>
+
+        </div>
+
+
+
+        <div class="karte-admin-row" style="gap: 12px; margin-top: 10px;">
+
+            <button id="revealBtnT1" class="karte-reveal-btn off" onclick="toggleRevealPin('Team 1')">📌 Pin Team 1 aufdecken</button>
+
+            <button id="revealBtnT2" class="karte-reveal-btn off" onclick="toggleRevealPin('Team 2')">📌 Pin Team 2 aufdecken</button>
+
+            <button id="revealBtnTarget" class="karte-reveal-btn off" onclick="toggleRevealPin('target')">🎯 Richtigen Ort aufdecken</button>
+
+            <button id="revealBtnDistances" class="karte-reveal-btn off" onclick="toggleRevealPin('distances')">📏 Entfernungen für alle aufdecken</button>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<script>
+
+    let _allKartePlaces = [];
+
+
+
+    function populateKartePlaces(places) {
+
+        if (!Array.isArray(places)) return;
+
+        _allKartePlaces = places;
+
+        const sel = document.getElementById('kartePlaceSelect');
+
+        if (!sel) return;
+
+        const cur = sel.value;
+
+        sel.innerHTML = '<option value="">-- Ort auswählen --</option>';
+
+        places.forEach((p, idx) => {
+
+            const opt = document.createElement('option');
+
+            opt.value = idx;
+
+            opt.innerText = p.name;
+
+            if (String(idx) === cur) opt.selected = true;
+
+            sel.appendChild(opt);
+
+        });
+
+    }
+
+
+
+    window.onSelectKartePlace = function(idx) {
+
+        if (idx === '' || !_allKartePlaces[idx]) return;
+
+        const p = _allKartePlaces[idx];
+
+        document.getElementById('karteTargetName').value = p.name || '';
+
+        document.getElementById('karteTargetLat').value = p.lat !== undefined ? p.lat : '';
+
+        document.getElementById('karteTargetLng').value = p.lng !== undefined ? p.lng : '';
+
+    };
+
+
+
+    window.nextKartePlaceSequential = function() {
+
+        if (!_allKartePlaces.length) return;
+
+        const sel = document.getElementById('kartePlaceSelect');
+
+        let nextIdx = 0;
+
+        if (sel && sel.value !== '') {
+
+            nextIdx = (parseInt(sel.value) + 1) % _allKartePlaces.length;
+
+        }
+
+        if (sel) sel.value = nextIdx;
+
+        onSelectKartePlace(nextIdx);
+
+        startKarteRound();
+
+    };
+
+
+
+    if (typeof socket !== 'undefined') {
+
+        socket.off('receiveKartePlaces');
+
+        socket.on('receiveKartePlaces', populateKartePlaces);
+
+        socket.emit('getKartePlaces');
+
+    }
+
+    fetch('/karte.json').then(r => r.json()).then(populateKartePlaces).catch(() => {});
+
+
+
+    window.saveKartePinners = function() {
+
+        const p1 = document.getElementById('kartePinnerTeam1').value || null;
+
+        const p2 = document.getElementById('kartePinnerTeam2').value || null;
+
+        if (typeof socket !== 'undefined') {
+
+            socket.emit('adminSetKartePinners', { 'Team 1': p1, 'Team 2': p2 });
+
+        }
+
+    };
+
+
+
+    window.startKarteRound = function() {
+
+        const name = (document.getElementById('karteTargetName').value || '').trim();
+
+        const lat = parseFloat(document.getElementById('karteTargetLat').value);
+
+        const lng = parseFloat(document.getElementById('karteTargetLng').value);
+        const selectedPlace = _allKartePlaces[document.getElementById('kartePlaceSelect').value];
+
+
+
+        if (!name || isNaN(lat) || isNaN(lng)) {
+
+            alert('Bitte einen gültigen Ort mit Lat/Lng auswählen oder eingeben!');
+
+            return;
+
+        }
+
+
+
+        const p1 = document.getElementById('kartePinnerTeam1').value || null;
+
+        const p2 = document.getElementById('kartePinnerTeam2').value || null;
+
+
+
+        if (typeof socket !== 'undefined') {
+
+            socket.emit('adminStartKarteRound', {
+
+                target: { name, lat, lng, answer: selectedPlace ? (selectedPlace.answer || '') : '' },
+
+                pinners: { 'Team 1': p1, 'Team 2': p2 }
+
+            });
+
+        }
+
+    };
+
+
+
+    window.toggleRevealPin = function(who) {
+
+        if (typeof socket !== 'undefined') {
+
+            socket.emit('adminRevealKartePin', who);
+
+        }
+
+    };
+
+
+
+    window.addKartePoint = function(team, amount) {
+
+        if (typeof socket !== 'undefined') {
+
+            socket.emit('adminAddKartePoint', { team, amount });
+
+        }
+
+    };
+
+
+
+    window.resetKarteGame = function() {
+
+        if (confirm('Kartenspiel wirklich zurücksetzen?') && typeof socket !== 'undefined') {
+
+            socket.emit('adminResetKarteGame');
+
+        }
+
+    };
+
+
+
+    window.onModuleStateUpdate = function(state) {
+
+        const kg = state.karteGame || {};
+
+        const teams = state.teams || {};
+
+        const players = state.players || {};
+        const teamNames = Object.keys(state.teams || {});
+        const firstTeam = teamNames[0] || 'Team 1';
+        const secondTeam = teamNames[1] || 'Team 2';
+
+        const phase = kg.phase || 'IDLE';
+
+
+
+        // Scores (x / 7)
+
+        const scoresEl = document.getElementById('karteScores');
+
+        if (scoresEl) {
+
+            scoresEl.innerHTML = '';
+
+            const scores = kg.scores || {};
+
+            Object.keys(teams).forEach(t => {
+
+                const color = (teams[t] || {}).color || '#fff';
+
+                const row = document.createElement('div');
+
+                row.className = 'karte-score-row';
+
+                row.style.borderLeft = '5px solid ' + color;
+
+                row.innerHTML = '<span style="font-weight:bold;color:' + color + '">' + t + ': ' + (scores[t] || 0) + ' / 7</span>';
+
+
+
+                const minus = document.createElement('button');
+
+                minus.className = 'karte-score-btn';
+
+                minus.innerText = '-1';
+
+                minus.onclick = () => addKartePoint(t, -1);
+
+
+
+                const plus = document.createElement('button');
+
+                plus.className = 'karte-score-btn';
+
+                plus.innerText = '+1';
+
+                plus.onclick = () => addKartePoint(t, 1);
+
+
+
+                row.appendChild(minus);
+
+                row.appendChild(plus);
+
+                scoresEl.appendChild(row);
+
+            });
+
+        }
+
+
+
+        // Pinner selects
+
+        const s1 = document.getElementById('kartePinnerTeam1');
+
+        const s2 = document.getElementById('kartePinnerTeam2');
+
+        const pinners = kg.pinners || {};
+
+
+
+        if (s1) {
+
+            const cur1 = s1.value || pinners[firstTeam] || pinners['Team 1'];
+
+            s1.innerHTML = '<option value="">-- Spieler wählen --</option>';
+
+            Object.values(players).filter(p => p.team === firstTeam).forEach(p => {
+
+                const opt = document.createElement('option');
+
+                opt.value = p.id;
+
+                opt.innerText = p.name;
+
+                if (p.id === cur1) opt.selected = true;
+
+                s1.appendChild(opt);
+
+            });
+
+        }
+
+
+
+        if (s2) {
+
+            const cur2 = s2.value || pinners[secondTeam] || pinners['Team 2'];
+
+            s2.innerHTML = '<option value="">-- Spieler wählen --</option>';
+
+            Object.values(players).filter(p => p.team === secondTeam).forEach(p => {
+
+                const opt = document.createElement('option');
+
+                opt.value = p.id;
+
+                opt.innerText = p.name;
+
+                if (p.id === cur2) opt.selected = true;
+
+                s2.appendChild(opt);
+
+            });
+
+        }
+
+
+
+        const activeSec = document.getElementById('karteActiveSection');
+
+        if (activeSec) {
+
+            activeSec.style.display = phase === 'PLAYING' ? 'block' : 'none';
+
+        }
+
+
+
+        if (phase === 'PLAYING') {
+
+            const targetEl = document.getElementById('karteCurrentTargetDisplay');
+
+            if (targetEl && kg.target) targetEl.innerText = kg.target.name || '-';
+
+
+
+            // Status locked / guess
+
+            const st1 = document.getElementById('karteStatusT1');
+
+            const st2 = document.getElementById('karteStatusT2');
+
+            const locked = kg.locked || {};
+
+            const guesses = kg.guesses || {};
+
+
+
+            if (st1) {
+
+                if (locked[firstTeam]) st1.innerHTML = '<span style="color:#2ed573;font-weight:bold;">🔒 Eingeloggt</span>';
+
+                else if (guesses[firstTeam]) st1.innerHTML = '<span style="color:#f1c40f;">📍 Pin gesetzt (noch nicht eingeloggt)</span>';
+
+                else st1.innerHTML = '<span style="color:#a4b0be;">Noch kein Pin gesetzt</span>';
+
+            }
+
+
+
+            if (st2) {
+
+                if (locked[secondTeam]) st2.innerHTML = '<span style="color:#2ed573;font-weight:bold;">🔒 Eingeloggt</span>';
+
+                else if (guesses[secondTeam]) st2.innerHTML = '<span style="color:#f1c40f;">📍 Pin gesetzt (noch nicht eingeloggt)</span>';
+
+                else st2.innerHTML = '<span style="color:#a4b0be;">Noch kein Pin gesetzt</span>';
+
+            }
+
+
+
+            // Reveal buttons state
+
+            const rev = kg.revealed || {};
+
+            const btn1 = document.getElementById('revealBtnT1');
+
+            const btn2 = document.getElementById('revealBtnT2');
+
+            const btnTar = document.getElementById('revealBtnTarget');
+
+
+
+            if (btn1) {
+
+                btn1.className = 'karte-reveal-btn ' + (rev[firstTeam] ? 'on' : 'off');
+
+                btn1.innerText = rev[firstTeam] ? `✓ Pin ${firstTeam} sichtbar` : `📌 Pin ${firstTeam} aufdecken`;
+
+            }
+
+            if (btn2) {
+
+                btn2.className = 'karte-reveal-btn ' + (rev[secondTeam] ? 'on' : 'off');
+
+                btn2.innerText = rev[secondTeam] ? `✓ Pin ${secondTeam} sichtbar` : `📌 Pin ${secondTeam} aufdecken`;
+
+            }
+
+            if (btnTar) {
+
+                btnTar.className = 'karte-reveal-btn ' + (rev['target'] ? 'on' : 'off');
+
+                btnTar.innerText = rev['target'] ? '✓ Zielort sichtbar' : '🎯 Richtigen Ort aufdecken';
+
+            }
+
+            const btnDist = document.getElementById('revealBtnDistances');
+
+            if (btnDist) {
+
+                btnDist.className = 'karte-reveal-btn ' + (rev['distances'] ? 'on' : 'off');
+
+                btnDist.innerText = rev['distances'] ? '✓ Entfernungen sichtbar' : '📏 Entfernungen für alle aufdecken';
+
+            }
+
+        }
+
+    };
+
+</script>
+
+
+

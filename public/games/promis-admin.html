@@ -1,0 +1,93 @@
+<style>
+    .promi-admin-actions,
+    .promi-admin-scores {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0;
+    }
+
+</style>
+
+<div class="card">
+    <h2>Promis raten</h2>
+    <p id="promiAdminStatus">Noch kein Bild ausgewählt.</p>
+    <div class="promi-admin-actions">
+        <button onclick="nextPromiImage()">Nächstes Bild</button>
+        <button onclick="lockPromiBuzzer()">Buzzer locken</button>
+        <button onclick="resetPromiBuzzer()">Buzzer zurücksetzen</button>
+        <button onclick="revealPromiName()">Promi-Namen aufdecken</button>
+    </div>
+    <div id="promiAdminScores" class="promi-admin-scores"></div>
+    <div id="promiAdminWinner"></div>
+</div>
+
+<script>
+    let lastPromiAdminBuzzerWinner = null;
+
+    function playPromiAdminBuzzerSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(880, context.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.18, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.22);
+    }
+
+    window.nextPromiImage = function() {
+        socket.emit('adminNextPromiImage');
+    };
+
+    window.lockPromiBuzzer = function() {
+        socket.emit('adminLockPromiBuzzer');
+    };
+
+    window.resetPromiBuzzer = function() {
+        socket.emit('adminResetPromiBuzzer');
+    };
+
+    window.revealPromiName = function() {
+        socket.emit('adminRevealPromiName');
+    };
+
+    window.onModuleStateUpdate = function(state) {
+        const promi = state.promiGame || {};
+        const status = document.getElementById('promiAdminStatus');
+        const scores = document.getElementById('promiAdminScores');
+        const winner = document.getElementById('promiAdminWinner');
+        if (!status || !scores || !winner) return;
+        if (promi.buzzerWinner && promi.buzzerWinner !== lastPromiAdminBuzzerWinner) {
+            playPromiAdminBuzzerSound();
+            lastPromiAdminBuzzerWinner = promi.buzzerWinner;
+        }
+        if (!promi.buzzerWinner) lastPromiAdminBuzzerWinner = null;
+
+        status.innerText = promi.buzzerWinner
+            ? `Gebuzzert: ${promi.buzzerWinner}`
+            : promi.buzzerLocked ? 'Buzzer ist gesperrt.' : 'Buzzer ist offen.';
+        scores.innerHTML = '';
+        Object.entries(promi.scores || {}).forEach(([team, points]) => {
+            const score = document.createElement('div');
+            score.innerHTML = `<b>${team}: ${points} / 5</b>`;
+            const minus = document.createElement('button');
+            minus.innerText = '-1';
+            minus.onclick = () => socket.emit('adminAddPromiPoint', { team, amount: -1 });
+            const plus = document.createElement('button');
+            plus.innerText = '+1';
+            plus.onclick = () => socket.emit('adminAddPromiPoint', { team, amount: 1 });
+            score.appendChild(minus);
+            score.appendChild(plus);
+            scores.appendChild(score);
+        });
+
+        winner.innerText = promi.winnerTeam ? `${promi.winnerTeam} gewinnt mit 5 Punkten.` : '';
+    };
+</script>

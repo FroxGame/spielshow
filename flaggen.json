@@ -1,0 +1,545 @@
+{
+  "rounds": [
+    {
+      "id": "singapur",
+      "country": "Singapur",
+      "difficulty": "Mittel",
+      "targetFlag": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;display:block;border-radius:10px;'><rect width='300' height='100' fill='#ed2939'/><rect y='100' width='300' height='100' fill='#ffffff'/><path d='M 68 25 A 35 35 0 1 0 68 85 A 27 27 0 1 1 68 25 Z' fill='#ffffff'/><g fill='#ffffff'><polygon points='84,36 86,41 91,41 87,44 89,49 84,46 79,49 81,44 77,41 82,41'/><polygon points='100,45 102,50 107,50 103,53 105,58 100,55 95,58 97,53 93,50 98,50'/><polygon points='94,66 96,71 101,71 97,74 99,79 94,76 89,79 91,74 87,71 92,71'/><polygon points='75,70 77,75 82,75 78,78 80,83 75,80 70,83 72,78 68,75 73,75'/><polygon points='69,49 71,54 76,54 72,57 74,62 69,59 64,62 66,57 62,54 67,54'/></g></svg>",
+      "elements": [
+        {
+          "id": "stripe-red-half",
+          "name": "Rote obere Hälfte",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 50,
+          "color": "#ed2939",
+          "svg": "<svg viewBox='0 0 300 100' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='100' fill='#ed2939' rx='6'/></svg>"
+        },
+        {
+          "id": "stripe-white-half",
+          "name": "Weiße untere Hälfte",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 50,
+          "color": "#ffffff",
+          "svg": "<svg viewBox='0 0 300 100' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='100' fill='#ffffff' rx='6'/></svg>"
+        },
+        {
+          "id": "symbol-singapore",
+          "name": "Singapur Halbmond & 5 Sterne",
+          "type": "symbol",
+          "defaultWidth": 38,
+          "defaultHeight": 44,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><path d='M 48 20 A 40 40 0 1 0 48 100 A 31 31 0 1 1 48 20 Z' fill='#ffffff'/><g fill='#ffffff'><polygon points='67,34 69,40 75,40 70,44 72,50 67,46 62,50 64,44 59,40 65,40'/><polygon points='86,45 88,51 94,51 89,55 91,61 86,57 81,61 83,55 78,51 84,51'/><polygon points='79,70 81,76 87,76 82,80 84,86 79,82 74,86 76,80 71,76 77,76'/><polygon points='56,74 58,80 64,80 59,84 61,90 56,86 51,90 53,84 48,80 54,80'/><polygon points='49,49 51,55 57,55 52,59 54,65 49,61 44,65 46,59 41,55 47,55'/></g></svg>"
+        },
+        {
+          "id": "stripe-red-bar",
+          "name": "Roter Querstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ed2939",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ed2939' rx='6'/></svg>"
+        },
+        {
+          "id": "stripe-yellow-bar",
+          "name": "Gelber Querstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ffd166",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ffd166' rx='6'/></svg>"
+        },
+        {
+          "id": "stripe-blue-bar",
+          "name": "Blauer Querstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#0055a4",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#0055a4' rx='6'/></svg>"
+        },
+        {
+          "id": "stripe-red-vert",
+          "name": "Roter Längsstreifen",
+          "type": "stripe-vertical",
+          "defaultWidth": 33.33,
+          "defaultHeight": 100,
+          "color": "#ed2939",
+          "svg": "<svg viewBox='0 0 70 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='70' height='200' fill='#ed2939' rx='6'/></svg>"
+        },
+        {
+          "id": "stripe-blue-vert",
+          "name": "Blauer Längsstreifen",
+          "type": "stripe-vertical",
+          "defaultWidth": 33.33,
+          "defaultHeight": 100,
+          "color": "#0055a4",
+          "svg": "<svg viewBox='0 0 70 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='70' height='200' fill='#0055a4' rx='6'/></svg>"
+        },
+        {
+          "id": "symbol-mauritania",
+          "name": "Mauritanien Mondsichel",
+          "type": "symbol",
+          "defaultWidth": 36,
+          "defaultHeight": 36,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><path d='M 18 45 A 46 46 0 0 0 102 45 A 38 38 0 0 1 18 45 Z' fill='#ffd166'/><polygon points='60,20 63,28 72,28 65,33 68,41 60,37 52,41 55,33 48,28 57,28' fill='#ffd166'/></svg>"
+        },
+        {
+          "id": "symbol-turkey",
+          "name": "Türkei Mondsichel & Stern",
+          "type": "symbol",
+          "defaultWidth": 34,
+          "defaultHeight": 34,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><path d='M 55 25 A 36 36 0 1 0 55 95 A 28 28 0 1 1 55 25 Z' fill='#ffffff'/><polygon points='75,48 77,54 83,54 78,58 80,64 75,60 70,64 72,58 67,54 73,54' fill='#ffffff'/></svg>"
+        },
+        {
+          "id": "symbol-fiji",
+          "name": "Fidschi Wappenschild",
+          "type": "symbol",
+          "defaultWidth": 28,
+          "defaultHeight": 36,
+          "svg": "<svg viewBox='0 0 100 130' style='width:100%;height:100%;'><path d='M 10 10 L 90 10 L 90 75 C 90 105 50 125 50 125 C 50 125 10 105 10 75 Z' fill='#ffffff' stroke='#c0392b' stroke-width='4'/><line x1='10' y1='40' x2='90' y2='40' stroke='#c0392b' stroke-width='5'/><line x1='50' y1='40' x2='50' y2='120' stroke='#c0392b' stroke-width='5'/><rect x='10' y='10' width='80' height='30' fill='#c0392b'/><circle cx='32' cy='62' r='8' fill='#ffd166'/><circle cx='68' cy='62' r='8' fill='#2ecc71'/><circle cx='32' cy='95' r='8' fill='#3498db'/><circle cx='68' cy='95' r='8' fill='#ffd166'/></svg>"
+        },
+        {
+          "id": "stripe-white-bar",
+          "name": "Weißer Querstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ffffff",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ffffff' rx='6'/></svg>"
+        }
+      ]
+    },
+    {
+      "id": "spanien",
+      "country": "Spanien",
+      "difficulty": "Leicht",
+      "targetFlag": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;display:block;border-radius:10px;'><rect width='300' height='50' fill='#aa151b'/><rect y='50' width='300' height='100' fill='#f1bf00'/><rect y='150' width='300' height='50' fill='#aa151b'/><g transform='translate(65, 62) scale(0.48)'><rect x='20' y='20' width='60' height='65' fill='#aa151b' rx='4' stroke='#ffd700' stroke-width='4'/><rect x='15' y='5' width='70' height='18' fill='#ffd700' rx='3'/><rect x='3' y='15' width='10' height='75' fill='#e0e0e0' rx='2'/><rect x='87' y='15' width='10' height='75' fill='#e0e0e0' rx='2'/><circle cx='50' cy='52' r='14' fill='#f1bf00'/></g></svg>",
+      "elements": [
+        {
+          "id": "stripe-red-quarter-top",
+          "name": "Roter Streifen oben (1/4)",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 25,
+          "color": "#aa151b",
+          "svg": "<svg viewBox='0 0 300 50' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='50' fill='#aa151b' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-yellow-half",
+          "name": "Gelber Mittelstreifen (1/2)",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 50,
+          "color": "#f1bf00",
+          "svg": "<svg viewBox='0 0 300 100' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='100' fill='#f1bf00' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-red-quarter-bottom",
+          "name": "Roter Streifen unten (1/4)",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 25,
+          "color": "#aa151b",
+          "svg": "<svg viewBox='0 0 300 50' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='50' fill='#aa151b' rx='5'/></svg>"
+        },
+        {
+          "id": "symbol-spain-crest",
+          "name": "Spanisches Wappen",
+          "type": "symbol",
+          "defaultWidth": 26,
+          "defaultHeight": 38,
+          "svg": "<svg viewBox='0 0 100 120' style='width:100%;height:100%;'><rect x='20' y='25' width='60' height='65' fill='#aa151b' rx='6' stroke='#ffd700' stroke-width='4'/><rect x='15' y='8' width='70' height='18' fill='#ffd700' rx='4'/><circle cx='50' cy='17' r='6' fill='#c0392b'/><rect x='3' y='20' width='10' height='75' fill='#e0e0e0' rx='2'/><rect x='87' y='20' width='10' height='75' fill='#e0e0e0' rx='2'/><circle cx='50' cy='57' r='16' fill='#f1bf00'/><rect x='44' y='51' width='12' height='12' fill='#aa151b'/></svg>"
+        },
+        {
+          "id": "stripe-black-quarter",
+          "name": "Schwarzer Streifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 25,
+          "color": "#000000",
+          "svg": "<svg viewBox='0 0 300 50' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='50' fill='#000000' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-blue-third",
+          "name": "Blauer Streifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#0055a4",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#0055a4' rx='5'/></svg>"
+        },
+        {
+          "id": "symbol-mauritania-2",
+          "name": "Gelbe Mondsichel",
+          "type": "symbol",
+          "defaultWidth": 34,
+          "defaultHeight": 34,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><path d='M 18 45 A 46 46 0 0 0 102 45 A 38 38 0 0 1 18 45 Z' fill='#ffd166'/><polygon points='60,20 63,28 72,28 65,33 68,41 60,37 52,41 55,33 48,28 57,28' fill='#ffd166'/></svg>"
+        },
+        {
+          "id": "symbol-eagle",
+          "name": "Schwarzer Adler",
+          "type": "symbol",
+          "defaultWidth": 30,
+          "defaultHeight": 36,
+          "svg": "<svg viewBox='0 0 100 120' style='width:100%;height:100%;'><path d='M 50 15 C 40 25 25 35 15 55 C 25 50 35 50 40 60 C 25 65 15 80 20 95 C 35 85 45 80 50 85 C 55 80 65 85 80 95 C 85 80 75 65 60 60 C 65 50 75 50 85 55 C 75 35 60 25 50 15 Z' fill='#000000'/></svg>"
+        }
+      ]
+    },
+    {
+      "id": "deutschland",
+      "country": "Deutschland",
+      "difficulty": "Sehr leicht",
+      "targetFlag": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;display:block;border-radius:10px;'><rect width='300' height='66.6' fill='#000000'/><rect y='66.6' width='300' height='66.6' fill='#dd0000'/><rect y='133.2' width='300' height='66.8' fill='#ffce00'/></svg>",
+      "elements": [
+        {
+          "id": "stripe-black-third",
+          "name": "Schwarzer Drittelstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#000000",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#000000' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-red-third",
+          "name": "Roter Drittelstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#dd0000",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#dd0000' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-gold-third",
+          "name": "Goldgelber Drittelstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ffce00",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ffce00' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-blue-third-de",
+          "name": "Blauer Streifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#0055a4",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#0055a4' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-white-third-de",
+          "name": "Weißer Streifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ffffff",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ffffff' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-red-vert-de",
+          "name": "Roter Längsstreifen",
+          "type": "stripe-vertical",
+          "defaultWidth": 33.33,
+          "defaultHeight": 100,
+          "color": "#dd0000",
+          "svg": "<svg viewBox='0 0 70 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='70' height='200' fill='#dd0000' rx='5'/></svg>"
+        },
+        {
+          "id": "symbol-eagle-de",
+          "name": "Bundesadler",
+          "type": "symbol",
+          "defaultWidth": 28,
+          "defaultHeight": 34,
+          "svg": "<svg viewBox='0 0 100 120' style='width:100%;height:100%;'><path d='M 50 15 C 40 25 25 35 15 55 C 25 50 35 50 40 60 C 25 65 15 80 20 95 C 35 85 45 80 50 85 C 55 80 65 85 80 95 C 85 80 75 65 60 60 C 65 50 75 50 85 55 C 75 35 60 25 50 15 Z' fill='#000000'/></svg>"
+        }
+      ]
+    },
+    {
+      "id": "fidschi",
+      "country": "Fidschi",
+      "difficulty": "Schwer",
+      "targetFlag": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;display:block;border-radius:10px;'><rect width='300' height='200' fill='#68bfe5'/><g transform='scale(0.8)'><rect width='160' height='100' fill='#012169'/><path d='M 0 0 L 160 100 M 160 0 L 0 100' stroke='#ffffff' stroke-width='16'/><path d='M 0 0 L 160 100 M 160 0 L 0 100' stroke='#c8102e' stroke-width='8'/><path d='M 80 0 L 80 100 M 0 50 L 160 50' stroke='#ffffff' stroke-width='24'/><path d='M 80 0 L 80 100 M 0 50 L 160 50' stroke='#c8102e' stroke-width='14'/></g><g transform='translate(200, 50) scale(0.65)'><path d='M 10 10 L 90 10 L 90 75 C 90 105 50 125 50 125 C 50 125 10 105 10 75 Z' fill='#ffffff' stroke='#c0392b' stroke-width='4'/><line x1='10' y1='40' x2='90' y2='40' stroke='#c0392b' stroke-width='5'/><line x1='50' y1='40' x2='50' y2='120' stroke='#c0392b' stroke-width='5'/><rect x='10' y='10' width='80' height='30' fill='#c0392b'/><circle cx='32' cy='62' r='8' fill='#ffd166'/><circle cx='68' cy='62' r='8' fill='#2ecc71'/><circle cx='32' cy='95' r='8' fill='#3498db'/><circle cx='68' cy='95' r='8' fill='#ffd166'/></g></svg>",
+      "elements": [
+        {
+          "id": "field-lightblue",
+          "name": "Hellblaues Flaggenfeld",
+          "type": "field",
+          "defaultWidth": 100,
+          "defaultHeight": 100,
+          "color": "#68bfe5",
+          "svg": "<svg viewBox='0 0 300 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='200' fill='#68bfe5' rx='8'/></svg>"
+        },
+        {
+          "id": "canton-unionjack",
+          "name": "Union Jack Kanto (GB)",
+          "type": "canton",
+          "defaultWidth": 46,
+          "defaultHeight": 44,
+          "svg": "<svg viewBox='0 0 160 100' style='width:100%;height:100%;'><rect width='160' height='100' fill='#012169' rx='4'/><path d='M 0 0 L 160 100 M 160 0 L 0 100' stroke='#ffffff' stroke-width='16'/><path d='M 0 0 L 160 100 M 160 0 L 0 100' stroke='#c8102e' stroke-width='8'/><path d='M 80 0 L 80 100 M 0 50 L 160 50' stroke='#ffffff' stroke-width='24'/><path d='M 80 0 L 80 100 M 0 50 L 160 50' stroke='#c8102e' stroke-width='14'/></svg>"
+        },
+        {
+          "id": "symbol-fiji-crest",
+          "name": "Fidschi Wappenschild",
+          "type": "symbol",
+          "defaultWidth": 30,
+          "defaultHeight": 40,
+          "svg": "<svg viewBox='0 0 100 130' style='width:100%;height:100%;'><path d='M 10 10 L 90 10 L 90 75 C 90 105 50 125 50 125 C 50 125 10 105 10 75 Z' fill='#ffffff' stroke='#c0392b' stroke-width='4'/><line x1='10' y1='40' x2='90' y2='40' stroke='#c0392b' stroke-width='5'/><line x1='50' y1='40' x2='50' y2='120' stroke='#c0392b' stroke-width='5'/><rect x='10' y='10' width='80' height='30' fill='#c0392b'/><circle cx='32' cy='62' r='8' fill='#ffd166'/><circle cx='68' cy='62' r='8' fill='#2ecc71'/><circle cx='32' cy='95' r='8' fill='#3498db'/><circle cx='68' cy='95' r='8' fill='#ffd166'/></svg>"
+        },
+        {
+          "id": "field-darkblue",
+          "name": "Dunkelblaues Flaggenfeld",
+          "type": "field",
+          "defaultWidth": 100,
+          "defaultHeight": 100,
+          "color": "#012169",
+          "svg": "<svg viewBox='0 0 300 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='200' fill='#012169' rx='8'/></svg>"
+        },
+        {
+          "id": "symbol-southerncross",
+          "name": "Kreuz des Südens (Sterne)",
+          "type": "symbol",
+          "defaultWidth": 30,
+          "defaultHeight": 45,
+          "svg": "<svg viewBox='0 0 100 140' style='width:100%;height:100%;fill:#ffffff;'><polygon points='50,15 52,21 58,21 53,25 55,31 50,27 45,31 47,25 42,21 48,21'/><polygon points='25,60 27,66 33,66 28,70 30,76 25,72 20,76 22,70 17,66 23,66'/><polygon points='75,55 77,61 83,61 78,65 80,71 75,67 70,71 72,65 67,61 73,61'/><polygon points='50,110 52,116 58,116 53,120 55,126 50,122 45,126 47,120 42,116 48,116'/></svg>"
+        },
+        {
+          "id": "stripe-red-bar-fiji",
+          "name": "Roter Querstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ed2939",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ed2939' rx='6'/></svg>"
+        }
+      ]
+    },
+    {
+      "id": "japan",
+      "country": "Japan",
+      "difficulty": "Sehr leicht",
+      "targetFlag": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;display:block;border-radius:10px;'><rect width='300' height='200' fill='#ffffff'/><circle cx='150' cy='100' r='58' fill='#bc002d'/></svg>",
+      "elements": [
+        {
+          "id": "field-white",
+          "name": "Weißes Flaggenfeld",
+          "type": "field",
+          "defaultWidth": 100,
+          "defaultHeight": 100,
+          "color": "#ffffff",
+          "svg": "<svg viewBox='0 0 300 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='200' fill='#ffffff' rx='8'/></svg>"
+        },
+        {
+          "id": "circle-red",
+          "name": "Roter Sonnenkreis",
+          "type": "symbol",
+          "defaultWidth": 38,
+          "defaultHeight": 58,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><circle cx='60' cy='60' r='50' fill='#bc002d'/></svg>"
+        },
+        {
+          "id": "circle-yellow",
+          "name": "Gelber Kreis (Palau)",
+          "type": "symbol",
+          "defaultWidth": 38,
+          "defaultHeight": 58,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><circle cx='60' cy='60' r='50' fill='#ffce00'/></svg>"
+        },
+        {
+          "id": "circle-blue",
+          "name": "Blauer Kreis",
+          "type": "symbol",
+          "defaultWidth": 38,
+          "defaultHeight": 58,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><circle cx='60' cy='60' r='50' fill='#0055a4'/></svg>"
+        },
+        {
+          "id": "field-green-bd",
+          "name": "Grünes Flaggenfeld",
+          "type": "field",
+          "defaultWidth": 100,
+          "defaultHeight": 100,
+          "color": "#006a4e",
+          "svg": "<svg viewBox='0 0 300 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='200' fill='#006a4e' rx='8'/></svg>"
+        },
+        {
+          "id": "stripe-red-vert-jp",
+          "name": "Roter Längsstreifen",
+          "type": "stripe-vertical",
+          "defaultWidth": 33.33,
+          "defaultHeight": 100,
+          "color": "#bc002d",
+          "svg": "<svg viewBox='0 0 70 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='70' height='200' fill='#bc002d' rx='6'/></svg>"
+        }
+      ]
+    },
+    {
+      "id": "frankreich",
+      "country": "Frankreich",
+      "difficulty": "Leicht",
+      "targetFlag": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;display:block;border-radius:10px;'><rect width='100' height='200' fill='#0055a4'/><rect x='100' width='100' height='200' fill='#ffffff'/><rect x='200' width='100' height='200' fill='#ef4135'/></svg>",
+      "elements": [
+        {
+          "id": "stripe-blue-vert-fr",
+          "name": "Blauer Längsstreifen (1/3)",
+          "type": "stripe-vertical",
+          "defaultWidth": 33.33,
+          "defaultHeight": 100,
+          "color": "#0055a4",
+          "svg": "<svg viewBox='0 0 70 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='70' height='200' fill='#0055a4' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-white-vert-fr",
+          "name": "Weißer Längsstreifen (1/3)",
+          "type": "stripe-vertical",
+          "defaultWidth": 33.33,
+          "defaultHeight": 100,
+          "color": "#ffffff",
+          "svg": "<svg viewBox='0 0 70 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='70' height='200' fill='#ffffff' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-red-vert-fr",
+          "name": "Roter Längsstreifen (1/3)",
+          "type": "stripe-vertical",
+          "defaultWidth": 33.33,
+          "defaultHeight": 100,
+          "color": "#ef4135",
+          "svg": "<svg viewBox='0 0 70 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='70' height='200' fill='#ef4135' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-green-vert-it",
+          "name": "Grüner Längsstreifen",
+          "type": "stripe-vertical",
+          "defaultWidth": 33.33,
+          "defaultHeight": 100,
+          "color": "#009246",
+          "svg": "<svg viewBox='0 0 70 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='70' height='200' fill='#009246' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-blue-horiz-fr",
+          "name": "Blauer Querstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#0055a4",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#0055a4' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-red-horiz-fr",
+          "name": "Roter Querstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ef4135",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ef4135' rx='5'/></svg>"
+        }
+      ]
+    },
+    {
+      "id": "schweiz",
+      "country": "Schweiz",
+      "difficulty": "Sehr leicht",
+      "targetFlag": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;display:block;border-radius:10px;'><rect width='300' height='200' fill='#da291c'/><rect x='130' y='45' width='40' height='110' fill='#ffffff'/><rect x='95' y='80' width='110' height='40' fill='#ffffff'/></svg>",
+      "elements": [
+        {
+          "id": "field-red-ch",
+          "name": "Rotes Flaggenfeld",
+          "type": "field",
+          "defaultWidth": 100,
+          "defaultHeight": 100,
+          "color": "#da291c",
+          "svg": "<svg viewBox='0 0 300 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='200' fill='#da291c' rx='8'/></svg>"
+        },
+        {
+          "id": "cross-white-ch",
+          "name": "Weißes Schweizer Kreuz",
+          "type": "symbol",
+          "defaultWidth": 38,
+          "defaultHeight": 58,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><rect x='46' y='18' width='28' height='84' fill='#ffffff'/><rect x='18' y='46' width='84' height='28' fill='#ffffff'/></svg>"
+        },
+        {
+          "id": "cross-red-rk",
+          "name": "Rotes Kreuz auf Weiß (Rotes Kreuz)",
+          "type": "symbol",
+          "defaultWidth": 38,
+          "defaultHeight": 58,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><rect width='120' height='120' fill='#ffffff' rx='6'/><rect x='46' y='18' width='28' height='84' fill='#da291c'/><rect x='18' y='46' width='84' height='28' fill='#da291c'/></svg>"
+        },
+        {
+          "id": "field-white-ch",
+          "name": "Weißes Flaggenfeld",
+          "type": "field",
+          "defaultWidth": 100,
+          "defaultHeight": 100,
+          "color": "#ffffff",
+          "svg": "<svg viewBox='0 0 300 200' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='200' fill='#ffffff' rx='8'/></svg>"
+        },
+        {
+          "id": "cross-yellow-nordic",
+          "name": "Gelbes Skandinavisches Kreuz",
+          "type": "symbol",
+          "defaultWidth": 80,
+          "defaultHeight": 80,
+          "svg": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;'><rect x='80' width='36' height='200' fill='#ffd166'/><rect y='82' width='300' height='36' fill='#ffd166'/></svg>"
+        }
+      ]
+    },
+    {
+      "id": "argentinien",
+      "country": "Argentinien",
+      "difficulty": "Mittel",
+      "targetFlag": "<svg viewBox='0 0 300 200' style='width:100%;height:100%;display:block;border-radius:10px;'><rect width='300' height='66.6' fill='#74acdf'/><rect y='66.6' width='300' height='66.6' fill='#ffffff'/><rect y='133.2' width='300' height='66.8' fill='#74acdf'/><g transform='translate(150, 100) scale(0.6)'><circle cx='0' cy='0' r='24' fill='#f6b40e' stroke='#853406' stroke-width='2'/><circle cx='-8' cy='-6' r='3' fill='#853406'/><circle cx='8' cy='-6' r='3' fill='#853406'/><path d='M -8 8 Q 0 15 8 8' stroke='#853406' stroke-width='2' fill='none'/><g stroke='#f6b40e' stroke-width='4' stroke-linecap='round'><line x1='0' y1='-26' x2='0' y2='-48'/><line x1='0' y1='26' x2='0' y2='48'/><line x1='-26' y1='0' x2='-48' y2='0'/><line x1='26' y1='0' x2='48' y2='0'/><line x1='-18' y1='-18' x2='-35' y2='-35'/><line x1='18' y1='-18' x2='35' y2='-35'/><line x1='-18' y1='18' x2='-35' y2='35'/><line x1='18' y1='18' x2='35' y2='35'/></g></g></svg>",
+      "elements": [
+        {
+          "id": "stripe-lightblue-third",
+          "name": "Hellblauer Drittelstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#74acdf",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#74acdf' rx='5'/></svg>"
+        },
+        {
+          "id": "stripe-white-third-ar",
+          "name": "Weißer Drittelstreifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ffffff",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ffffff' rx='5'/></svg>"
+        },
+        {
+          "id": "symbol-sun-may",
+          "name": "Mai-Sonne (Sol de Mayo)",
+          "type": "symbol",
+          "defaultWidth": 30,
+          "defaultHeight": 45,
+          "svg": "<svg viewBox='0 0 120 120' style='width:100%;height:100%;'><g transform='translate(60,60)'><circle cx='0' cy='0' r='22' fill='#f6b40e' stroke='#853406' stroke-width='2'/><circle cx='-7' cy='-5' r='3' fill='#853406'/><circle cx='7' cy='-5' r='3' fill='#853406'/><path d='M -7 7 Q 0 13 7 7' stroke='#853406' stroke-width='2' fill='none'/><g stroke='#f6b40e' stroke-width='4' stroke-linecap='round'><line x1='0' y1='-25' x2='0' y2='-45'/><line x1='0' y1='25' x2='0' y2='45'/><line x1='-25' y1='0' x2='-45' y2='0'/><line x1='25' y1='0' x2='45' y2='0'/><line x1='-17' y1='-17' x2='-33' y2='-33'/><line x1='17' y1='-17' x2='33' y2='-33'/><line x1='-17' y1='17' x2='-33' y2='33'/><line x1='17' y1='17' x2='33' y2='33'/></g></g></svg>"
+        },
+        {
+          "id": "stripe-yellow-third-ar",
+          "name": "Gelber Streifen",
+          "type": "stripe-horizontal",
+          "defaultWidth": 100,
+          "defaultHeight": 33.33,
+          "color": "#ffd166",
+          "svg": "<svg viewBox='0 0 300 70' preserveAspectRatio='none' style='width:100%;height:100%;'><rect width='300' height='70' fill='#ffd166' rx='5'/></svg>"
+        },
+        {
+          "id": "symbol-star-white-ar",
+          "name": "Weißer Stern",
+          "type": "symbol",
+          "defaultWidth": 24,
+          "defaultHeight": 32,
+          "svg": "<svg viewBox='0 0 100 100' style='width:100%;height:100%;fill:#ffffff;'><polygon points='50,15 58,35 79,35 62,48 68,69 50,56 32,69 38,48 21,35 42,35'/></svg>"
+        }
+      ]
+    }
+  ]
+}
+

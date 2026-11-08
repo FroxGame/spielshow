@@ -1,0 +1,445 @@
+<style>
+    .flaggen-admin-wrap { max-width: 1200px; margin: 0 auto; box-sizing: border-box; }
+    .flaggen-admin-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
+    .flaggen-admin-label { font-size: 0.85rem; color: #a4b0be; margin-bottom: 4px; display: block; }
+    .flaggen-admin-scores { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .flaggen-score-box {
+        display: inline-flex; align-items: center; gap: 8px;
+        padding: 6px 14px; border-radius: 6px; background: #1c202c;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 1rem;
+    }
+    .flaggen-score-btn {
+        padding: 3px 10px; font-size: 0.85rem; font-weight: bold;
+        cursor: pointer; border-radius: 4px; border: 1px solid #4a5676;
+        background: #2b3348; color: #fff;
+    }
+    .flaggen-score-btn:hover { background: #3e4a68; }
+    .flaggen-select, .flaggen-input {
+        padding: 8px 12px; background: #1c202c; border: 1px solid #4a5676;
+        border-radius: 6px; color: #fff; font-family: inherit; font-size: 0.95rem; min-width: 180px;
+    }
+    .flaggen-btn {
+        padding: 9px 18px; border-radius: 6px; font-weight: bold;
+        font-size: 0.95rem; cursor: pointer; border: none; transition: filter 0.15s;
+    }
+    .flaggen-btn:hover { filter: brightness(1.15); }
+
+    .flaggen-preview-section {
+        display: grid;
+        grid-template-columns: 1fr 220px 1fr;
+        gap: 16px;
+        align-items: start;
+        margin-top: 18px;
+    }
+    .flaggen-board-card {
+        background: #171922;
+        border: 1px solid #303646;
+        border-radius: 10px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .flaggen-board-card h3 {
+        margin: 0 0 8px 0;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+    }
+    .flaggen-canvas-preview {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        background: #1a1e29;
+        border: 4px solid #ffffff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    .flaggen-placed-piece {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+    }
+    .flaggen-target-box {
+        background: #171922;
+        border: 1px solid #303646;
+        border-radius: 10px;
+        padding: 12px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .flaggen-target-flag-wrap {
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        border: 3px solid #ffd166;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-top: 8px;
+        background: #111;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    @media (max-width: 900px) {
+        .flaggen-preview-section { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="flaggen-admin-wrap card">
+    <h2>🚩 Flaggen bauen (Admin)</h2>
+    <div id="flaggenAdminScores" class="flaggen-admin-scores"></div>
+
+    <div class="flaggen-admin-row">
+        <div>
+            <label class="flaggen-admin-label">Land-Vorlage wählen:</label>
+            <select id="flaggenPresetSelect" class="flaggen-select" onchange="onSelectFlaggenPreset(this.value)">
+                <option value="">-- Land wählen --</option>
+            </select>
+        </div>
+        <div>
+            <label class="flaggen-admin-label">Land (Aufgabe):</label>
+            <input type="text" id="flaggenCountryInput" class="flaggen-input" placeholder="z.B. Singapur" style="min-width: 180px;">
+        </div>
+        <div>
+            <label class="flaggen-admin-label">Bauzeit (Sek., 0 = unbegrenzt):</label>
+            <input type="number" id="flaggenDurationInput" class="flaggen-input" value="180" style="width: 120px;" min="0" max="999">
+        </div>
+    </div>
+
+    <div class="flaggen-admin-row">
+        <div>
+            <label class="flaggen-admin-label">Baumeister Team 1:</label>
+            <select id="flaggenBuilderTeam1" class="flaggen-select" onchange="onSaveBuilders()">
+                <option value="">-- Alle im Team dürfen bauen --</option>
+            </select>
+        </div>
+        <div>
+            <label class="flaggen-admin-label">Baumeister Team 2:</label>
+            <select id="flaggenBuilderTeam2" class="flaggen-select" onchange="onSaveBuilders()">
+                <option value="">-- Alle im Team dürfen bauen --</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="flaggen-admin-row" style="margin-top: 14px; gap: 10px;">
+        <button id="flaggenBtnStart" class="flaggen-btn" style="background: #2ed573; color: #000;" onclick="startFlaggenRound()">▶ Runde starten</button>
+        <button id="flaggenBtnLock" class="flaggen-btn" style="background: #e67e22; color: #fff;" onclick="toggleFlaggenLock()">⏹ Bauen beenden / sperren</button>
+        <button id="flaggenBtnReveal" class="flaggen-btn" style="background: #3742fa; color: #fff;" onclick="revealFlaggen()">👁️ Flaggen aufdecken</button>
+        <button id="flaggenBtnReset" class="flaggen-btn" style="background: #747d8c; color: #fff;" onclick="resetFlaggen()">🔄 Zurücksetzen</button>
+    </div>
+
+    <div id="flaggenAdminStatus" style="margin-top: 12px; font-weight: bold; font-size: 1.05rem; color: #ffd166;"></div>
+
+    <div class="flaggen-preview-section">
+        <!-- Team 1 Live Board -->
+        <div class="flaggen-board-card">
+            <h3 id="flaggenTitleT1" style="color: #9b59b6;">Team 1 <span id="flaggenBuilderTagT1" style="font-size: 0.8rem; color: #a4b0be; font-weight: normal;"></span></h3>
+            <div id="flaggenCanvasT1" class="flaggen-canvas-preview"></div>
+        </div>
+
+        <!-- Target Flag Center -->
+        <div class="flaggen-target-box">
+            <h4 style="margin: 0; font-size: 0.95rem; color: #a4b0be; text-transform: uppercase;">Original-Flagge</h4>
+            <div id="flaggenTargetName" style="font-size: 1.15rem; font-weight: bold; margin-top: 4px;">-</div>
+            <div id="flaggenTargetFlag" class="flaggen-target-flag-wrap"></div>
+        </div>
+
+        <!-- Team 2 Live Board -->
+        <div class="flaggen-board-card">
+            <h3 id="flaggenTitleT2" style="color: #2ecc71;">Team 2 <span id="flaggenBuilderTagT2" style="font-size: 0.8rem; color: #a4b0be; font-weight: normal;"></span></h3>
+            <div id="flaggenCanvasT2" class="flaggen-canvas-preview"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let flaggenData = null;
+    let flaggenLatestState = null;
+
+    function loadFlaggenJson() {
+        fetch('/flaggen.json')
+            .then(res => res.json())
+            .then(data => {
+                flaggenData = data;
+                populatePresets(data.rounds || []);
+            })
+            .catch(err => console.error("Konnte flaggen.json nicht laden:", err));
+    }
+    window.loadFlaggenJson = loadFlaggenJson;
+
+    function populatePresets(rounds) {
+        const select = document.getElementById('flaggenPresetSelect');
+        if (!select) return;
+        const curVal = select.value;
+        select.innerHTML = '<option value="">-- Land wählen --</option>';
+        rounds.forEach(r => {
+            const opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = `${r.country} (${r.difficulty || 'Mittel'})`;
+            select.appendChild(opt);
+        });
+        if (curVal && rounds.some(r => r.id === curVal)) {
+            select.value = curVal;
+        } else if (rounds.length > 0) {
+            select.value = rounds[0].id;
+            onSelectFlaggenPreset(rounds[0].id);
+        }
+    }
+
+    function onSelectFlaggenPreset(presetId) {
+        if (!flaggenData || !flaggenData.rounds) return;
+        const round = flaggenData.rounds.find(r => r.id === presetId);
+        if (round) {
+            const countryInput = document.getElementById('flaggenCountryInput');
+            if (countryInput) countryInput.value = round.country;
+            const targetName = document.getElementById('flaggenTargetName');
+            if (targetName) targetName.textContent = round.country;
+            const targetEl = document.getElementById('flaggenTargetFlag');
+            if (targetEl) targetEl.innerHTML = round.targetFlag || '<div style="color:#777;padding:30px;">Keine Vorschau</div>';
+        }
+    }
+    window.onSelectFlaggenPreset = onSelectFlaggenPreset;
+
+    function populateBuilderSelects(players, teams, currentBuilders) {
+        const s1 = document.getElementById('flaggenBuilderTeam1');
+        const s2 = document.getElementById('flaggenBuilderTeam2');
+        if (!s1 || !s2) return;
+
+        const teamNames = Object.keys(teams || {});
+        const t1Name = teamNames[0] || 'Team 1';
+        const t2Name = teamNames[1] || 'Team 2';
+
+        const curB1 = (currentBuilders && currentBuilders[t1Name]) || s1.value || '';
+        const curB2 = (currentBuilders && currentBuilders[t2Name]) || s2.value || '';
+
+        const p1List = Object.values(players || {}).filter(p => p.team === t1Name);
+        const p2List = Object.values(players || {}).filter(p => p.team === t2Name);
+
+        const key1 = p1List.map(p => p.id + ':' + p.name).join('|');
+        const key2 = p2List.map(p => p.id + ':' + p.name).join('|');
+
+        if (s1.dataset.playersKey !== key1) {
+            s1.innerHTML = '<option value="">-- Alle im Team dürfen bauen --</option>';
+            p1List.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                s1.appendChild(opt);
+            });
+            s1.dataset.playersKey = key1;
+        }
+        if (s1.value !== curB1) s1.value = curB1;
+
+        if (s2.dataset.playersKey !== key2) {
+            s2.innerHTML = '<option value="">-- Alle im Team dürfen bauen --</option>';
+            p2List.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                s2.appendChild(opt);
+            });
+            s2.dataset.playersKey = key2;
+        }
+        if (s2.value !== curB2) s2.value = curB2;
+    }
+
+    function onSaveBuilders() {
+        if (!flaggenLatestState) return;
+        const teams = flaggenLatestState.teams || {};
+        const teamNames = Object.keys(teams);
+        const t1 = teamNames[0] || 'Team 1';
+        const t2 = teamNames[1] || 'Team 2';
+
+        const b1 = (document.getElementById('flaggenBuilderTeam1') && document.getElementById('flaggenBuilderTeam1').value) || null;
+        const b2 = (document.getElementById('flaggenBuilderTeam2') && document.getElementById('flaggenBuilderTeam2').value) || null;
+
+        const builders = {};
+        if (b1) builders[t1] = b1;
+        if (b2) builders[t2] = b2;
+
+        socket.emit('adminSetFlaggenBuilders', { builders });
+    }
+    window.onSaveBuilders = onSaveBuilders;
+
+    function startFlaggenRound() {
+        console.log("startFlaggenRound ausgeführt!");
+        let country = (document.getElementById('flaggenCountryInput') && document.getElementById('flaggenCountryInput').value.trim()) || '';
+        const presetSelect = document.getElementById('flaggenPresetSelect');
+        const presetId = presetSelect ? presetSelect.value : '';
+        const duration = parseInt(document.getElementById('flaggenDurationInput').value, 10) || 0;
+
+        let elements = [];
+        let targetFlag = null;
+
+        if (flaggenData && flaggenData.rounds && flaggenData.rounds.length > 0) {
+            let found = null;
+            if (presetId) {
+                found = flaggenData.rounds.find(r => r.id === presetId);
+            }
+            if (!found && country) {
+                found = flaggenData.rounds.find(r => r.country.toLowerCase() === country.toLowerCase());
+            }
+            if (!found) {
+                found = flaggenData.rounds[0];
+            }
+            if (found) {
+                if (!country) country = found.country;
+                elements = found.elements || [];
+                targetFlag = found.targetFlag || null;
+            }
+        }
+
+        const teams = (flaggenLatestState && flaggenLatestState.teams) || {};
+        const teamNames = Object.keys(teams);
+        const t1 = teamNames[0] || 'Team 1';
+        const t2 = teamNames[1] || 'Team 2';
+
+        const b1 = (document.getElementById('flaggenBuilderTeam1') && document.getElementById('flaggenBuilderTeam1').value) || null;
+        const b2 = (document.getElementById('flaggenBuilderTeam2') && document.getElementById('flaggenBuilderTeam2').value) || null;
+
+        const builders = {};
+        if (b1) builders[t1] = b1;
+        if (b2) builders[t2] = b2;
+
+        console.log("Sende adminStartFlaggenRound:", { country: country || 'Singapur', duration, elementsCount: elements.length, builders });
+
+        socket.emit('adminStartFlaggenRound', {
+            country: country || 'Singapur',
+            duration,
+            elements,
+            targetFlag,
+            builders
+        });
+    }
+    window.startFlaggenRound = startFlaggenRound;
+
+    function toggleFlaggenLock() {
+        socket.emit('adminToggleFlaggenLock');
+    }
+    window.toggleFlaggenLock = toggleFlaggenLock;
+
+    function revealFlaggen() {
+        socket.emit('adminRevealFlaggen');
+    }
+    window.revealFlaggen = revealFlaggen;
+
+    function resetFlaggen() {
+        socket.emit('adminResetFlaggen');
+    }
+    window.resetFlaggen = resetFlaggen;
+
+    function renderPlacedPieces(container, placements, elements) {
+        if (!container) return;
+        container.innerHTML = '';
+        if (!placements || !placements.length) return;
+
+        const elemMap = new Map();
+        (elements || []).forEach(e => elemMap.set(e.id, e));
+
+        // Sort by zIndex
+        const sorted = [...placements].sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+        sorted.forEach(p => {
+            const def = elemMap.get(p.elementId);
+            if (!def) return;
+
+            const el = document.createElement('div');
+            el.className = 'flaggen-placed-piece';
+            el.style.left = (p.x * 100) + '%';
+            el.style.top = (p.y * 100) + '%';
+            el.style.width = (def.defaultWidth || 40) + '%';
+            el.style.height = (def.defaultHeight || 40) + '%';
+            el.style.zIndex = p.zIndex || 1;
+            el.style.transform = `translate(-50%, -50%) rotate(${p.rotation || 0}deg)`;
+            el.innerHTML = def.svg || `<div style="width:100%;height:100%;background:${def.color || '#fff'};border-radius:4px;"></div>`;
+            container.appendChild(el);
+        });
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        flaggenLatestState = state;
+        const game = state.flaggenGame || {};
+        const teams = state.teams || {};
+        const teamNames = Object.keys(teams);
+        const t1 = teamNames[0] || 'Team 1';
+        const t2 = teamNames[1] || 'Team 2';
+        const players = state.players || {};
+
+        // Update scores
+        const scoresEl = document.getElementById('flaggenAdminScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = game.scores || {};
+            teamNames.forEach(team => {
+                const col = (teams[team] || {}).color || '#fff';
+                const box = document.createElement('div');
+                box.className = 'flaggen-score-box';
+                box.style.borderLeft = '4px solid ' + col;
+                box.innerHTML = `
+                    <span style="color:${col}; font-weight:bold;">${team}:</span>
+                    <span style="font-weight:bold; font-size:1.1rem;">${scores[team] || 0} Pkt.</span>
+                    <button class="flaggen-score-btn" onclick="socket.emit('adminAddFlaggenPoint', { team: '${team.replace(/'/g, "\\'")}', amount: 1 })">+1</button>
+                    <button class="flaggen-score-btn" onclick="socket.emit('adminAddFlaggenPoint', { team: '${team.replace(/'/g, "\\'")}', amount: -1 })">-1</button>
+                `;
+                scoresEl.appendChild(box);
+            });
+        }
+
+        // Status
+        const statusEl = document.getElementById('flaggenAdminStatus');
+        if (statusEl) {
+            if (game.phase === 'PLAYING') {
+                const lockText = game.buildingLocked ? '🔒 BAUEN GESPERRT' : '🔨 BAUEN AKTIV';
+                const revealText = game.revealed ? ' | 👁️ AUFGEDECKT' : '';
+                const timeText = game.duration > 0 ? ` | ⏱️ ${game.remaining}s` : '';
+                statusEl.textContent = `Aufgabe: ${game.country || '-'} | ${lockText}${timeText}${revealText}`;
+            } else {
+                statusEl.textContent = 'Bereit für neue Runde (IDLE)';
+            }
+        }
+
+        // Lock button label
+        const lockBtn = document.getElementById('flaggenBtnLock');
+        if (lockBtn) {
+            if (game.buildingLocked) {
+                lockBtn.textContent = '▶ Bauen wieder freigeben';
+                lockBtn.style.background = '#27ae60';
+            } else {
+                lockBtn.textContent = '⏹ Bauen beenden / sperren';
+                lockBtn.style.background = '#e67e22';
+            }
+        }
+
+        // Builder dropdowns
+        populateBuilderSelects(players, teams, game.builders || {});
+
+        // Builder tags
+        const b1Id = (game.builders || {})[t1];
+        const b2Id = (game.builders || {})[t2];
+        const p1 = b1Id ? players[b1Id] : null;
+        const p2 = b2Id ? players[b2Id] : null;
+
+        const tag1 = document.getElementById('flaggenBuilderTagT1');
+        const tag2 = document.getElementById('flaggenBuilderTagT2');
+        if (tag1) tag1.textContent = p1 ? `(Baumeister: ${p1.name})` : '(Alle bauen)';
+        if (tag2) tag2.textContent = p2 ? `(Baumeister: ${p2.name})` : '(Alle bauen)';
+
+        // Target flag
+        const targetName = document.getElementById('flaggenTargetName');
+        const targetFlag = document.getElementById('flaggenTargetFlag');
+        if (targetName) targetName.textContent = game.country || '-';
+        if (targetFlag && game.targetFlag) targetFlag.innerHTML = game.targetFlag;
+
+        // Render live boards
+        const boards = game.boards || {};
+        const elements = game.elements || [];
+        renderPlacedPieces(document.getElementById('flaggenCanvasT1'), (boards[t1] || {}).placements || [], elements);
+        renderPlacedPieces(document.getElementById('flaggenCanvasT2'), (boards[t2] || {}).placements || [], elements);
+    };
+
+    loadFlaggenJson();
+</script>

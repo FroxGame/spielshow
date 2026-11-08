@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zuschaueransicht</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 28px;
+        }
+
+        #spectator-login {
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #11131a;
+        }
+
+        .spectator-login-box {
+            width: min(90%, 380px);
+            padding: 28px;
+            border-radius: 10px;
+            background: #1d202b;
+            border: 1px solid #303646;
+            text-align: center;
+        }
+
+        .spectator-login-box input,
+        .spectator-login-box button {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin-top: 10px;
+            font: inherit;
+        }
+
+        .spectator-login-box button {
+            cursor: pointer;
+        }
+
+        #spectator-login-error {
+            color: #ff6b6b;
+            display: none;
+        }
+        body.fullscreen-mode {
+            padding: 0 !important;
+            overflow: hidden;
+        }
+        body.fullscreen-mode header,
+        body.fullscreen-mode #teams-overview {
+            display: none !important;
+        }
+        body.fullscreen-mode #spectator-content {
+            width: 100vw;
+            height: 100vh;
+            max-width: 100vw;
+            margin: 0;
+            padding: 0;
+            border: none;
+            border-radius: 0;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #0e1626;
+            background: #11131a;
+            color: #f4f6fb;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto 24px;
+        }
+
+        #spectator-alltime-score {
+            position: fixed;
+            top: 12px;
+            right: 12px;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 20px;
+            border-radius: 12px;
+            background: #1e1e1e;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+            flex-direction: row;
+        }
+
+        #spectator-alltime-score.large {
+            position: static;
+            top: auto;
+            right: auto;
+            left: auto;
+            transform: none;
+            flex-direction: row;
+            width: auto;
+            max-width: 100%;
+            gap: 25px;
+            margin: 0 auto;
+        }
+
+        .spectator-alltime-team {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: bold;
+        }
+
+        #spectator-alltime-score.large .spectator-alltime-team {
+            flex-direction: column;
+            gap: 5px;
+            font-size: 1.35rem;
+        }
+
+        .spectator-alltime-stars {
+            letter-spacing: 2px;
+            font-size: 1rem;
+        }
+
+        .spectator-alltime-stars .star-filled {
+            opacity: 1;
+            text-shadow: 0 0 8px currentColor;
+        }
+
+        .spectator-alltime-stars .star-empty {
+            opacity: 0.25;
+        }
+
+        #spectator-alltime-score.large .spectator-alltime-stars {
+            font-size: 2rem;
+            letter-spacing: 5px;
+        }
+
+        #spectator-alltime-score.small .spectator-alltime-team {
+            flex-direction: row;
+        }
+
+        #spectator-content .waiting #spectator-alltime-score {
+            position: static;
+        }
+
+        #spectator-content .waiting {
+            min-height: 260px;
+        }
+
+        h1,
+        h2,
+        p {
+            margin-top: 0;
+        }
+
+        h1 {
+            margin-bottom: 4px;
+            font-size: clamp(1.6rem, 3vw, 2.5rem);
+        }
+
+        #status {
+            color: #a4b0be;
+        }
+
+        #teams-overview {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            max-width: 1400px;
+            margin: 0 auto 20px;
+        }
+
+        .team-panel,
+        #spectator-content {
+            background: #1d202b;
+            border: 1px solid #303646;
+            border-radius: 10px;
+            padding: 18px;
+        }
+
+        .team-panel {
+            border-top: 5px solid var(--team-color);
+        }
+
+        .team-panel-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: baseline;
+        }
+
+        .team-panel h2 {
+            margin-bottom: 4px;
+        }
+
+        .show-score {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--team-color);
+        }
+
+        .team-players {
+            color: #b9c1d0;
+        }
+
+        #spectator-content {
+            max-width: 1400px;
+            min-height: 260px;
+            margin: 0 auto;
+        }
+
+        #spectator-notes {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            max-width: 1400px;
+            margin: 0 auto 20px;
+        }
+
+        .spectator-notes-team {
+            padding: 16px;
+            background: #171922;
+            border: 1px solid #303646;
+            border-radius: 10px;
+        }
+
+        .spectator-notes-team h2 {
+            margin-bottom: 10px;
+        }
+
+        .spectator-notes-players {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .spectator-note {
+            padding: 9px 0;
+            border-top: 1px solid #303646;
+            color: #c7cedb;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .spectator-note strong {
+            color: #f4f6fb;
+        }
+
+        .spectator-note-input {
+            width: 100%;
+            min-height: 64px;
+            margin-top: 6px;
+            padding: 9px 10px;
+            box-sizing: border-box;
+            border: 1px solid #555b70;
+            border-radius: 6px;
+            background: #10121a;
+            color: #f4f6fb;
+            font: inherit;
+            resize: vertical;
+            opacity: 1;
+        }
+
+        .waiting {
+            display: grid;
+            min-height: 220px;
+            place-items: center;
+            color: #a4b0be;
+            text-align: center;
+        }
+
+        @media (max-width: 700px) {
+            body {
+                padding: 16px;
+            }
+
+            header,
+            #teams-overview,
+            #spectator-notes {
+                display: block;
+            }
+
+            header {
+                margin-bottom: 16px;
+            }
+
+            .team-panel + .team-panel {
+                margin-top: 12px;
+            }
+
+            .spectator-notes-team + .spectator-notes-team {
+                margin-top: 12px;
+            }
+
+            .spectator-notes-players {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        #game-intro {
+            position: fixed;
+            inset: 0;
+            z-index: 6000;
+            display: none;
+            place-items: center;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #273c75 0%, #11131a 70%);
+        }
+
+        #game-intro.visible { display: grid; }
+
+        .game-intro-card {
+            display: grid;
+            justify-items: center;
+            gap: 30px;
+            color: #fff;
+            text-align: center;
+        }
+
+        .game-intro-badge {
+            display: grid;
+            place-items: center;
+            width: min(72vw, 430px);
+            height: min(35vw, 210px);
+            border: 8px solid #f5c542;
+            border-radius: 50%;
+            background: #18213a;
+            box-shadow: 0 0 35px rgba(245, 197, 66, .7), inset 0 0 25px rgba(255,255,255,.15);
+            font-size: clamp(2.4rem, 8vw, 6rem);
+            font-weight: 900;
+            animation: intro-spin 2.2s cubic-bezier(.2,.8,.25,1) both;
+        }
+
+        .game-intro-name {
+            max-width: 90vw;
+            margin: 0;
+            font-size: clamp(2rem, 6vw, 5rem);
+            opacity: 0;
+            transform: translateY(18px) scale(.9);
+            animation: intro-name .8s ease-out 1.8s forwards;
+        }
+
+        @keyframes intro-spin {
+            0% { opacity: 0; transform: perspective(800px) rotateY(-180deg) scale(.45); }
+            45% { opacity: 1; transform: perspective(800px) rotateY(25deg) scale(1.08); }
+            100% { opacity: 1; transform: perspective(800px) rotateY(0) scale(1); }
+        }
+
+        @keyframes intro-name {
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+    </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/karte-config.js"></script>
+    <script src="/europe_land_clean.js"></script>
+</head>
+<body>
+    <div id="game-intro" aria-live="polite">
+        <div class="game-intro-card">
+            <div class="game-intro-badge" id="game-intro-number"></div>
+            <h1 class="game-intro-name" id="game-intro-name"></h1>
+        </div>
+    </div>
+
+    <div id="spectator-login">
+        <form class="spectator-login-box" id="spectator-login-form">
+            <h2>Host-Zuschaueransicht</h2>
+            <p>Passwort eingeben, um die Live-Ansicht zu öffnen.</p>
+            <input id="spectator-password" type="password" autocomplete="current-password" placeholder="Passwort">
+            <button type="submit">Einloggen</button>
+            <p id="spectator-login-error">Falsches Passwort.</p>
+        </form>
+    </div>
+    <div id="spectator-alltime-score"></div>
+    <header>
+        <div>
+            <h1>Zuschaueransicht</h1>
+            <div id="status">Verbinde mit der Spielshow...</div>
+        </div>
+        <strong id="current-screen"></strong>
+    </header>
+
+    <section id="teams-overview"></section>
+    <main id="spectator-content"></main>
+    <section id="spectator-notes"></section>
+
+    <script>
+        const socket = io();
+        let loadedScreen = null;
+        let latestSpectatorState = null;
+        let latestSpectatorNotes = [];
+        let latestDiscordSpectatorState = { phase: 'IDLE' };
+        let latestPartnerSpectatorState = { phase: 'IDLE', scores: {} };
+        let latestDiktatSpectatorState = { phase: 'IDLE', scores: {} };
+        let spectatorAuthenticated = false;
+        let gameIntroHideTimer = null;
+
+        function showGameIntro(intro) {
+            if (!spectatorAuthenticated) return;
+            const overlay = document.getElementById('game-intro');
+            const badge = document.getElementById('game-intro-number');
+            const name = document.getElementById('game-intro-name');
+            badge.textContent = `Spiel ${intro.number}`;
+            name.textContent = intro.name;
+            badge.style.animation = 'none';
+            name.style.animation = 'none';
+            overlay.classList.remove('visible');
+            void overlay.offsetWidth;
+            void badge.offsetWidth;
+            void name.offsetWidth;
+            badge.style.animation = '';
+            name.style.animation = '';
+            overlay.classList.add('visible');
+            if (gameIntroHideTimer) {
+                window.clearTimeout(gameIntroHideTimer);
+            }
+            gameIntroHideTimer = window.setTimeout(() => {
+                overlay.classList.remove('visible');
+                gameIntroHideTimer = null;
+            }, 4300);
+        }
+
+        socket.on('gameIntro', showGameIntro);
+
+        document.getElementById('spectator-login-form').addEventListener('submit', event => {
+            event.preventDefault();
+            socket.emit('spectatorLogin', document.getElementById('spectator-password').value);
+        });
+
+        socket.on('spectatorAuthResult', result => {
+            if (result.success) {
+                spectatorAuthenticated = true;
+                document.getElementById('spectator-login').style.display = 'none';
+            } else {
+                document.getElementById('spectator-login-error').style.display = 'block';
+            }
+        });
+
+        function renderTeams(state) {
+            const overview = document.getElementById('teams-overview');
+            overview.innerHTML = '';
+
+            Object.entries(state.teams || {}).forEach(([teamName, team]) => {
+                const players = Object.values(state.players || {})
+                    .filter(player => player.team === teamName)
+                    .map(player => player.name);
+                const panel = document.createElement('article');
+                panel.className = 'team-panel';
+                panel.style.setProperty('--team-color', team.color || '#a4b0be');
+                panel.innerHTML = `
+                    <div class="team-panel-header">
+                        <h2>${teamName}</h2>
+                        <span class="show-score">${team.score} / 5</span>
+                    </div>
+                    <div class="team-players">${players.length ? players.join(' &middot; ') : 'Noch keine Spieler verbunden'}</div>
+                `;
+                overview.appendChild(panel);
+            });
+
+            const score = document.getElementById('spectator-alltime-score');
+            if (score) {
+                const waitingSlot = document.getElementById('spectator-waiting-score');
+                if (state.currentScreen === 'WAITING' && waitingSlot) {
+                    waitingSlot.appendChild(score);
+                } else if (state.currentScreen !== 'WAITING' && !document.body.contains(score)) {
+                    document.body.appendChild(score);
+                }
+                score.classList.toggle('large', state.currentScreen === 'WAITING');
+                score.classList.toggle('small', state.currentScreen !== 'WAITING');
+                score.innerHTML = '';
+                Object.entries(state.teams || {}).forEach(([teamName, team]) => {
+                    const teamScore = document.createElement('div');
+                    teamScore.className = 'spectator-alltime-team';
+                    const stars = Array.from({ length: 5 }, (_, index) => index < team.score
+                        ? '<span class="star-filled">★</span>'
+                        : '<span class="star-empty">★</span>').join('');
+                    teamScore.innerHTML = `<span style="color:${team.color || '#fff'}">${teamName}</span><span class="spectator-alltime-stars" style="color:${team.color || '#fff'}">${stars}</span>`;
+                    score.appendChild(teamScore);
+                });
+            }
+        }
+
+        function renderSpectatorNotes(notes) {
+            const container = document.getElementById('spectator-notes');
+            container.innerHTML = '';
+
+            notes.forEach(teamData => {
+                const team = document.createElement('section');
+                team.className = 'spectator-notes-team';
+
+                const heading = document.createElement('h2');
+                heading.innerText = `${teamData.team} - Notizen`;
+                team.appendChild(heading);
+
+                if (teamData.players.length === 0) {
+                    const empty = document.createElement('div');
+                    empty.className = 'spectator-note';
+                    empty.innerText = 'Keine Spieler verbunden';
+                    team.appendChild(empty);
+                }
+
+                const playersContainer = document.createElement('div');
+                playersContainer.className = 'spectator-notes-players';
+
+                teamData.players.forEach(player => {
+                    const note = document.createElement('div');
+                    note.className = 'spectator-note';
+
+                    const author = document.createElement('strong');
+                    author.innerText = `${player.name}:`;
+                    note.appendChild(author);
+
+                    const input = document.createElement('textarea');
+                    input.className = 'spectator-note-input';
+                    input.value = player.text || '';
+                    input.placeholder = 'Noch keine Notiz';
+                    input.disabled = true;
+                    note.appendChild(input);
+                    playersContainer.appendChild(note);
+                });
+
+                if (teamData.players.length > 0) {
+                    team.appendChild(playersContainer);
+                }
+                container.appendChild(team);
+            });
+        }
+
+        async function loadModule(screenName) {
+            if (loadedScreen === screenName) return;
+            loadedScreen = screenName;
+
+            const container = document.getElementById('spectator-content');
+            const modules = {
+                LISTENWISSEN: 'games/listenwissen-spectator.html',
+                DISCORD_GAME: 'games/discord-spectator.html',
+                PROMI_RATEN: 'games/promis-spectator.html',
+                DRUDEL: 'games/drudel-spectator.html',
+                DIKTAT: 'games/diktat-spectator.html',
+                KATEGORIEN: 'games/kategorien-spectator.html',
+                PARTNERWISSEN: 'games/partnerwissen-spectator.html',
+                BINGO: 'games/bingo-spectator.html',
+                MALEN: 'games/malen-spectator.html',
+                KARTE: 'games/karte-spectator.html'
+                ,MERKEN: 'games/merken-spectator.html'
+                ,REALITAET: 'games/realitaet-spectator.html'
+                ,FLAGGEN: 'games/flaggen-spectator.html'
+                ,BUCHSTABENSALAT: 'games/buchstabensalat-spectator.html'
+            };
+            document.body.classList.toggle('fullscreen-mode', screenName === 'KARTE');
+            const file = modules[screenName];
+
+            if (!file) {
+                container.innerHTML = '<div class="waiting"><div><h2>Spielpause</h2><p>Warte auf die nächste Runde...</p><div id="spectator-waiting-score"></div></div></div>';
+                if (latestSpectatorState) {
+                    renderTeams(latestSpectatorState);
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch(file);
+                if (!response.ok) throw new Error(`Modul konnte nicht geladen werden: ${response.status}`);
+                    const score = document.getElementById('spectator-alltime-score');
+                    if (score) document.body.appendChild(score);
+                container.innerHTML = await response.text();
+                container.querySelectorAll('script').forEach(script => eval(script.innerText));
+
+                if (window.onSpectatorStateUpdate && latestSpectatorState) {
+                    window.onSpectatorStateUpdate(latestSpectatorState);
+                }
+                if (window.onSpectatorNotesUpdate) {
+                    window.onSpectatorNotesUpdate(latestSpectatorNotes);
+                }
+
+                if (window.onDiscordSpectatorUpdate) {
+                    window.onDiscordSpectatorUpdate(latestDiscordSpectatorState);
+                }
+
+                if (window.onPartnerSpectatorUpdate) {
+                    window.onPartnerSpectatorUpdate(latestPartnerSpectatorState);
+                }
+
+                if (window.onDiktatSpectatorUpdate) {
+                    window.onDiktatSpectatorUpdate(latestDiktatSpectatorState);
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="waiting"><div><h2>Modul nicht verfügbar</h2></div></div>';
+                console.error(error);
+            }
+        }
+
+        socket.on('stateUpdate', state => {
+            if (!spectatorAuthenticated) return;
+            latestSpectatorState = state;
+            renderTeams(state);
+            document.getElementById('current-screen').innerText = state.currentScreen;
+            document.getElementById('status').innerText = 'Live verbunden';
+            loadModule(state.currentScreen);
+
+            if (window.onSpectatorStateUpdate) {
+                window.onSpectatorStateUpdate(state);
+            }
+        });
+
+        socket.on('spectatorNotesUpdate', notes => {
+            latestSpectatorNotes = notes;
+            renderSpectatorNotes(notes);
+            if (window.onSpectatorNotesUpdate) {
+                window.onSpectatorNotesUpdate(notes);
+            }
+        });
+
+        socket.on('discordSpectatorUpdate', state => {
+            latestDiscordSpectatorState = state;
+            if (window.onDiscordSpectatorUpdate) {
+                window.onDiscordSpectatorUpdate(state);
+            }
+        });
+
+        socket.on('partnerSpectatorUpdate', state => {
+            latestPartnerSpectatorState = state;
+            if (window.onPartnerSpectatorUpdate) {
+                window.onPartnerSpectatorUpdate(state);
+            }
+        });
+
+        socket.on('diktatSpectatorUpdate', state => {
+            latestDiktatSpectatorState = state;
+            if (window.onDiktatSpectatorUpdate) {
+                window.onDiktatSpectatorUpdate(state);
+            }
+        });
+    </script>
+</body>
+</html>

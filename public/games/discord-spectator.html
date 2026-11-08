@@ -1,0 +1,166 @@
+<style>
+    .discord-spectator-game h2 {
+        margin-bottom: 8px;
+    }
+
+    .discord-spectator-roles {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin: 16px 0;
+    }
+
+    .discord-spectator-scores {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 auto 12px;
+    }
+
+    .discord-spectator-score {
+        padding: 7px 11px;
+        border-radius: 6px;
+        background: #2c2f3c;
+        font-weight: bold;
+    }
+
+    .discord-role-card,
+    .discord-clue-card {
+        padding: 8px 10px;
+        border: 1px solid #3d4559;
+        border-radius: 7px;
+        background: #202431;
+    }
+
+    .discord-role-card strong {
+        display: block;
+        color: #8f9bb5;
+        font-size: 0.78rem;
+        text-transform: uppercase;
+    }
+
+    .discord-spectator-section {
+        margin-top: 18px;
+    }
+
+    .discord-spectator-section h3 {
+        margin-bottom: 8px;
+    }
+
+    .discord-clue-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .discord-clue-card {
+        min-height: 58px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 7px;
+    }
+
+    .discord-clue-number {
+        color: #8f9bb5;
+        font-size: 0.78rem;
+        font-weight: bold;
+    }
+
+    .discord-clue-text {
+        font-size: 1.05rem;
+        font-weight: bold;
+        overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 600px) {
+        .discord-spectator-roles,
+        .discord-clue-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div id="discordSpectatorScore" class="discord-spectator-scores"></div>
+
+<section class="card discord-spectator-game">
+    <h2>Das kam bei Discord nicht an</h2>
+    <p id="discordSpectatorPhase">Keine Runde aktiv.</p>
+    <div id="discordSpectatorDetails"></div>
+</section>
+
+<script>
+    function createDiscordSpectatorCards(title, clues) {
+        const section = document.createElement('section');
+        section.className = 'discord-spectator-section';
+
+        const heading = document.createElement('h3');
+        heading.innerText = title;
+        section.appendChild(heading);
+
+        const grid = document.createElement('div');
+        grid.className = 'discord-clue-grid';
+        clues.forEach((clue, index) => {
+            const card = document.createElement('div');
+            card.className = 'discord-clue-card';
+
+            const number = document.createElement('span');
+            number.className = 'discord-clue-number';
+            number.innerText = `HINWEIS ${index + 1}`;
+
+            const text = document.createElement('span');
+            text.className = 'discord-clue-text';
+            text.innerText = clue;
+
+            card.appendChild(number);
+            card.appendChild(text);
+            grid.appendChild(card);
+        });
+        section.appendChild(grid);
+        return section;
+    }
+
+    window.onDiscordSpectatorUpdate = function(game) {
+        const phase = document.getElementById('discordSpectatorPhase');
+        const details = document.getElementById('discordSpectatorDetails');
+        const scores = document.getElementById('discordSpectatorScore');
+        if (!phase || !details) return;
+
+        phase.innerText = `Phase: ${game.phase}`;
+        details.innerHTML = '';
+        scores.innerHTML = '';
+
+        const roles = document.createElement('div');
+        roles.className = 'discord-spectator-roles';
+        [
+            ['Hinweisgeber', game.giverName],
+            ['Partner', game.partnerName],
+            ['Austausch', game.exchangeName]
+        ].forEach(([label, value]) => {
+            const card = document.createElement('div');
+            card.className = 'discord-role-card';
+            card.innerHTML = `<strong>${label}</strong>${value}`;
+            roles.appendChild(card);
+        });
+        details.appendChild(roles);
+
+        Object.entries(game.scores || {}).forEach(([team, points]) => {
+            const score = document.createElement('div');
+            score.className = 'discord-spectator-score';
+            score.innerText = `${team}: ${points}`;
+            scores.appendChild(score);
+        });
+
+        if (game.originalClues && game.originalClues.length) {
+            details.appendChild(createDiscordSpectatorCards('Original-Hinweise', game.originalClues));
+        }
+        if (game.finalClues && game.finalClues.length) {
+            details.appendChild(createDiscordSpectatorCards('Finale Hinweise', game.finalClues));
+        }
+
+        const summary = document.createElement('p');
+        summary.innerText = `Zielbegriff: ${game.target || '-'} | Ersatzbegriff: ${game.replacement || '-'}`;
+        details.appendChild(summary);
+    };
+</script>

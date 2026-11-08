@@ -1,0 +1,130 @@
+<div class="card">
+    <h2>Kam bei Discord nicht an</h2>
+    <p id="discordAdminPhase">Keine Runde aktiv.</p>
+
+    <label>Hinweisgeber auswählen:</label>
+    <select id="discordGiver" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+
+    <label>Begriff auswählen:</label>
+    <select id="discordTarget" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+
+    <button onclick="startDiscordGame()">Runde starten</button>
+    <button onclick="resetDiscordGame()">Runde zurücksetzen</button>
+
+    <div id="discordAdminScores" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;"></div>
+    <div id="discordAdminDetails" style="margin-top:15px;"></div>
+</div>
+
+<script>
+    let discordAdminPlayerState = { players: {} };
+    let discordAdminGameState = { phase: 'IDLE' };
+
+    window.onModuleStateUpdate = function(state) {
+        discordAdminPlayerState = state;
+        const giver = document.getElementById('discordGiver');
+        if (!giver) return;
+
+        if (!giver.options.length) {
+            giver.innerHTML = Object.values(state.players || {}).map(player => (
+                `<option value="${player.id}">${player.name} (${player.team})</option>`
+            )).join('');
+        }
+    };
+
+    socket.on('receiveDiscordTerms', terms => {
+        const target = document.getElementById('discordTarget');
+        if (!target) return;
+        target.innerHTML = '<option value="">-- Begriff auswählen --</option>';
+        terms.forEach(term => {
+            const option = document.createElement('option');
+            option.value = term;
+            option.innerText = term;
+            target.appendChild(option);
+        });
+    });
+
+    socket.emit('getDiscordTerms');
+
+    window.startDiscordGame = function() {
+        socket.emit('adminStartDiscordGame', {
+            giverId: document.getElementById('discordGiver').value,
+            target: document.getElementById('discordTarget').value
+        });
+    };
+
+    window.resetDiscordGame = function() {
+        socket.emit('adminResetDiscordGame');
+    };
+
+    window.onDiscordAdminUpdate = function(game) {
+        const phase = document.getElementById('discordAdminPhase');
+        const details = document.getElementById('discordAdminDetails');
+        if (!phase || !details) return;
+
+        discordAdminGameState = game;
+
+        const scores = document.getElementById('discordAdminScores');
+        scores.innerHTML = '';
+        Object.entries(game.scores || {}).forEach(([team, points]) => {
+            const score = document.createElement('div');
+            score.innerHTML = `<b>${team}: ${points}</b>`;
+
+            const minus = document.createElement('button');
+            minus.innerText = '-1';
+            minus.onclick = () => adjustDiscordPoint(team, -1);
+
+            const plus = document.createElement('button');
+            plus.innerText = '+1';
+            plus.onclick = () => adjustDiscordPoint(team, 1);
+            score.appendChild(minus);
+            score.appendChild(plus);
+            scores.appendChild(score);
+        });
+
+        phase.innerText = `Phase: ${game.phase}`;
+        details.innerHTML = `<p><b>Hinweisgeber:</b> ${game.giverName}<br>
+            <b>Partner:</b> ${game.partnerName}<br>
+            <b>Austausch:</b> ${game.exchangeName}</p>`;
+
+        if (game.phase === 'GIVER_CLUES') {
+            details.innerHTML += `
+                <input class="discord-admin-clue" maxlength="60" placeholder="Hinweis 1">
+                <input class="discord-admin-clue" maxlength="60" placeholder="Hinweis 2">
+                <input class="discord-admin-clue" maxlength="60" placeholder="Hinweis 3">
+                <button id="discordAdminSubmitClues">Hinweise speichern</button>
+            `;
+            document.getElementById('discordAdminSubmitClues').onclick = () => {
+                const clues = [...document.querySelectorAll('.discord-admin-clue')].map(input => input.value);
+                socket.emit('adminSubmitDiscordClues', clues);
+            };
+        } else if (game.phase === 'EXCHANGE') {
+            details.innerHTML += `
+                <div id="discordAdminExchangeClues"></div>
+                <input id="discordAdminReplacement" maxlength="60" placeholder="Ersatzbegriff">
+                <button id="discordAdminSubmitExchange">Austausch speichern</button>
+            `;
+            const clues = document.getElementById('discordAdminExchangeClues');
+            game.originalClues.forEach((clue, index) => {
+                clues.innerHTML += `<label style="display:block; margin:8px 0;"><input type="radio" name="discordAdminExchangeIndex" value="${index}"> ${clue}</label>`;
+            });
+            document.getElementById('discordAdminSubmitExchange').onclick = () => {
+                const selected = document.querySelector('input[name="discordAdminExchangeIndex"]:checked');
+                socket.emit('adminSubmitDiscordExchange', {
+                    index: selected ? selected.value : -1,
+                    replacement: document.getElementById('discordAdminReplacement').value
+                });
+            };
+        } else {
+            details.innerHTML += `
+            <p><b>Ziel:</b> ${game.target || '-'}<br>
+            <b>Originale Hinweise:</b> ${(game.originalClues || []).join(' | ') || '-'}<br>
+            <b>Austausch:</b> ${game.replacement || '-'}<br>
+            <b>Finale Hinweise:</b> ${(game.finalClues || []).join(' | ') || '-'}</p>
+            `;
+        }
+    };
+
+    window.adjustDiscordPoint = function(team, amount) {
+        socket.emit('adminAddDiscordPoint', { team, amount });
+    };
+</script>

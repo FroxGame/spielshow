@@ -1,0 +1,26 @@
+{
+    "Katalog 1": [
+        { "question": "In welchem Land liegt die südlichste Stadt der Welt?", "answer": "Argentinien" },
+        { "question": "Für welche Zahl steht die römische Zahl 'CM'?", "answer": "900" },
+        { "question": "Welche deutsche Stadt bewarb sich für die olympischen Spiele 2024, zog diese aber aufgrund eines Bürgerreferendums zurück?", "answer": "Hamburg" },
+        { "question": "Wie hieß die Hauptstadt der DDR?", "answer": "Ostberlin" }
+    ],
+    "Katalog 2": [
+        { "question": "Welches ist das am häufigsten vorkommende Element im Universum?", "answer": "Wasserstoff" },
+        { "question": "Welcher Planet dient ins Star Wars als Navigationsnullpunkt der Galaxis?", "answer": "Coruscant" },
+        { "question": "Wie heißt die Schwester von Serena Williams, der erflogreichsten Tennisspielerin?", "answer": "Venus" },
+        { "question": "In welchen Behausungen wohnen die meisten Schlümpfe?", "answer": "Pilzhäuser" }
+    ],
+    "Katalog 3": [
+        { "question": "Wer schrieb das Lied 'Space Taxi' welches im Film (T)Raumschiff Surprise gesungen wurde?", "answer": "Stefan Raab" },
+        { "question": "Wie bezeichnen Sprachwissenschaftler Namen wie Anna und Bob?", "answer": "Palindrom" },
+        { "question": "Welches Land hat mit zwölf verschiedenen Zeitzonen die meisten?", "answer": "Frankreich" },
+        { "question": "Wie heißt die Beeinträchtigung in League of Legends, welche den Erhalt jeglicher Heilung um 40% reduztiert?", "answer": "Grievous Wounds/Klaffende Wunden" }
+    ],
+    "Katalog 4": [
+        { "question": "Welches Instrument spielt Thaddäus aus Spongebob?", "answer": "Kalrinette" },
+        { "question": "Welcher Kaiser folgte auf Gaius Julius Caesar?", "answer": "Augustus" },
+        { "question": "In welchem der vier Landesteile des vereinigten Königreichs starb Queen Elizabeth II. am 08. September 2022?", "answer": "Schottland" },
+        { "question": "Wwelches ist das einzige Säugetier bzw. die einzige Säugetierart, die fliegen kann?", "answer": "Fledermaus" }
+    ]
+}

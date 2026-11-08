@@ -1,0 +1,75 @@
+<style>
+    .drudel-player-game { text-align:center; }
+    .drudel-player-score { display:flex; justify-content:center; gap:10px; margin-bottom:8px; flex-wrap:wrap; }
+    .drudel-player-score span { padding:6px 11px; border-radius:6px; background:#2c2c3a; font-weight:bold; }
+    #drudelPlayerImage { display:block; width:100%; max-height:48vh; object-fit:contain; margin:10px auto; border-radius:10px; background:#202431; }
+    .drudel-player-buzzer { padding:12px 30px; background:#e74c3c; color:#fff; font-size:1.25rem; font-weight:bold; }
+    .drudel-player-buzzer:disabled { background:#555; cursor:not-allowed; }
+    .drudel-player-reveal { margin:8px 0; padding:10px; border-radius:6px; background:#202a2b; font-weight:bold; }
+    .drudel-player-reveal:empty { display:none; }
+</style>
+
+<div id="drudelPlayerScore" class="drudel-player-score"></div>
+<div class="card drudel-player-game">
+    <h2>Drudel</h2>
+    <p id="drudelPlayerStatus">Warte auf ein Bild...</p>
+    <img id="drudelPlayerImage" alt="Drudel">
+    <div id="drudelPlayerReveal" class="drudel-player-reveal"></div>
+    <button id="drudelPlayerBuzzer" class="drudel-player-buzzer">BUZZER</button>
+</div>
+
+<script>
+    let lastDrudelBuzzerWinner = null;
+    let drudelBuzzerSoundPlayedByClick = false;
+
+    function playDrudelBuzzerSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(880, context.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.18, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.22);
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.drudelGame || {};
+        const image = document.getElementById('drudelPlayerImage');
+        const buzzer = document.getElementById('drudelPlayerBuzzer');
+        const status = document.getElementById('drudelPlayerStatus');
+        const reveal = document.getElementById('drudelPlayerReveal');
+        const scores = document.getElementById('drudelPlayerScore');
+        if (!image || !buzzer || !status || !reveal || !scores) return;
+        if (game.buzzerWinner && game.buzzerWinner !== lastDrudelBuzzerWinner) {
+            if (!drudelBuzzerSoundPlayedByClick) playDrudelBuzzerSound();
+            drudelBuzzerSoundPlayedByClick = false;
+            lastDrudelBuzzerWinner = game.buzzerWinner;
+        }
+        if (!game.buzzerWinner) {
+            lastDrudelBuzzerWinner = null;
+        }
+
+        scores.innerHTML = Object.entries(game.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points} / 5</span>`).join('');
+        image.src = game.currentImage ? `/${game.currentImage}` : '';
+        image.style.display = game.currentImage ? 'block' : 'none';
+        buzzer.disabled = !game.currentImage || game.buzzerLocked || Boolean(game.winnerTeam);
+        status.innerText = game.buzzerWinner
+            ? `${game.buzzerWinner} hat gebuzzert.`
+            : game.buzzerLocked ? 'Der Buzzer ist gesperrt.' : 'Wer erkennt das Drudel zuerst?';
+        reveal.innerText = game.revealedName || '';
+    };
+
+    document.getElementById('drudelPlayerBuzzer').onclick = () => {
+        playDrudelBuzzerSound();
+        drudelBuzzerSoundPlayedByClick = true;
+        socket.emit('pressDrudelBuzzer');
+    };
+</script>

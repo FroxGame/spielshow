@@ -1,0 +1,231 @@
+<style>
+    .listenwissen-game {
+        background: #1e1e28;
+        padding: 16px;
+        border-radius: 10px;
+    }
+
+    .listenwissen-game h2 {
+        margin: 0 0 12px;
+        font-size: 1.25rem;
+    }
+
+    #wordProgress {
+        margin-bottom: 14px;
+        font-size: 0.95rem;
+        color: #a4b0be;
+    }
+
+    #wordGameScore {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        margin: 0 auto 12px;
+        font-weight: bold;
+    }
+
+    .word-game-team-score {
+        padding: 5px 10px;
+        border-radius: 5px;
+        background: #2c2c3a;
+    }
+
+    #teamNotes {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+    }
+
+    .team-note-field label {
+        display: block;
+        margin-bottom: 5px;
+        color: #a4b0be;
+        font-size: 0.85rem;
+        text-align: left;
+    }
+
+    .team-note-input {
+        width: 100%;
+        min-height: 64px;
+        box-sizing: border-box;
+        padding: 9px 10px;
+        border: 1px solid #555b70;
+        border-radius: 6px;
+        background: #15151d;
+        color: #fff;
+        font: inherit;
+        resize: vertical;
+    }
+
+    .team-note-input:disabled {
+        opacity: 1;
+        cursor: default;
+    }
+
+    #playerWordBoard {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: 680px;
+        margin: 0 auto;
+    }
+
+    .listenwissen-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+
+    .listenwissen-row:nth-child(even) {
+        width: calc(100% - 40px);
+        margin-left: 20px;
+    }
+
+    .listenwissen-row.is-short {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 75%;
+        align-self: center;
+    }
+
+    .listenwissen-word {
+        min-height: 42px;
+        padding: 7px 10px;
+        border-radius: 5px;
+        font-size: 0.95rem;
+        line-height: 1.2;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 600px) {
+        #wordGameScore {
+            gap: 8px;
+            font-size: 0.85rem;
+        }
+
+        #playerWordBoard {
+            max-width: none;
+        }
+
+        .listenwissen-row,
+        .listenwissen-row.is-short {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .listenwissen-word {
+            min-height: 42px;
+            font-size: 0.82rem;
+            padding: 7px 5px;
+        }
+
+        #teamNotes {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div id="wordGameScore"></div>
+
+<div class="listenwissen-game">
+    <h2 id="wordTitle">Listenwissen</h2>
+    <div id="wordProgress">Gefunden: 0 / 0</div>
+    <div id="playerWordBoard"></div>
+    <div id="teamNotes"></div>
+</div>
+
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const board = document.getElementById('playerWordBoard');
+        const title = document.getElementById('wordTitle');
+        const progress = document.getElementById('wordProgress');
+        const scoreBoard = document.getElementById('wordGameScore');
+        if (!board) return;
+
+        if (state.currentWordListKey) {
+            title.innerText = `Kategorie: ${state.currentWordListKey}`;
+        }
+
+        scoreBoard.innerHTML = '';
+        Object.entries(state.listenwissenScores || {}).forEach(([team, score]) => {
+            const teamScore = document.createElement('div');
+            teamScore.className = 'word-game-team-score';
+            teamScore.innerText = `${team}: ${score} / 5`;
+            scoreBoard.appendChild(teamScore);
+        });
+
+        if (state.wordGameData && state.wordGameData.length > 0) {
+            const revealedCount = state.wordGameData.filter(item => item.revealed).length;
+            progress.innerText = `Gefunden: ${revealedCount} / ${state.wordGameData.length}`;
+            board.innerHTML = '';
+            for (let index = 0; index < state.wordGameData.length; index += 4) {
+                const rowItems = state.wordGameData.slice(index, index + 4);
+                const row = document.createElement('div');
+                row.className = `listenwissen-row${rowItems.length < 4 ? ' is-short' : ''}`;
+
+                rowItems.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'listenwissen-word';
+                    card.style.background = item.revealed ? '#2ed573' : '#2c2c3a';
+                    card.style.color = item.revealed ? '#fff' : '#a4b0be';
+                    card.innerText = item.revealed ? item.word : '?';
+                    row.appendChild(card);
+                });
+
+                board.appendChild(row);
+            }
+        }
+    };
+
+    window.onTeamNotesUpdate = function(notes) {
+        const notesContainer = document.getElementById('teamNotes');
+        if (!notesContainer) return;
+
+        const noteIds = notes.map(note => note.playerId).join('|');
+        if (notesContainer.dataset.noteIds !== noteIds) {
+            notesContainer.innerHTML = '';
+            notes.forEach(note => {
+                const field = document.createElement('div');
+                field.className = 'team-note-field';
+
+                const label = document.createElement('label');
+                label.innerText = note.playerId === socket.id ? 'Deine Notiz' : `${note.name}s Notiz`;
+
+                const textarea = document.createElement('textarea');
+                textarea.className = 'team-note-input';
+                textarea.dataset.playerId = note.playerId;
+                textarea.maxLength = 500;
+                textarea.value = note.text || '';
+                textarea.disabled = note.playerId !== socket.id;
+                textarea.placeholder = note.playerId === socket.id
+                    ? 'Notiz für dich und deinen Teampartner...'
+                    : 'Noch keine Notiz vorhanden';
+
+                if (note.playerId === socket.id) {
+                    textarea.addEventListener('input', () => {
+                        socket.emit('updatePlayerNote', textarea.value);
+                    });
+                }
+
+                field.appendChild(label);
+                field.appendChild(textarea);
+                notesContainer.appendChild(field);
+            });
+            notesContainer.dataset.noteIds = noteIds;
+            return;
+        }
+
+        notes.forEach(note => {
+            const field = notesContainer.querySelector(`[data-player-id="${note.playerId}"]`);
+            if (field && document.activeElement !== field) {
+                field.value = note.text || '';
+            }
+        });
+    };
+</script>

@@ -1,0 +1,89 @@
+<style>
+    .partner-player-score { display:flex; justify-content:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+    .partner-player-score span { padding:6px 10px; border-radius:6px; background:#2c2c3a; font-weight:bold; }
+    .partner-question-grid { display:grid; gap:10px; }
+    .partner-question-card { padding:12px; border:1px solid #566078; border-radius:8px; background:#262b3a; }
+    .partner-question-card strong { display:block; margin-bottom:8px; }
+    .partner-question-card input { width:100%; padding:8px; box-sizing:border-box; }
+    .partner-submit { margin-top:12px; }
+    .partner-total { margin-top:10px; color:#a4b0be; }
+</style>
+
+<div id="partnerPlayerScore" class="partner-player-score"></div>
+<div class="card">
+    <h2>Ich weiß, was mein Partner weiß</h2>
+    <p id="partnerPlayerStatus">Warte auf eine Runde...</p>
+    <div id="partnerPlayerContent"></div>
+</div>
+
+<script>
+    window.onPartnerPlayerUpdate = function(view) {
+        const status = document.getElementById('partnerPlayerStatus');
+        const content = document.getElementById('partnerPlayerContent');
+        const score = document.getElementById('partnerPlayerScore');
+        if (!status || !content || !score) return;
+
+        score.innerHTML = Object.entries(view.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points}</span>`).join('');
+        content.innerHTML = '';
+
+        if (view.role === 'RATER') {
+            status.innerText = `Runde ${view.round}: Verteile genau 10 Punkte, maximal 4 pro Frage.`;
+            const grid = document.createElement('div');
+            grid.className = 'partner-question-grid';
+            view.questions.forEach((question, index) => {
+                const card = document.createElement('div');
+                card.className = 'partner-question-card';
+                card.innerHTML = `<strong>${index + 1}. ${question.question}</strong>`;
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '0';
+                input.max = '4';
+                input.value = view.allocations[index] ?? '';
+                input.className = 'partner-points';
+                card.appendChild(input);
+                grid.appendChild(card);
+            });
+            content.appendChild(grid);
+            const total = document.createElement('div');
+            total.className = 'partner-total';
+            content.appendChild(total);
+            const updateTotal = () => {
+                const sum = [...grid.querySelectorAll('.partner-points')]
+                    .reduce((result, input) => result + (Number(input.value) || 0), 0);
+                total.innerText = `Vergeben: ${sum} / 10`;
+            };
+            grid.addEventListener('input', updateTotal);
+            const button = document.createElement('button');
+            button.className = 'partner-submit';
+            button.innerText = 'Punkte speichern';
+            button.onclick = () => socket.emit('submitPartnerAllocations',
+                [...grid.querySelectorAll('.partner-points')].map(input => input.value));
+            content.appendChild(button);
+            updateTotal();
+            return;
+        }
+
+        if (view.role === 'ANSWERER') {
+            status.innerText = `Runde ${view.round}: Der Host zeigt die Fragen nacheinander an.`;
+            if (!view.questions.length) {
+                content.innerText = 'Warte, bis der Host die erste Frage freigibt.';
+                return;
+            }
+            const grid = document.createElement('div');
+            grid.className = 'partner-question-grid';
+            view.questions.forEach(question => {
+                const card = document.createElement('div');
+                card.className = 'partner-question-card';
+                card.innerHTML = `<strong>Frage ${question.index + 1}</strong>${question.question}`;
+                grid.appendChild(card);
+            });
+            content.appendChild(grid);
+            return;
+        }
+
+        status.innerText = view.phase === 'COMPLETE'
+            ? 'Die vier Fragen sind ausgewertet.'
+            : 'Du bist in dieser Runde nicht eingeteilt.';
+    };
+</script>

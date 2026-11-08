@@ -1,0 +1,246 @@
+<style>
+    .malen-spec-container {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        max-width: 1300px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+    .malen-spec-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #2a2f40;
+    }
+    .malen-spec-scores {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .malen-spec-score-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 14px;
+        border-radius: 6px;
+        background: #171922;
+        font-size: 1.05rem;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .malen-spec-word {
+        font-size: 1.25rem;
+        font-weight: bold;
+        padding: 8px 18px;
+        border-radius: 8px;
+        background: #171922;
+        border-left: 5px solid #2ed573;
+        color: #2ed573;
+        word-break: break-word;
+        display: inline-block;
+    }
+    .malen-spec-boards {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+        margin-top: 6px;
+    }
+    .malen-spec-board {
+        padding: 12px;
+        border: 1px solid #303646;
+        border-radius: 10px;
+        background: #171922;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .malen-spec-board-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    .malen-spec-board-header h4 {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+    .malen-spec-painter-tag {
+        font-size: 0.85rem;
+        color: #a4b0be;
+        font-weight: normal;
+    }
+    .malen-spec-canvas {
+        width: 100%;
+        max-width: 680px;
+        aspect-ratio: 4 / 3;
+        background: #ffffff;
+        border-radius: 8px;
+        border: 2px solid #2a2f40;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        display: block;
+        margin: 0 auto;
+    }
+    @media (max-width: 768px) {
+        .malen-spec-boards { grid-template-columns: 1fr; }
+        .malen-spec-header { flex-direction: column; align-items: stretch; }
+    }
+</style>
+
+<div class="malen-spec-container">
+    <div class="malen-spec-header">
+        <h3 style="margin: 0; font-size: 1.35rem;">Blindes Malen</h3>
+        <div id="malenSpecWord" class="malen-spec-word" style="display: none;">-</div>
+        <div id="malenSpecScores" class="malen-spec-scores"></div>
+    </div>
+    <div id="malenSpecContent"></div>
+</div>
+
+<script>
+    if (typeof socket !== 'undefined') {
+        socket.off('malenLinesAdded');
+        socket.on('malenLinesAdded', ({ team, lines }) => {
+            const canvas = team === window._malenFirstTeam
+                ? document.getElementById('specMalenCanvas1')
+                : document.getElementById('specMalenCanvas2');
+            if (canvas && lines) {
+                const ctx = canvas.getContext('2d');
+                _specDrawLines(ctx, canvas, lines);
+            }
+        });
+
+        socket.off('malenCanvasCleared');
+        socket.on('malenCanvasCleared', ({ team }) => {
+            if (team === window._malenFirstTeam || team === 'Team 1' || team === 'ALL') {
+                const c1 = document.getElementById('specMalenCanvas1');
+                if (c1) _specClearCanvas(c1);
+            }
+            if (team === window._malenSecondTeam || team === 'Team 2' || team === 'ALL') {
+                const c2 = document.getElementById('specMalenCanvas2');
+                if (c2) _specClearCanvas(c2);
+            }
+        });
+    }
+
+    function _specClearCanvas(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function _specDrawLines(ctx, canvas, lines) {
+        if (!lines || !lines.length) return;
+        ctx.strokeStyle = '#111111';
+        ctx.lineWidth = Math.max(3, Math.round(canvas.width * 0.005));
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        lines.forEach(l => {
+            ctx.beginPath();
+            ctx.moveTo(l.x0 * canvas.width, l.y0 * canvas.height);
+            ctx.lineTo(l.x1 * canvas.width, l.y1 * canvas.height);
+            ctx.stroke();
+        });
+    }
+
+    function _specRedraw(canvas, lines) {
+        _specClearCanvas(canvas);
+        if (lines && lines.length) {
+            _specDrawLines(canvas.getContext('2d'), canvas, lines);
+        }
+    }
+
+    window.onSpectatorStateUpdate = function(state) {
+        const malen = state.malenGame || {};
+        const teams = state.teams || {};
+        const teamNames = Object.keys(teams);
+        const firstTeam = teamNames[0] || 'Team 1';
+        const secondTeam = teamNames[1] || 'Team 2';
+        window._malenFirstTeam = firstTeam;
+        window._malenSecondTeam = secondTeam;
+        const players = state.players || {};
+        const phase = malen.phase || 'IDLE';
+
+        // Scores
+        const scoresEl = document.getElementById('malenSpecScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = malen.scores || {};
+            Object.keys(teams).forEach(t => {
+                const color = (teams[t] || {}).color || '#fff';
+                const box = document.createElement('div');
+                box.className = 'malen-spec-score-box';
+                box.style.borderLeft = '4px solid ' + color;
+                box.innerHTML = '<span style="color:' + color + '">' + t + ':</span> <span>' + (scores[t] || 0) + ' Pkt.</span>';
+                scoresEl.appendChild(box);
+            });
+        }
+
+        const wordEl = document.getElementById('malenSpecWord');
+        if (wordEl) {
+            if (phase === 'PLAYING') {
+                wordEl.style.display = 'inline-block';
+                wordEl.innerHTML = '<span style="font-size: 0.8rem; opacity: 0.75; text-transform: uppercase; letter-spacing: 1px; margin-right: 6px;">Begriff:</span> ' + (malen.word || '-');
+            } else {
+                wordEl.style.display = 'none';
+            }
+        }
+
+        const content = document.getElementById('malenSpecContent');
+        if (!content) return;
+
+        if (phase === 'IDLE') {
+            content.innerHTML = '<div style="text-align:center;padding:40px 10px;color:#a4b0be;"><h3 style="margin:0 0 4px;font-size:1.2rem;">Warte auf das Spiel...</h3><p style="margin:0;font-size:0.9rem;">Der Admin wählt die Maler und den Begriff aus.</p></div>';
+            return;
+        }
+
+        const painters = malen.painters || {};
+        const p1 = players[painters[firstTeam] || painters['Team 1']];
+        const p2 = players[painters[secondTeam] || painters['Team 2']];
+        const col1 = (teams[firstTeam] || {}).color || '#9b59b6';
+        const col2 = (teams[secondTeam] || {}).color || '#2ecc71';
+
+        // Check if boards exist already
+        let c1 = document.getElementById('specMalenCanvas1');
+        let c2 = document.getElementById('specMalenCanvas2');
+
+        if (!c1 || !c2) {
+            content.innerHTML = `
+                <div class="malen-spec-boards">
+                    <div class="malen-spec-board">
+                        <div class="malen-spec-board-header">
+                            <h4 id="specMalenHeader1" style="color: ${col1};">${firstTeam}</h4>
+                            <span id="specMalenTag1" class="malen-spec-painter-tag">${p1 ? 'Malt: ' + p1.name : ''}</span>
+                        </div>
+                        <canvas id="specMalenCanvas1" class="malen-spec-canvas" width="1000" height="750"></canvas>
+                    </div>
+                    <div class="malen-spec-board">
+                        <div class="malen-spec-board-header">
+                            <h4 id="specMalenHeader2" style="color: ${col2};">${secondTeam}</h4>
+                            <span id="specMalenTag2" class="malen-spec-painter-tag">${p2 ? 'Malt: ' + p2.name : ''}</span>
+                        </div>
+                        <canvas id="specMalenCanvas2" class="malen-spec-canvas" width="1000" height="750"></canvas>
+                    </div>
+                </div>
+            `;
+            c1 = document.getElementById('specMalenCanvas1');
+            c2 = document.getElementById('specMalenCanvas2');
+        } else {
+            const tag1 = document.getElementById('specMalenTag1');
+            const tag2 = document.getElementById('specMalenTag2');
+            if (tag1) tag1.innerText = p1 ? 'Malt: ' + p1.name : '';
+            if (tag2) tag2.innerText = p2 ? 'Malt: ' + p2.name : '';
+        }
+
+        const drawings = malen.drawings || {};
+        if (c1) _specRedraw(c1, drawings[firstTeam] || drawings['Team 1'] || []);
+        if (c2) _specRedraw(c2, drawings[secondTeam] || drawings['Team 2'] || []);
+    };
+</script>
+

@@ -1,0 +1,33 @@
+<style>
+    .realitaet-spectator { text-align: center; }
+    .realitaet-spectator-display { min-height: 300px; display: grid; place-items: center; margin-top: 15px; padding: 16px; background: #171922; border-radius: 12px; }
+    .realitaet-spectator-display img { max-width: 100%; max-height: 58vh; object-fit: contain; border-radius: 10px; }
+    .realitaet-spectator-question { font-size: clamp(7rem, 24vw, 15rem); line-height: 1; font-weight: 900; color: #f5c542; }
+</style>
+<div class="card realitaet-spectator">
+    <h2>Ist es real oder ist es nicht Wirklichkeit?</h2>
+    <p id="realitaetSpectatorStatus">Warte auf die Runde...</p>
+    <div id="realitaetSpectatorDisplay" class="realitaet-spectator-display"></div>
+</div>
+<script>
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.realitaetGame || {};
+        const status = document.getElementById('realitaetSpectatorStatus');
+        const display = document.getElementById('realitaetSpectatorDisplay');
+        if (!status || !display) return;
+        status.textContent = game.phase === 'PLAYING'
+            ? `${game.targetTeam || 'Zielteam'} · ${game.remaining} Sekunden`
+            : game.phase === 'FINISHED' ? 'Runde beendet.' : 'Warte auf die Runde...';
+        display.innerHTML = '';
+        if (game.phase === 'PLAYING') {
+            if (game.contentType === 'IMAGE' && game.image) {
+                const image = document.createElement('img');
+                image.src = `/${game.image}`;
+                image.alt = 'Spielbild';
+                display.appendChild(image);
+            } else if (game.contentType === 'QUESTION') {
+                display.innerHTML = '<div class="realitaet-spectator-question">?</div>';
+            }
+        }
+    };
+</script>

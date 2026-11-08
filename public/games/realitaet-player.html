@@ -1,0 +1,41 @@
+<style>
+    .realitaet-player { text-align: center; }
+    .realitaet-player-display { min-height: 300px; display: grid; place-items: center; margin: 15px auto; padding: 16px; background: #202431; border-radius: 12px; }
+    .realitaet-player-display img { max-width: 100%; max-height: 52vh; object-fit: contain; border-radius: 10px; }
+    .realitaet-question { font-size: clamp(7rem, 24vw, 15rem); line-height: 1; font-weight: 900; color: #f5c542; }
+    .realitaet-player-status { color: #a4b0be; }
+</style>
+<div class="card realitaet-player">
+    <h2>Ist es real oder ist es nicht Wirklichkeit?</h2>
+    <p id="realitaetPlayerStatus" class="realitaet-player-status">Warte auf die Runde...</p>
+    <div id="realitaetPlayerDisplay" class="realitaet-player-display"></div>
+</div>
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const game = state.realitaetGame || {};
+        const me = state.players && state.players[socket.id];
+        const status = document.getElementById('realitaetPlayerStatus');
+        const display = document.getElementById('realitaetPlayerDisplay');
+        if (!status || !display) return;
+        const isTarget = me && me.team === game.targetTeam;
+        status.textContent = game.phase === 'PLAYING'
+            ? (isTarget ? `Dein Team hat ${game.remaining} Sekunden Zeit.` : 'Das andere Team stellt Fragen.')
+            : game.phase === 'FINISHED' ? 'Runde beendet.' : 'Warte auf die Runde...';
+        if (game.phase === 'PLAYING' && !isTarget) {
+            status.textContent = `Fragerunde läuft · noch ${game.remaining} Sekunden`;
+        }
+        display.innerHTML = '';
+        if (game.phase === 'PLAYING' && isTarget) {
+            if (game.contentType === 'IMAGE' && game.image) {
+                const image = document.createElement('img');
+                image.src = `/${game.image}`;
+                image.alt = 'Spielbild';
+                display.appendChild(image);
+            } else if (game.contentType === 'QUESTION') {
+                display.innerHTML = '<div class="realitaet-question">?</div>';
+            }
+        } else if (game.phase === 'PLAYING') {
+            display.innerHTML = '<div style="color:#a4b0be;font-size:1.3rem;">Das Zielteam sieht seine Anzeige.</div>';
+        }
+    };
+</script>

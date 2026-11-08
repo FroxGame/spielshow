@@ -1,0 +1,220 @@
+<style>
+    .promi-player-game {
+        text-align: center;
+    }
+
+    .promi-player-game h2 {
+        margin: 6px 0;
+    }
+
+    .promi-player-game p {
+        margin: 6px 0;
+    }
+
+    .promi-player-score {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 8px;
+        flex-wrap: wrap;
+    }
+
+    .promi-player-score span {
+        padding: 6px 11px;
+        border-radius: 6px;
+        background: #2c2c3a;
+        font-weight: bold;
+    }
+
+    #promiPlayerImage {
+        display: block;
+        width: 100%;
+        max-height: 48vh;
+        object-fit: contain;
+        margin: 10px auto;
+        border-radius: 10px;
+        background: #202431;
+    }
+
+    .promi-player-buzzer {
+        padding: 12px 30px;
+        background: #e74c3c;
+        color: #fff;
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+
+    .promi-player-buzzer:disabled {
+        background: #555;
+        cursor: not-allowed;
+    }
+
+    .promi-player-reveal {
+        margin: 8px 0;
+        padding: 10px;
+        border-radius: 6px;
+        background: #202a2b;
+        font-weight: bold;
+    }
+
+    .promi-player-reveal:empty {
+        display: none;
+    }
+
+    #teamNotes {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+    }
+
+    .team-note-field label {
+        display: block;
+        margin-bottom: 5px;
+        color: #a4b0be;
+        font-size: 0.85rem;
+        text-align: left;
+    }
+
+    .team-note-input {
+        width: 100%;
+        min-height: 64px;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border: 1px solid #555b70;
+        border-radius: 6px;
+        background: #15151d;
+        color: #fff;
+        font: inherit;
+        font-size: 0.92rem;
+        resize: vertical;
+    }
+
+    .team-note-input:disabled {
+        opacity: 1;
+        cursor: default;
+    }
+
+    @media (max-width: 600px) {
+        #teamNotes { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div id="promiPlayerScore" class="promi-player-score"></div>
+<div class="promi-player-game">
+    <h2>Promis raten</h2>
+    <p id="promiPlayerStatus">Warte auf ein Bild...</p>
+    <img id="promiPlayerImage" alt="Promi">
+    <div id="promiPlayerReveal" class="promi-player-reveal"></div>
+    <button id="promiPlayerBuzzer" class="promi-player-buzzer">BUZZER</button>
+    <div id="teamNotes"></div>
+</div>
+
+<script>
+    let lastPromiBuzzerWinner = null;
+    let promiBuzzerSoundPlayedByClick = false;
+
+    function playPromiBuzzerSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(880, context.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.18, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.22);
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        const promi = state.promiGame || {};
+        const image = document.getElementById('promiPlayerImage');
+        const buzzer = document.getElementById('promiPlayerBuzzer');
+        const status = document.getElementById('promiPlayerStatus');
+        const reveal = document.getElementById('promiPlayerReveal');
+        const scores = document.getElementById('promiPlayerScore');
+        if (!image || !buzzer || !status || !reveal || !scores) return;
+        if (promi.buzzerWinner && promi.buzzerWinner !== lastPromiBuzzerWinner) {
+            if (!promiBuzzerSoundPlayedByClick) playPromiBuzzerSound();
+            promiBuzzerSoundPlayedByClick = false;
+            lastPromiBuzzerWinner = promi.buzzerWinner;
+        }
+        if (!promi.buzzerWinner) {
+            lastPromiBuzzerWinner = null;
+        }
+
+        scores.innerHTML = Object.entries(promi.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points} / 5</span>`)
+            .join('');
+        image.src = promi.currentImage ? `/${promi.currentImage}` : '';
+        image.style.display = promi.currentImage ? 'block' : 'none';
+        buzzer.disabled = !promi.currentImage || promi.buzzerLocked || Boolean(promi.winnerTeam);
+        status.innerText = promi.buzzerWinner
+            ? `${promi.buzzerWinner} hat gebuzzert.`
+            : promi.buzzerLocked ? 'Der Buzzer ist gesperrt.' : 'Wer erkennt den Promi zuerst?';
+        reveal.innerText = promi.revealedName || '';
+    }
+
+    document.getElementById('promiPlayerBuzzer').onclick = () => {
+        playPromiBuzzerSound();
+        promiBuzzerSoundPlayedByClick = true;
+        socket.emit('pressPromiBuzzer');
+    }
+
+    window.onTeamNotesUpdate = function(notes) {
+        const notesContainer = document.getElementById('teamNotes');
+        if (!notesContainer || !Array.isArray(notes)) return;
+
+        const noteIds = notes.map(note => note.playerId).join('|');
+        if (notesContainer.dataset.noteIds !== noteIds) {
+            notesContainer.innerHTML = '';
+            notes.forEach(note => {
+                const field = document.createElement('div');
+                field.className = 'team-note-field';
+
+                const label = document.createElement('label');
+                label.innerText = (typeof socket !== 'undefined' && note.playerId === socket.id)
+                    ? 'Deine Notiz'
+                    : `${note.name}s Notiz`;
+
+                const textarea = document.createElement('textarea');
+                textarea.className = 'team-note-input';
+                textarea.dataset.playerId = note.playerId;
+                textarea.maxLength = 500;
+                textarea.value = note.text || '';
+                textarea.disabled = (typeof socket !== 'undefined' && note.playerId !== socket.id);
+                textarea.placeholder = (typeof socket !== 'undefined' && note.playerId === socket.id)
+                    ? 'Notiz für dich und deinen Teampartner...'
+                    : 'Noch keine Notiz vorhanden';
+
+                if (typeof socket !== 'undefined' && note.playerId === socket.id) {
+                    textarea.addEventListener('input', () => {
+                        socket.emit('updatePlayerNote', textarea.value);
+                    });
+                }
+
+                field.appendChild(label);
+                field.appendChild(textarea);
+                notesContainer.appendChild(field);
+            });
+            notesContainer.dataset.noteIds = noteIds;
+            return;
+        }
+
+        notes.forEach(note => {
+            const field = notesContainer.querySelector(`[data-player-id="${note.playerId}"]`);
+            if (field && document.activeElement !== field) {
+                field.value = note.text || '';
+            }
+        });
+    }
+
+    if (typeof latestTeamNotes !== 'undefined' && latestTeamNotes) {
+        window.onTeamNotesUpdate(latestTeamNotes);
+    }
+</script>

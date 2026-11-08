@@ -1,0 +1,102 @@
+<style>
+    .bsalat-spec-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+        box-sizing: border-box;
+        padding: 20px 10px;
+    }
+    .bsalat-spec-category {
+        font-size: 1.1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #a4b0be;
+        font-weight: bold;
+        margin-bottom: 12px;
+        text-align: center;
+    }
+    .bsalat-spec-answer {
+        font-size: 3.5rem;
+        font-family: monospace;
+        letter-spacing: 0.2em;
+        color: #ffd166;
+        background: #171922;
+        border: 3px solid #303646;
+        border-radius: 18px;
+        padding: 36px 56px;
+        text-align: center;
+        word-break: break-word;
+        min-width: 400px;
+        min-height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        transition: color 0.4s, border-color 0.4s;
+    }
+    .bsalat-spec-status {
+        margin-top: 18px;
+        font-size: 1.1rem;
+        color: #a4b0be;
+        text-align: center;
+    }
+    .bsalat-spec-idle {
+        font-size: 1.2rem;
+        color: #576574;
+        margin-top: 24px;
+        text-align: center;
+    }
+</style>
+
+<div class="bsalat-spec-container">
+    <div id="bsalatSpecCategory" class="bsalat-spec-category"></div>
+    <div id="bsalatSpecAnswer" class="bsalat-spec-answer">— — —</div>
+    <div id="bsalatSpecStatus" class="bsalat-spec-status"></div>
+    <div id="bsalatSpecIdle" class="bsalat-spec-idle">Warte auf die nächste Runde...</div>
+</div>
+
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const game = state.buchstabensalatGame || {};
+        const phase = game.phase || 'IDLE';
+
+        const catEl = document.getElementById('bsalatSpecCategory');
+        const answerEl = document.getElementById('bsalatSpecAnswer');
+        const statusEl = document.getElementById('bsalatSpecStatus');
+        const idleEl = document.getElementById('bsalatSpecIdle');
+
+        if (!catEl) return;
+
+        if (phase === 'IDLE') {
+            catEl.textContent = '';
+            answerEl.textContent = '— — —';
+            answerEl.style.color = '#ffd166';
+            answerEl.style.borderColor = '#303646';
+            statusEl.textContent = '';
+            idleEl.style.display = 'block';
+            return;
+        }
+
+        idleEl.style.display = 'none';
+        catEl.textContent = '🏷 Kategorie: ' + (game.category || '');
+
+        if (phase === 'REVEALED') {
+            answerEl.textContent = game.answer || '';
+            answerEl.style.color = '#2ed573';
+            answerEl.style.borderColor = '#2ed573';
+            statusEl.textContent = '✅ Auflösung!';
+        } else {
+            answerEl.textContent = game.revealed || '…';
+            answerEl.style.color = '#ffd166';
+            answerEl.style.borderColor = '#ffd166';
+            if (game.order && game.order.length > 0) {
+                statusEl.textContent = `Schritt ${game.step} / ${game.order.length}`;
+            } else {
+                statusEl.textContent = '';
+            }
+        }
+    };
+</script>

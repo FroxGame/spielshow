@@ -1,0 +1,318 @@
+<style>
+    .category-player-scores {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 14px;
+        margin: 0 auto 12px;
+    }
+    .category-player-score-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 14px;
+        border-radius: 6px;
+        background: #1c202c;
+        font-size: 1.05rem;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .category-player-categories {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin: 12px 0;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .category-player-category {
+        min-height: 135px;
+        padding: 10px 12px;
+        border: 1px solid #4a5676;
+        border-radius: 6px;
+        background: #1c202c;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    .category-player-category h3 {
+        margin: 0 0 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #3d4763;
+        font-size: 1.05rem;
+        word-break: break-word;
+    }
+    .category-player-category-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-content: flex-start;
+        flex-grow: 1;
+        min-width: 0;
+    }
+    .category-player-term {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        background: #2c2f3c;
+        border: 1px solid #48526e;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .category-player-term-text {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        flex: 1 1 auto;
+    }
+    .category-player-team-tag {
+        font-size: 0.75rem;
+        font-weight: bold;
+        padding: 1px 6px;
+        border-radius: 3px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        line-height: 1.3;
+    }
+    .category-player-unassigned {
+        margin-top: 14px;
+        padding: 12px;
+        border: 1px dashed #4a5676;
+        border-radius: 6px;
+        background: #161822;
+        text-align: left;
+        box-sizing: border-box;
+        width: 100%;
+    }
+    .category-player-unassigned h4 {
+        margin: 0 0 10px 0;
+        font-size: 0.95rem;
+        color: #a4b0be;
+    }
+    .category-player-unassigned-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .category-correct {
+        background: #19462e !important;
+        border-color: #2ed573 !important;
+        color: #a4f5c5 !important;
+    }
+    .category-wrong {
+        background: #4a1f26 !important;
+        border-color: #ff6b6b !important;
+        color: #ffb8b8 !important;
+    }
+
+    #teamNotes {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 16px;
+    }
+    .team-note-field label {
+        display: block;
+        margin-bottom: 5px;
+        color: #a4b0be;
+        font-size: 0.85rem;
+        text-align: left;
+    }
+    .team-note-input {
+        width: 100%;
+        min-height: 64px;
+        box-sizing: border-box;
+        padding: 8px 10px;
+        border: 1px solid #555b70;
+        border-radius: 6px;
+        background: #15151d;
+        color: #fff;
+        font: inherit;
+        font-size: 0.92rem;
+        resize: vertical;
+    }
+    .team-note-input:disabled {
+        opacity: 1;
+        cursor: default;
+    }
+
+    @media (max-width: 900px) {
+        .category-player-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 600px) {
+        .category-player-categories { grid-template-columns: 1fr; }
+        #teamNotes { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div style="width: 100%; box-sizing: border-box;">
+    <h2 style="margin: 0 0 8px 0; font-size: 1.35rem;">Begriffe Kategorien zuordnen</h2>
+    <div id="categoryPlayerScores" class="category-player-scores"></div>
+    <p id="categoryPlayerStatus" style="margin: 0 0 10px 0; color: #a4b0be; font-size: 0.95rem;">Warte auf eine Runde...</p>
+    <div id="categoryPlayerCategories" class="category-player-categories"></div>
+    <div id="categoryPlayerUnassigned" class="category-player-unassigned" style="display: none;">
+        <h4>Noch nicht zugeordnet:</h4>
+        <div id="categoryPlayerUnassignedItems" class="category-player-unassigned-items"></div>
+    </div>
+    <div id="teamNotes"></div>
+</div>
+
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const game = state.categoryGame || {};
+        const status = document.getElementById('categoryPlayerStatus');
+        const scoresBoard = document.getElementById('categoryPlayerScores');
+        const categories = document.getElementById('categoryPlayerCategories');
+        const unassigned = document.getElementById('categoryPlayerUnassigned');
+        const unassignedItems = document.getElementById('categoryPlayerUnassignedItems');
+        if (!status || !categories || !unassigned || !unassignedItems) return;
+
+        status.innerText = game.roundName ? `Runde: ${game.roundName}` : 'Warte auf eine Runde...';
+
+        // Render Scores (Points)
+        if (scoresBoard) {
+            scoresBoard.innerHTML = '';
+            const scores = game.scores || {};
+            const teams = state.teams || {};
+            Object.keys(teams).forEach(teamName => {
+                const teamData = teams[teamName] || {};
+                const color = teamData.color || '#fff';
+                const pts = scores[teamName] || 0;
+
+                const box = document.createElement('div');
+                box.className = 'category-player-score-box';
+                box.style.borderLeft = `5px solid ${color}`;
+                box.innerHTML = `<span style="color: ${color};">${teamName}:</span> <span>${pts} Pkt.</span>`;
+                scoresBoard.appendChild(box);
+            });
+        }
+
+        if (!game.roundName || game.phase !== 'PLAYING') {
+            categories.innerHTML = '';
+            unassignedItems.innerHTML = '';
+            unassigned.style.display = 'none';
+            return;
+        }
+
+        unassigned.style.display = 'block';
+        categories.innerHTML = '';
+        unassignedItems.innerHTML = '';
+
+        const categoryItemContainers = {};
+        (game.categories || []).forEach(category => {
+            const column = document.createElement('section');
+            column.className = 'category-player-category';
+            column.innerHTML = `<h3>${category}</h3>`;
+            const items = document.createElement('div');
+            items.className = 'category-player-category-items';
+            column.appendChild(items);
+            categoryItemContainers[category] = items;
+            categories.appendChild(column);
+        });
+
+        const assignments = game.assignments || {};
+        const assignedTeams = game.assignedTeams || {};
+        const revealed = game.revealed || {};
+        const results = game.results || {};
+        const teams = state.teams || {};
+
+        (game.terms || []).forEach(entry => {
+            const card = document.createElement('div');
+            card.className = 'category-player-term';
+
+            const termText = document.createElement('span');
+            termText.className = 'category-player-term-text';
+            termText.innerText = entry.term;
+            card.appendChild(termText);
+
+            const assignment = assignments[entry.term];
+            const isRevealed = Boolean(revealed[entry.term]);
+            const result = results[entry.term];
+            const termTeam = assignedTeams[entry.term];
+            const teamColor = termTeam && teams[termTeam] ? teams[termTeam].color : null;
+
+            if (assignment && categoryItemContainers[assignment]) {
+                if (termTeam && teamColor) {
+                    card.style.borderLeft = `5px solid ${teamColor}`;
+                    const teamTag = document.createElement('span');
+                    teamTag.className = 'category-player-team-tag';
+                    teamTag.style.background = teamColor + '33';
+                    teamTag.style.color = teamColor;
+                    teamTag.style.border = `1px solid ${teamColor}`;
+                    teamTag.innerText = termTeam;
+                    card.appendChild(teamTag);
+                }
+
+                if (isRevealed && result !== undefined) {
+                    card.classList.add(result ? 'category-correct' : 'category-wrong');
+                    const badge = document.createElement('span');
+                    badge.style.marginLeft = '4px';
+                    badge.style.fontWeight = 'bold';
+                    badge.innerText = result ? '✓' : '✗';
+                    card.appendChild(badge);
+                }
+                categoryItemContainers[assignment].appendChild(card);
+            } else {
+                unassignedItems.appendChild(card);
+            }
+        });
+    };
+
+    window.onTeamNotesUpdate = function(notes) {
+        const notesContainer = document.getElementById('teamNotes');
+        if (!notesContainer || !Array.isArray(notes)) return;
+
+        const noteIds = notes.map(note => note.playerId).join('|');
+        if (notesContainer.dataset.noteIds !== noteIds) {
+            notesContainer.innerHTML = '';
+            notes.forEach(note => {
+                const field = document.createElement('div');
+                field.className = 'team-note-field';
+
+                const label = document.createElement('label');
+                label.innerText = (typeof socket !== 'undefined' && note.playerId === socket.id)
+                    ? 'Deine Notiz'
+                    : `${note.name}s Notiz`;
+
+                const textarea = document.createElement('textarea');
+                textarea.className = 'team-note-input';
+                textarea.dataset.playerId = note.playerId;
+                textarea.maxLength = 500;
+                textarea.value = note.text || '';
+                textarea.disabled = (typeof socket !== 'undefined' && note.playerId !== socket.id);
+                textarea.placeholder = (typeof socket !== 'undefined' && note.playerId === socket.id)
+                    ? 'Notiz für dich und deinen Teampartner...'
+                    : 'Noch keine Notiz vorhanden';
+
+                if (typeof socket !== 'undefined' && note.playerId === socket.id) {
+                    textarea.addEventListener('input', () => {
+                        socket.emit('updatePlayerNote', textarea.value);
+                    });
+                }
+
+                field.appendChild(label);
+                field.appendChild(textarea);
+                notesContainer.appendChild(field);
+            });
+            notesContainer.dataset.noteIds = noteIds;
+            return;
+        }
+
+        notes.forEach(note => {
+            const field = notesContainer.querySelector(`[data-player-id="${note.playerId}"]`);
+            if (field && document.activeElement !== field) {
+                field.value = note.text || '';
+            }
+        });
+    };
+
+    if (typeof latestTeamNotes !== 'undefined' && latestTeamNotes) {
+        window.onTeamNotesUpdate(latestTeamNotes);
+    }
+</script>

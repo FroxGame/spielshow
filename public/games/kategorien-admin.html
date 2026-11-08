@@ -1,0 +1,682 @@
+<style>
+    .category-admin-controls {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+    }
+    .category-admin-status {
+        margin: 0;
+        font-weight: bold;
+        color: #a4b0be;
+    }
+    .category-admin-scores {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    .category-score-team {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 12px;
+        border-radius: 6px;
+        background: #1c2130;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    }
+    .category-score-btn {
+        padding: 3px 9px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 4px;
+        border: 1px solid #4a5676;
+        background: #2b3348;
+        color: #fff;
+    }
+    .category-score-btn:hover {
+        background: #3e4a68;
+    }
+
+    .category-admin-team-selector {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: #191e2b;
+        border: 1px solid #363e54;
+        border-radius: 6px;
+        margin-bottom: 14px;
+    }
+    .category-team-btn {
+        padding: 5px 12px;
+        font-size: 0.85rem;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 5px;
+        border: 2px solid transparent;
+        background: #272d3e;
+        color: #cbd5e1;
+        transition: all 0.15s;
+    }
+    .category-team-btn.active {
+        box-shadow: 0 0 8px currentColor;
+    }
+
+    .category-admin-dropzones {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 16px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .category-admin-dropzone {
+        min-height: 140px;
+        padding: 10px 12px;
+        border: 2px dashed #485474;
+        border-radius: 8px;
+        background: #1c202c;
+        display: flex;
+        flex-direction: column;
+        transition: border-color 0.15s, background-color 0.15s;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+    .category-admin-dropzone.drag-over {
+        border-color: #2ed573;
+        background: #1e3328;
+    }
+    .category-admin-dropzone.target-selected {
+        border-color: #ffa502;
+        background: #2f2a1f;
+    }
+    .category-admin-dropzone-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 0 0 8px 0;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #363d52;
+        font-size: 1.05rem;
+        font-weight: bold;
+    }
+    .category-admin-dropzone-count {
+        font-size: 0.75rem;
+        padding: 2px 7px;
+        border-radius: 10px;
+        background: #2c3245;
+        color: #a4b0be;
+    }
+    .category-admin-dropzone-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        flex-grow: 1;
+        align-content: flex-start;
+        min-height: 40px;
+        min-width: 0;
+    }
+
+    .category-admin-unassigned-pool {
+        padding: 12px;
+        border: 2px dashed #3e475e;
+        border-radius: 8px;
+        background: #181b24;
+        transition: border-color 0.15s, background-color 0.15s;
+        box-sizing: border-box;
+        width: 100%;
+    }
+    .category-admin-unassigned-pool.drag-over {
+        border-color: #ffa502;
+        background: #24221a;
+    }
+    .category-admin-unassigned-pool h4 {
+        margin: 0 0 10px 0;
+        font-size: 0.95rem;
+        color: #a4b0be;
+    }
+    .category-admin-chips-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        min-height: 40px;
+    }
+
+    .category-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 11px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        border-radius: 6px;
+        background: #2f364a;
+        color: #f1f2f6;
+        border: 1px solid #4a5676;
+        cursor: grab;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+        transition: transform 0.1s, opacity 0.1s, background-color 0.1s;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    .category-chip:active {
+        cursor: grabbing;
+    }
+    .category-chip.dragging {
+        opacity: 0.35;
+        transform: scale(0.95);
+    }
+    .category-chip.chip-selected {
+        outline: 2px solid #ffa502;
+        background: #3e4663;
+    }
+    .category-chip.chip-correct {
+        background: #19462e !important;
+        border-color: #2ed573 !important;
+        color: #a4f5c5 !important;
+    }
+    .category-chip.chip-wrong {
+        background: #4a1f26 !important;
+        border-color: #ff6b6b !important;
+        color: #ffb8b8 !important;
+    }
+
+    .category-chip-text {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
+        flex: 1 1 auto;
+    }
+
+    .category-chip-team-tag {
+        font-size: 0.75rem;
+        font-weight: bold;
+        padding: 1px 6px;
+        border-radius: 3px;
+        cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
+        line-height: 1.3;
+    }
+    .category-chip-team-tag:hover {
+        filter: brightness(1.2);
+    }
+
+    .category-chip-remove {
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 1rem;
+        opacity: 0.7;
+        margin-left: 2px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+    .category-chip-remove:hover {
+        opacity: 1;
+        color: #ff4757;
+    }
+
+    .category-chip-reveal-btn {
+        background: #3d4a6b;
+        color: #fff;
+        border: 1px solid #5a6d9e;
+        border-radius: 4px;
+        padding: 2px 7px;
+        font-size: 0.78rem;
+        cursor: pointer;
+        margin-left: 3px;
+        line-height: 1.3;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+    .category-chip-reveal-btn:hover {
+        background: #50628e;
+    }
+    .category-chip-badge {
+        font-size: 0.85rem;
+        font-weight: bold;
+        margin-left: 3px;
+        flex-shrink: 0;
+    }
+    .category-chip-hide-btn {
+        cursor: pointer;
+        font-size: 0.9rem;
+        opacity: 0.75;
+        margin-left: 3px;
+        line-height: 1;
+        flex-shrink: 0;
+    }
+    .category-chip-hide-btn:hover {
+        opacity: 1;
+        color: #ffa502;
+    }
+
+    @media (max-width: 900px) {
+        .category-admin-dropzones {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 550px) {
+        .category-admin-dropzones {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div class="card" style="width: 100%; box-sizing: border-box;">
+    <h2>Begriffe Kategorien zuordnen</h2>
+    <div class="category-admin-controls">
+        <select id="categoryRoundSelect" style="padding: 7px 10px; min-width: 200px;">
+            <option value="">-- Runde auswählen --</option>
+        </select>
+        <button onclick="startCategoryRound()">Runde starten</button>
+        <button onclick="resetCategoryGame()">Spiel zurücksetzen</button>
+        <button id="categoryRevealAllBtn" onclick="revealAllCategoryTerms()" style="display: none; background: #3742fa; color: white;">Alle aufdecken</button>
+        <span id="categoryAdminStatus" class="category-admin-status">Keine Runde aktiv.</span>
+    </div>
+
+    <div id="categoryAdminScores" class="category-admin-scores"></div>
+
+    <div id="categoryAdminTeamBar" class="category-admin-team-selector" style="display: none;">
+        <span style="font-weight: bold; color: #a4b0be; font-size: 0.9rem;">Zuordnen für Team:</span>
+        <div id="categoryActiveTeamButtons" style="display: inline-flex; flex-wrap: wrap; gap: 6px;"></div>
+    </div>
+
+    <div id="categoryAdminDropzones" class="category-admin-dropzones"></div>
+    <div id="categoryAdminUnassigned" class="category-admin-unassigned-pool" style="display: none;">
+        <h4>Offene Begriffe (Per Drag &amp; Drop auf eine Kategorie ziehen oder anklicken):</h4>
+        <div id="categoryAdminChips" class="category-admin-chips-container"></div>
+    </div>
+</div>
+
+<script>
+    let selectedTermToAssign = null;
+    let activeAssignmentTeam = null;
+
+    function fillCategoryRounds(rounds) {
+        const select = document.getElementById('categoryRoundSelect');
+        if (!select) return;
+        const roundList = Array.isArray(rounds) ? rounds : (rounds && typeof rounds === 'object' ? Object.keys(rounds) : []);
+        if (!roundList.length) return;
+
+        const currentVal = select.value;
+        select.innerHTML = '<option value="">-- Runde auswählen --</option>';
+        roundList.forEach(round => {
+            const option = document.createElement('option');
+            option.value = round;
+            option.innerText = round;
+            if (round === currentVal) option.selected = true;
+            select.appendChild(option);
+        });
+    }
+
+    if (typeof socket !== 'undefined') {
+        socket.off('receiveCategoryRounds');
+        socket.on('receiveCategoryRounds', fillCategoryRounds);
+        socket.emit('getCategoryRounds');
+    }
+
+    window.startCategoryRound = function() {
+        const select = document.getElementById('categoryRoundSelect');
+        if (!select || !select.value) {
+            alert('Bitte wähle zuerst eine Runde aus!');
+            return;
+        }
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminStartCategoryRound', select.value);
+        }
+    };
+
+    window.resetCategoryGame = function() {
+        selectedTermToAssign = null;
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminResetCategoryGame');
+        }
+    };
+
+    window.revealTerm = function(term) {
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminRevealCategoryTerm', term);
+        }
+    };
+
+    window.revealAllCategoryTerms = function() {
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminRevealAllCategoryTerms');
+        }
+    };
+
+    window.addCategoryPoint = function(team, amount) {
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminAddCategoryPoint', { team, amount });
+        }
+    };
+
+    window.setCategoryTermTeam = function(term, team) {
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminSetCategoryTermTeam', { term, team });
+        }
+    };
+
+    function assignTerm(term, category) {
+        selectedTermToAssign = null;
+        document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('chip-selected'));
+        document.querySelectorAll('.category-admin-dropzone').forEach(z => z.classList.remove('target-selected'));
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminAssignCategoryTerm', { term, category, team: activeAssignmentTeam });
+        }
+    }
+
+    function createChip(term, isAssigned, isRevealed, isCorrect, assignedTeam, teamColor, availableTeams) {
+        const chip = document.createElement('div');
+        chip.className = 'category-chip';
+        chip.draggable = true;
+        chip.dataset.term = term;
+
+        if (isAssigned && isRevealed) {
+            chip.classList.add(isCorrect ? 'chip-correct' : 'chip-wrong');
+        }
+
+        if (isAssigned && assignedTeam && teamColor) {
+            chip.style.borderLeft = `5px solid ${teamColor}`;
+        }
+
+        const label = document.createElement('span');
+        label.className = 'category-chip-text';
+        label.innerText = term;
+        chip.appendChild(label);
+
+        if (isAssigned) {
+            // Team badge with click-to-cycle team assignment
+            const teamBadge = document.createElement('span');
+            teamBadge.className = 'category-chip-team-tag';
+            if (assignedTeam && teamColor) {
+                teamBadge.style.background = teamColor + '33';
+                teamBadge.style.color = teamColor;
+                teamBadge.style.border = `1px solid ${teamColor}`;
+                teamBadge.innerText = assignedTeam;
+                teamBadge.title = 'Klicken zum Wechseln des Teams';
+            } else {
+                teamBadge.style.background = '#363d52';
+                teamBadge.style.color = '#a4b0be';
+                teamBadge.style.border = '1px dashed #556182';
+                teamBadge.innerText = '+ Team';
+                teamBadge.title = 'Team zuweisen';
+            }
+
+            teamBadge.onclick = (e) => {
+                e.stopPropagation();
+                const teamList = availableTeams || [];
+                if (!teamList.length) return;
+                let nextTeam = null;
+                if (!assignedTeam) {
+                    nextTeam = teamList[0];
+                } else {
+                    const idx = teamList.indexOf(assignedTeam);
+                    if (idx >= 0 && idx < teamList.length - 1) {
+                        nextTeam = teamList[idx + 1];
+                    } else {
+                        nextTeam = null; // Cycles back to no team
+                    }
+                }
+                window.setCategoryTermTeam(term, nextTeam);
+            };
+            chip.appendChild(teamBadge);
+
+            if (!isRevealed) {
+                const revealBtn = document.createElement('button');
+                revealBtn.className = 'category-chip-reveal-btn';
+                revealBtn.innerHTML = '&#128065; Aufdecken';
+                revealBtn.title = 'Ergebnis aufdecken';
+                revealBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    window.revealTerm(term);
+                };
+                chip.appendChild(revealBtn);
+            } else {
+                const badge = document.createElement('span');
+                badge.className = 'category-chip-badge';
+                badge.innerText = isCorrect ? '✓' : '✗';
+                chip.appendChild(badge);
+
+                const hideBtn = document.createElement('span');
+                hideBtn.className = 'category-chip-hide-btn';
+                hideBtn.innerHTML = '&#8634;';
+                hideBtn.title = 'Wieder verdecken';
+                hideBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    window.revealTerm(term);
+                };
+                chip.appendChild(hideBtn);
+            }
+
+            const removeBtn = document.createElement('span');
+            removeBtn.className = 'category-chip-remove';
+            removeBtn.innerHTML = '&times;';
+            removeBtn.title = 'Zuordnung aufheben';
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                assignTerm(term, null);
+            };
+            chip.appendChild(removeBtn);
+        }
+
+        chip.addEventListener('dragstart', (e) => {
+            chip.classList.add('dragging');
+            e.dataTransfer.setData('text/plain', term);
+            e.dataTransfer.effectAllowed = 'move';
+        });
+
+        chip.addEventListener('dragend', () => {
+            chip.classList.remove('dragging');
+        });
+
+        chip.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isAssigned) return;
+            if (selectedTermToAssign === term) {
+                selectedTermToAssign = null;
+                chip.classList.remove('chip-selected');
+                document.querySelectorAll('.category-admin-dropzone').forEach(z => z.classList.remove('target-selected'));
+            } else {
+                selectedTermToAssign = term;
+                document.querySelectorAll('.category-chip').forEach(c => c.classList.remove('chip-selected'));
+                chip.classList.add('chip-selected');
+                document.querySelectorAll('.category-admin-dropzone').forEach(z => z.classList.add('target-selected'));
+            }
+        });
+
+        return chip;
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        if (!state) return;
+        const game = state.categoryGame || {};
+        const roundSelect = document.getElementById('categoryRoundSelect');
+        const status = document.getElementById('categoryAdminStatus');
+        const revealAllBtn = document.getElementById('categoryRevealAllBtn');
+        const scoresContainer = document.getElementById('categoryAdminScores');
+        const teamBar = document.getElementById('categoryAdminTeamBar');
+        const teamButtonsContainer = document.getElementById('categoryActiveTeamButtons');
+        const dropzonesContainer = document.getElementById('categoryAdminDropzones');
+        const unassignedPool = document.getElementById('categoryAdminUnassigned');
+        const chipsContainer = document.getElementById('categoryAdminChips');
+        if (!status || !dropzonesContainer || !unassignedPool || !chipsContainer || !roundSelect) return;
+
+        if (state.categoryRoundNames && state.categoryRoundNames.length > 0 && roundSelect.options.length <= 1) {
+            fillCategoryRounds(state.categoryRoundNames);
+        }
+
+        status.innerText = game.roundName ? `Runde: ${game.roundName} (${game.phase || 'Aktiv'})` : 'Keine Runde aktiv.';
+
+        // Render Scores (Points) for both teams
+        if (scoresContainer) {
+            scoresContainer.innerHTML = '';
+            const scores = game.scores || {};
+            const teams = state.teams || {};
+            const teamNames = Object.keys(teams);
+
+            teamNames.forEach(teamName => {
+                const teamData = teams[teamName] || {};
+                const color = teamData.color || '#fff';
+                const pts = scores[teamName] || 0;
+
+                const row = document.createElement('div');
+                row.className = 'category-score-team';
+                row.style.borderLeft = `5px solid ${color}`;
+                row.innerHTML = `
+                    <span style="font-weight: bold; color: ${color}; font-size: 0.95rem;">${teamName}: ${pts} Pkt.</span>
+                    <button class="category-score-btn" onclick="addCategoryPoint('${teamName}', -1)">-1</button>
+                    <button class="category-score-btn" onclick="addCategoryPoint('${teamName}', 1)">+1</button>
+                `;
+                scoresContainer.appendChild(row);
+            });
+        }
+
+        if (!game.roundName || game.phase !== 'PLAYING') {
+            dropzonesContainer.innerHTML = '';
+            chipsContainer.innerHTML = '';
+            unassignedPool.style.display = 'none';
+            if (revealAllBtn) revealAllBtn.style.display = 'none';
+            if (teamBar) teamBar.style.display = 'none';
+            return;
+        }
+
+        if (revealAllBtn) revealAllBtn.style.display = 'inline-block';
+        if (teamBar) teamBar.style.display = 'flex';
+        unassignedPool.style.display = 'block';
+        dropzonesContainer.innerHTML = '';
+        chipsContainer.innerHTML = '';
+
+        const teams = state.teams || {};
+        const teamNames = Object.keys(teams);
+
+        // Render Active Team Selector Buttons
+        if (teamButtonsContainer) {
+            teamButtonsContainer.innerHTML = '';
+
+            // Button for "Kein Team"
+            const noneBtn = document.createElement('button');
+            noneBtn.className = 'category-team-btn' + (activeAssignmentTeam === null ? ' active' : '');
+            noneBtn.innerText = 'Kein Team';
+            if (activeAssignmentTeam === null) {
+                noneBtn.style.borderColor = '#ffa502';
+                noneBtn.style.color = '#ffa502';
+            }
+            noneBtn.onclick = () => {
+                activeAssignmentTeam = null;
+                window.onModuleStateUpdate(state);
+            };
+            teamButtonsContainer.appendChild(noneBtn);
+
+            // Buttons for each team
+            teamNames.forEach(teamName => {
+                const teamData = teams[teamName] || {};
+                const color = teamData.color || '#3498db';
+                const btn = document.createElement('button');
+                const isActive = activeAssignmentTeam === teamName;
+                btn.className = 'category-team-btn' + (isActive ? ' active' : '');
+                btn.innerText = `● ${teamName}`;
+                btn.style.color = color;
+                btn.style.borderColor = isActive ? color : 'transparent';
+                if (isActive) btn.style.background = color + '22';
+                btn.onclick = () => {
+                    activeAssignmentTeam = teamName;
+                    window.onModuleStateUpdate(state);
+                };
+                teamButtonsContainer.appendChild(btn);
+            });
+        }
+
+        const assignments = game.assignments || {};
+        const assignedTeams = game.assignedTeams || {};
+        const revealed = game.revealed || {};
+        const results = game.results || {};
+        const categories = game.categories || [];
+        const terms = game.terms || [];
+
+        // Unassigned dropzone setup (allows dragging assigned terms back to unassign)
+        unassignedPool.ondragover = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            unassignedPool.classList.add('drag-over');
+        };
+        unassignedPool.ondragleave = () => {
+            unassignedPool.classList.remove('drag-over');
+        };
+        unassignedPool.ondrop = (e) => {
+            e.preventDefault();
+            unassignedPool.classList.remove('drag-over');
+            const term = e.dataTransfer.getData('text/plain');
+            if (term && assignments[term]) {
+                assignTerm(term, null);
+            }
+        };
+
+        // Render 4 Category Dropzones
+        categories.forEach(category => {
+            const assignedTerms = terms.filter(t => assignments[t.term] === category);
+
+            const dropzone = document.createElement('div');
+            dropzone.className = 'category-admin-dropzone';
+            if (selectedTermToAssign) dropzone.classList.add('target-selected');
+
+            const header = document.createElement('div');
+            header.className = 'category-admin-dropzone-header';
+            header.innerHTML = `<span>${category}</span><span class="category-admin-dropzone-count">${assignedTerms.length}</span>`;
+            dropzone.appendChild(header);
+
+            const items = document.createElement('div');
+            items.className = 'category-admin-dropzone-items';
+
+            assignedTerms.forEach(t => {
+                const termTeam = assignedTeams[t.term];
+                const teamColor = termTeam && teams[termTeam] ? teams[termTeam].color : null;
+                const chip = createChip(t.term, true, revealed[t.term], results[t.term], termTeam, teamColor, teamNames);
+                items.appendChild(chip);
+            });
+            dropzone.appendChild(items);
+
+            dropzone.ondragover = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                dropzone.classList.add('drag-over');
+            };
+            dropzone.ondragleave = () => {
+                dropzone.classList.remove('drag-over');
+            };
+            dropzone.ondrop = (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('drag-over');
+                const term = e.dataTransfer.getData('text/plain');
+                if (term) {
+                    assignTerm(term, category);
+                }
+            };
+            dropzone.onclick = () => {
+                if (selectedTermToAssign) {
+                    assignTerm(selectedTermToAssign, category);
+                }
+            };
+
+            dropzonesContainer.appendChild(dropzone);
+        });
+
+        // Render Unassigned Chips
+        const unassignedTerms = terms.filter(t => !assignments[t.term]);
+        unassignedTerms.forEach(t => {
+            const chip = createChip(t.term, false, false);
+            if (selectedTermToAssign === t.term) {
+                chip.classList.add('chip-selected');
+            }
+            chipsContainer.appendChild(chip);
+        });
+    };
+</script>

@@ -1,0 +1,38 @@
+<style>
+    .diktat-spectator-score { display:flex; justify-content:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
+    .diktat-spectator-score span { padding:7px 12px; border-radius:6px; background:#2c2f3c; font-weight:bold; }
+    .diktat-spectator-answer { padding:10px; margin:8px 0; border:1px solid #566078; border-radius:7px; white-space:pre-wrap; }
+    .diktat-word-wrong { color:#ff6b6b; font-weight:bold; }
+</style>
+
+<div id="diktatSpectatorScore" class="diktat-spectator-score"></div>
+<section class="card">
+    <h2>Diktat</h2>
+    <p id="diktatSpectatorStatus">Warte auf die nächste Runde...</p>
+    <div id="diktatSpectatorSentence"></div>
+    <div id="diktatSpectatorAnswers"></div>
+</section>
+
+<script>
+    function renderDiktatWords(answer) {
+        return answer.words && answer.words.length
+            ? answer.words.map(word => `<span class="${word.correct ? '' : 'diktat-word-wrong'}">${word.text}</span>`).join(' ')
+            : answer.text || '';
+    }
+
+    window.onDiktatSpectatorUpdate = function(game) {
+        const score = document.getElementById('diktatSpectatorScore');
+        const status = document.getElementById('diktatSpectatorStatus');
+        const sentence = document.getElementById('diktatSpectatorSentence');
+        const answers = document.getElementById('diktatSpectatorAnswers');
+        if (!score || !status || !sentence || !answers) return;
+
+        score.innerHTML = Object.entries(game.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points}</span>`).join('');
+        status.innerText = game.round ? `Runde ${game.round} | ${game.phase}` : 'Warte auf die nächste Runde...';
+        sentence.innerHTML = game.originalSentence ? `<h3>${game.originalSentence}</h3>` : '';
+        answers.innerHTML = (game.players || []).map(answer => (
+            `<div class="diktat-spectator-answer"><b>${answer.name} (${answer.team})</b><br>${renderDiktatWords(answer)}</div>`
+        )).join('');
+    };
+</script>

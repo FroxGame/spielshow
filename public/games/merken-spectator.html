@@ -1,0 +1,43 @@
+<style>
+    .merken-spectator { width: 100%; max-width: 1200px; margin: auto; }
+    .merken-spectator-status { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+    .merken-spectator-badge { padding: 7px 12px; border-radius: 6px; background: #171922; }
+    .merken-spectator-grid { display: grid; grid-template-columns: repeat(6, minmax(70px, 1fr)); gap: 8px; }
+    .merken-spectator-card { min-height: 82px; display: grid; place-items: center; border: 1px solid #303646; border-radius: 8px; background: #27304a; }
+    .merken-spectator-card.face { background: #18213a; border-color: #f5c542; }
+    .merken-spectator-card.revealed { border-color: #2ed573; background: #173c2b; }
+    .merken-spectator-icon { font-size: 2rem; }
+    .merken-spectator-back { font-size: 1.8rem; color: #7383a8; }
+    @media (max-width: 700px) { .merken-spectator-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+<div class="card merken-spectator">
+    <h2>Merken</h2>
+    <div id="merkenSpectatorStatus" class="merken-spectator-status"></div>
+    <div id="merkenSpectatorGrid" class="merken-spectator-grid"></div>
+</div>
+
+<script>
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.merkenGame || {};
+        const status = document.getElementById('merkenSpectatorStatus');
+        const grid = document.getElementById('merkenSpectatorGrid');
+        if (!status || !grid) return;
+        const scores = Object.entries(game.scores || {}).map(([team, score]) => `${team}: ${score} / 7`).join(' · ');
+        const phase = game.phase === 'MEMORIZING'
+            ? `Merken: ${game.remaining || 0} Sekunden`
+            : game.phase === 'PLAYING' ? 'Abfrage läuft' : game.phase === 'FINISHED' ? 'Spiel beendet' : 'Warte auf den Start';
+        status.innerHTML = `<span class="merken-spectator-badge">${phase}</span><span class="merken-spectator-badge">${scores}</span>`;
+        const showFaces = game.phase === 'MEMORIZING';
+        grid.innerHTML = '';
+        (game.cards || []).forEach(card => {
+            const isRevealed = (game.revealedCards || []).includes(card.id);
+            const item = document.createElement('div');
+            item.className = 'merken-spectator-card' + ((showFaces || isRevealed) ? ' face' : '') + (isRevealed ? ' revealed' : '');
+            item.innerHTML = showFaces || isRevealed
+                ? `<span class="merken-spectator-icon">${card.icon}</span><small>${card.id}</small>`
+                : `<span class="merken-spectator-back">?</span><small>${card.id}</small>`;
+            grid.appendChild(item);
+        });
+    };
+</script>

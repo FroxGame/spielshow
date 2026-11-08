@@ -1,0 +1,87 @@
+<style>
+    .merken-admin { color: #f4f6fb; }
+    .merken-admin-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 14px; }
+    .merken-admin-controls label { display: grid; gap: 4px; color: #a4b0be; font-size: .85rem; }
+    .merken-admin-controls input { width: 90px; padding: 8px; border: 1px solid #4a5676; border-radius: 6px; background: #1c202c; color: #fff; }
+    .merken-admin-controls button { padding: 8px 12px; font-size: .95rem; }
+    .merken-admin-info { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+    .merken-admin-badge { padding: 7px 12px; border-radius: 6px; background: #1c202c; }
+    .merken-admin-grid { display: grid; grid-template-columns: repeat(6, minmax(70px, 1fr)); gap: 8px; }
+    .merken-admin-card { min-height: 82px; padding: 6px; border: 1px solid #4a5676; border-radius: 8px; background: #222a3d; color: #fff; cursor: pointer; }
+    .merken-admin-card:hover, .merken-admin-card.selected { border-color: #f5c542; box-shadow: 0 0 0 2px #f5c542; }
+    .merken-admin-card.revealed { border-color: #2ed573; background: #173c2b; }
+    .merken-admin-icon { display: block; font-size: 2rem; }
+    .merken-admin-name { display: block; font-size: .75rem; }
+    @media (max-width: 700px) { .merken-admin-grid { grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+<div class="card merken-admin">
+    <h2>Merken</h2>
+    <div class="merken-admin-controls">
+        <label>Merkzeit in Sekunden
+            <input id="merkenDuration" type="number" min="5" max="3600" value="30">
+        </label>
+        <button onclick="startMerken()" style="background:#2ed573;color:#000;font-weight:bold;">▶ Spiel / Merken starten</button>
+        <button onclick="stopMerkenTimer()" style="background:#e67e22;color:#fff;">⏭ Merken beenden</button>
+        <button onclick="revealAllMerkenCards()" style="background:#3742fa;color:#fff;">Alle aufdecken</button>
+        <button onclick="resetMerken()" style="background:#c0392b;color:#fff;">Spiel zurücksetzen</button>
+    </div>
+    <div class="merken-admin-info">
+        <div id="merkenAdminPhase" class="merken-admin-badge">Noch nicht gestartet</div>
+        <div id="merkenAdminScores" class="merken-admin-badge"></div>
+    </div>
+    <p id="merkenAdminHint">Während der Abfrage eine verdeckte Karte anklicken und danach aufdecken.</p>
+    <div id="merkenAdminGrid" class="merken-admin-grid"></div>
+</div>
+
+<script>
+    window.startMerken = function() {
+        const duration = Number(document.getElementById('merkenDuration').value) || 30;
+        socket.emit('adminStartMerken', duration);
+    };
+    window.stopMerkenTimer = function() { socket.emit('adminStopMerkenTimer'); };
+    window.revealAllMerkenCards = function() { socket.emit('adminRevealAllMerkenCards'); };
+    window.resetMerken = function() { socket.emit('adminResetMerken'); };
+    window.selectMerkenCard = function(id) { socket.emit('adminSelectMerkenCard', id); };
+    window.onModuleStateUpdate = function(state) {
+        const game = state.merkenGame || {};
+        const teams = Object.keys(state.teams || {});
+        const phase = document.getElementById('merkenAdminPhase');
+        const scores = document.getElementById('merkenAdminScores');
+        if (!phase || !scores) return;
+        phase.textContent = game.phase === 'MEMORIZING'
+            ? `Merken: ${game.remaining || 0} Sekunden`
+            : (game.phase === 'PLAYING' ? 'Abfrage läuft' : (game.phase === 'FINISHED' ? 'Spiel beendet' : 'Noch nicht gestartet'));
+        scores.innerHTML = teams.map(team => `
+            <span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;">
+                <strong>${team}: ${(game.scores || {})[team] || 0} / 7</strong>
+                <button onclick="changeMerkenScore('${team}', -1)" style="padding:2px 7px;">−</button>
+                <button onclick="changeMerkenScore('${team}', 1)" style="padding:2px 7px;">+</button>
+            </span>
+        `).join('');
+
+        const grid = document.getElementById('merkenAdminGrid');
+        grid.innerHTML = '';
+        (game.cards || []).forEach(card => {
+            const button = document.createElement('button');
+            button.className = 'merken-admin-card';
+            if ((game.revealedCards || []).includes(card.id)) button.classList.add('revealed');
+            button.innerHTML = `<span class="merken-admin-icon">${card.icon}</span><span class="merken-admin-name">${card.id}. ${card.name}</span>`;
+            button.onclick = () => selectMerkenCard(card.id);
+            grid.appendChild(button);
+        });
+
+        const hint = document.getElementById('merkenAdminHint');
+        if (game.phase === 'PLAYING') {
+            hint.textContent = 'Karte anklicken: aufdecken oder wieder zudecken.';
+        } else if (game.phase === 'MEMORIZING') {
+            hint.textContent = 'Die Teams merken sich die 30 Piktogramme.';
+        } else {
+            hint.textContent = 'Während der Abfrage eine verdeckte Karte anklicken und danach aufdecken.';
+        }
+    };
+
+    window.changeMerkenScore = function(team, amount) {
+        socket.emit('adminAdjustMerkenScore', { team, amount });
+    };
+</script>

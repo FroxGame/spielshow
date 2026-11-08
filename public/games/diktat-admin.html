@@ -1,0 +1,75 @@
+<style>
+    .diktat-admin-actions,.diktat-admin-scores { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0; }
+    .diktat-admin-answer { padding:10px; margin:8px 0; border:1px solid #566078; border-radius:7px; }
+    .diktat-word-wrong { color:#ff6b6b; font-weight:bold; }
+</style>
+
+<div class="card">
+    <h2>Diktat</h2>
+    <p id="diktatAdminStatus">Keine Runde aktiv.</p>
+    <select id="diktatSentence" style="width:100%; padding:8px; margin:5px 0 10px;">
+        <option value="">-- Satz auswählen --</option>
+    </select>
+    <div class="diktat-admin-actions">
+        <button onclick="startDiktatRound()">Runde starten</button>
+        <button onclick="closeDiktat()">Textfelder schließen</button>
+        <button onclick="showDiktatAnswers()">Texte anzeigen</button>
+        <button onclick="resetDiktat()">Spiel zurücksetzen</button>
+    </div>
+    <div id="diktatAdminScores" class="diktat-admin-scores"></div>
+    <div id="diktatAdminAnswers"></div>
+</div>
+
+<script>
+    socket.on('receiveDiktatSentences', sentences => {
+        const select = document.getElementById('diktatSentence');
+        if (!select) return;
+        select.innerHTML = '<option value="">-- Satz auswählen --</option>';
+        sentences.forEach(sentence => {
+            const option = document.createElement('option');
+            option.value = sentence;
+            option.innerText = sentence;
+            select.appendChild(option);
+        });
+    });
+    socket.emit('getDiktatSentences');
+
+    window.startDiktatRound = () => socket.emit('adminStartDiktatRound', document.getElementById('diktatSentence').value);
+    window.closeDiktat = () => socket.emit('adminCloseDiktat');
+    window.showDiktatAnswers = () => socket.emit('adminShowDiktatAnswers');
+    window.resetDiktat = () => socket.emit('adminResetDiktat');
+
+    function renderDiktatWords(answer) {
+        return (answer.words || []).map(word => `<span class="${word.correct ? '' : 'diktat-word-wrong'}">${word.text}</span>`).join(' ');
+    }
+
+    window.onDiktatAdminUpdate = function(game) {
+        const status = document.getElementById('diktatAdminStatus');
+        const scores = document.getElementById('diktatAdminScores');
+        const answers = document.getElementById('diktatAdminAnswers');
+        if (!status || !scores || !answers) return;
+
+        status.innerText = game.round ? `Runde ${game.round} | ${game.phase}` : 'Keine Runde aktiv.';
+        scores.innerHTML = '';
+        Object.entries(game.scores || {}).forEach(([team, points]) => {
+            const row = document.createElement('div');
+            row.innerHTML = `<b>${team}: ${points}</b>`;
+            const minus = document.createElement('button');
+            minus.innerText = '-1';
+            minus.onclick = () => socket.emit('adminAddDiktatPoint', { team, amount: -1 });
+            const plus = document.createElement('button');
+            plus.innerText = '+1';
+            plus.onclick = () => socket.emit('adminAddDiktatPoint', { team, amount: 1 });
+            row.appendChild(minus);
+            row.appendChild(plus);
+            scores.appendChild(row);
+        });
+
+        answers.innerHTML = game.phase === 'REVEALED' ? `<h3>${game.originalSentence}</h3>` : '';
+        if (game.phase === 'REVEALED') {
+            game.players.forEach(answer => {
+                answers.innerHTML += `<div class="diktat-admin-answer"><b>${answer.name} (${answer.team})</b><br>${renderDiktatWords(answer)}</div>`;
+            });
+        }
+    };
+</script>

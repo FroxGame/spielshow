@@ -1,0 +1,58 @@
+<style>
+    .drudel-spectator-score { display:flex; justify-content:center; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+    .drudel-spectator-score span { padding:7px 12px; border-radius:6px; background:#2c2f3c; font-weight:bold; }
+    #drudelSpectatorImage { display:block; width:100%; max-height:52vh; object-fit:contain; margin:10px auto; border-radius:10px; background:#202431; }
+    .drudel-spectator-reveal { padding:12px; border-radius:6px; background:#202a2b; font-size:1.15rem; font-weight:bold; }
+</style>
+
+<div id="drudelSpectatorScore" class="drudel-spectator-score"></div>
+<section class="card">
+    <h2>Drudel</h2>
+    <p id="drudelSpectatorStatus">Warte auf ein Bild...</p>
+    <img id="drudelSpectatorImage" alt="Drudel">
+    <div id="drudelSpectatorReveal" class="drudel-spectator-reveal"></div>
+</section>
+
+<script>
+    let lastDrudelSpectatorBuzzerWinner = null;
+
+    function playDrudelSpectatorBuzzerSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(880, context.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.18, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.22);
+    }
+
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.drudelGame || {};
+        const image = document.getElementById('drudelSpectatorImage');
+        const status = document.getElementById('drudelSpectatorStatus');
+        const reveal = document.getElementById('drudelSpectatorReveal');
+        const scores = document.getElementById('drudelSpectatorScore');
+        if (!image || !status || !reveal || !scores) return;
+        if (game.buzzerWinner && game.buzzerWinner !== lastDrudelSpectatorBuzzerWinner) {
+            playDrudelSpectatorBuzzerSound();
+            lastDrudelSpectatorBuzzerWinner = game.buzzerWinner;
+        }
+        if (!game.buzzerWinner) lastDrudelSpectatorBuzzerWinner = null;
+
+        scores.innerHTML = Object.entries(game.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points} / 5</span>`).join('');
+        image.src = game.currentImage ? `/${game.currentImage}` : '';
+        image.style.display = game.currentImage ? 'block' : 'none';
+        status.innerText = game.buzzerWinner
+            ? `${game.buzzerWinner} hat gebuzzert.`
+            : game.buzzerLocked ? 'Der Buzzer ist gesperrt.' : 'Buzzer ist offen.';
+        reveal.innerText = game.revealedName || '';
+    };
+</script>

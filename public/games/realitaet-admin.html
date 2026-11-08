@@ -1,0 +1,106 @@
+<style>
+    .realitaet-admin-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+    .realitaet-admin-controls label { display: grid; gap: 4px; color: #a4b0be; font-size: .85rem; }
+    .realitaet-admin-controls select, .realitaet-admin-controls input { padding: 8px; min-width: 180px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff; }
+    .realitaet-admin-scores { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+    .realitaet-admin-score { padding: 8px 12px; background: #1c202c; border-radius: 6px; }
+    #realitaetAdminPreview { max-width: 500px; max-height: 360px; display: none; margin-top: 16px; border-radius: 10px; object-fit: contain; background: #202431; }
+</style>
+
+<div class="card">
+    <h2>Ist es real oder ist es nicht Wirklichkeit?</h2>
+    <div class="realitaet-admin-controls">
+        <label>Zielteam
+            <select id="realitaetTeam"></select>
+        </label>
+        <label>Anzeige
+            <select id="realitaetType">
+                <option value="IMAGE">Bild</option>
+                <option value="QUESTION">Fragezeichen</option>
+            </select>
+        </label>
+        <label>Bild
+            <select id="realitaetImage"></select>
+        </label>
+        <label>Zeit (Sekunden)
+            <input id="realitaetDuration" type="number" min="10" max="3600" value="180">
+        </label>
+        <button onclick="startRealitaet()" style="background:#2ed573;color:#000;font-weight:bold;">▶ Runde starten</button>
+        <button onclick="stopRealitaet()" style="background:#e67e22;color:#fff;">⏹ Zeit stoppen</button>
+        <button onclick="resetRealitaet()" style="background:#c0392b;color:#fff;">Spiel zurücksetzen</button>
+    </div>
+    <p id="realitaetAdminStatus">Noch keine Runde gestartet.</p>
+    <div id="realitaetAdminScores" class="realitaet-admin-scores"></div>
+    <img id="realitaetAdminPreview" alt="Ausgewähltes Bild">
+</div>
+
+<script>
+    function populateRealitaetImages(images) {
+        const select = document.getElementById('realitaetImage');
+        if (!select) return;
+        select.innerHTML = '';
+        (images || []).forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.path;
+            option.textContent = item.name;
+            select.appendChild(option);
+        });
+        updateRealitaetPreview();
+    }
+
+    function updateRealitaetPreview() {
+        const image = document.getElementById('realitaetAdminPreview');
+        const select = document.getElementById('realitaetImage');
+        if (image && select && select.value) {
+            image.src = `/${select.value}`;
+            image.style.display = document.getElementById('realitaetType').value === 'IMAGE' ? 'block' : 'none';
+        }
+    }
+
+    window.startRealitaet = function() {
+        socket.emit('adminStartRealitaet', {
+            targetTeam: document.getElementById('realitaetTeam').value,
+            contentType: document.getElementById('realitaetType').value,
+            image: document.getElementById('realitaetImage').value,
+            duration: Number(document.getElementById('realitaetDuration').value) || 180
+        });
+    };
+    window.stopRealitaet = function() { socket.emit('adminStopRealitaet'); };
+    window.resetRealitaet = function() { socket.emit('adminResetRealitaet'); };
+
+    document.getElementById('realitaetImage').addEventListener('change', updateRealitaetPreview);
+    document.getElementById('realitaetType').addEventListener('change', updateRealitaetPreview);
+    socket.emit('getRealitaetImages');
+    socket.on('receiveRealitaetImages', populateRealitaetImages);
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.realitaetGame || {};
+        const teams = Object.keys(state.teams || {});
+        const teamSelect = document.getElementById('realitaetTeam');
+        const currentTeam = teamSelect.value;
+        teamSelect.innerHTML = '';
+        teams.forEach(team => {
+            const option = document.createElement('option');
+            option.value = team;
+            option.textContent = team;
+            option.selected = team === (game.targetTeam || currentTeam);
+            teamSelect.appendChild(option);
+        });
+        const status = document.getElementById('realitaetAdminStatus');
+        status.textContent = game.phase === 'PLAYING'
+            ? `${game.targetTeam}: ${game.contentType === 'IMAGE' ? 'Bild' : 'Fragezeichen'} · ${game.remaining} Sekunden`
+            : game.phase === 'FINISHED' ? 'Runde beendet.' : 'Noch keine Runde gestartet.';
+        document.getElementById('realitaetAdminPreview').style.display = game.contentType === 'IMAGE' ? 'block' : 'none';
+
+        const scores = document.getElementById('realitaetAdminScores');
+        scores.innerHTML = teams.map(team => `
+            <div class="realitaet-admin-score"><b>${team}: ${game.scores?.[team] || 0}</b>
+                <button onclick="changeRealitaetScore('${team}', -1)">-1</button>
+                <button onclick="changeRealitaetScore('${team}', 1)">+1</button>
+            </div>`).join('');
+    };
+
+    window.changeRealitaetScore = function(team, amount) {
+        socket.emit('adminAdjustRealitaetScore', { team, amount });
+    };
+</script>

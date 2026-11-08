@@ -1,0 +1,343 @@
+<style>
+    .malen-player-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 1000px;
+        margin: 0 auto;
+        box-sizing: border-box;
+    }
+    .malen-player-scores {
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 12px;
+        max-width: 900px;
+    }
+    .malen-player-score-box {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 14px;
+        border-radius: 6px;
+        background: #1c202c;
+        font-size: 1rem;
+        font-weight: bold;
+    }
+    .malen-word-banner {
+        font-size: 1.5rem;
+        font-weight: bold;
+        padding: 12px 24px;
+        border-radius: 8px;
+        background: #1c202c;
+        border: 2px solid #2ed573;
+        color: #2ed573;
+        text-align: center;
+        margin-bottom: 12px;
+        max-width: 900px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .malen-role-info {
+        font-size: 0.95rem;
+        color: #a4b0be;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+    .malen-canvas-wrapper {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        max-width: 900px;
+        max-height: 70vh;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 8px;
+        border: 3px solid #3d4763;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        touch-action: none;
+        overflow: hidden;
+    }
+    /* When drawing blind: the canvas is completely covered or masked so the painter sees NOTHING drawn */
+    .malen-canvas-blind {
+        background: #222634 !important;
+        cursor: crosshair;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        user-select: none;
+    }
+    .malen-canvas-blind-notice {
+        color: #718093;
+        padding: 20px;
+        line-height: 1.5;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-align: center;
+        pointer-events: none;
+        user-select: none;
+    }
+    .malen-player-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+    .malen-player-controls {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 12px;
+        width: 100%;
+    }
+    .malen-clear-btn {
+        background: #e74c3c;
+        color: #fff;
+        font-weight: bold;
+        font-size: 1rem;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        cursor: pointer;
+        transition: background 0.15s;
+    }
+    .malen-clear-btn:hover { background: #c0392b; }
+    .malen-waiting {
+        text-align: center;
+        padding: 40px 20px;
+        color: #a4b0be;
+    }
+</style>
+
+<div class="malen-player-container">
+    <h2 style="margin: 0 0 10px; text-align: center;">Blindes Malen</h2>
+    <div id="malenPlayerScores" class="malen-player-scores"></div>
+    <div id="malenPlayerContent" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
+</div>
+
+<script>
+    let _malenCurrentRole = null; // 'PAINTER' | 'GUESSER' | 'WAITING'
+    let _malenTeam = null;
+    let _isDrawing = false;
+    let _lastX = 0;
+    let _lastY = 0;
+    let _lineBatch = [];
+    let _batchInterval = null;
+
+    if (typeof socket !== 'undefined') {
+        socket.off('malenLinesAdded');
+        socket.on('malenLinesAdded', ({ team, lines }) => {
+            // Only non-painters of that team update their view canvas
+            if (_malenCurrentRole === 'GUESSER' && team === _malenTeam) {
+                const canvas = document.getElementById('guesserMalenCanvas');
+                if (canvas && lines) {
+                    const ctx = canvas.getContext('2d');
+                    _drawLines(ctx, canvas, lines);
+                }
+            }
+        });
+
+        socket.off('malenCanvasCleared');
+        socket.on('malenCanvasCleared', ({ team }) => {
+            if (team === _malenTeam || team === 'ALL') {
+                const canvas = document.getElementById('guesserMalenCanvas');
+                if (canvas) _clearCanvas(canvas);
+            }
+        });
+    }
+
+    function _clearCanvas(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function _drawLines(ctx, canvas, lines) {
+        if (!lines || !lines.length) return;
+        ctx.strokeStyle = '#111111';
+        ctx.lineWidth = Math.max(4, Math.round(canvas.width * 0.005));
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        lines.forEach(l => {
+            ctx.beginPath();
+            ctx.moveTo(l.x0 * canvas.width, l.y0 * canvas.height);
+            ctx.lineTo(l.x1 * canvas.width, l.y1 * canvas.height);
+            ctx.stroke();
+        });
+    }
+
+    function _sendBatch() {
+        if (_lineBatch.length > 0 && typeof socket !== 'undefined') {
+            socket.emit('playerMalenDrawBatch', { lines: _lineBatch });
+            _lineBatch = [];
+        }
+    }
+
+    function _setupPainterListeners(pad) {
+        function getCoords(e) {
+            const rect = pad.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (clientX - rect.left) / rect.width,
+                y: (clientY - rect.top) / rect.height
+            };
+        }
+
+        function onStart(e) {
+            e.preventDefault();
+            _isDrawing = true;
+            const pos = getCoords(e);
+            _lastX = pos.x;
+            _lastY = pos.y;
+        }
+
+        function onMove(e) {
+            if (!_isDrawing) return;
+            e.preventDefault();
+            const pos = getCoords(e);
+            _lineBatch.push({
+                x0: _lastX,
+                y0: _lastY,
+                x1: pos.x,
+                y1: pos.y
+            });
+            _lastX = pos.x;
+            _lastY = pos.y;
+        }
+
+        function onEnd(e) {
+            if (!_isDrawing) return;
+            _isDrawing = false;
+            _sendBatch();
+        }
+
+        pad.addEventListener('mousedown', onStart);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+
+        pad.addEventListener('touchstart', onStart, { passive: false });
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onEnd);
+        window.addEventListener('touchcancel', onEnd);
+
+        if (_batchInterval) clearInterval(_batchInterval);
+        _batchInterval = setInterval(_sendBatch, 50);
+    }
+
+    window.clearMyCanvas = function() {
+        if (typeof socket !== 'undefined') {
+            socket.emit('playerClearMalenCanvas');
+        }
+    };
+
+    window.onModuleStateUpdate = function(state) {
+        const malen = state.malenGame || {};
+        const me = state.players ? state.players[socket.id] : null;
+        const teams = state.teams || {};
+        const phase = malen.phase || 'IDLE';
+
+        // Update scores
+        const scoresEl = document.getElementById('malenPlayerScores');
+        if (scoresEl) {
+            scoresEl.innerHTML = '';
+            const scores = malen.scores || {};
+            Object.keys(teams).forEach(t => {
+                const color = (teams[t] || {}).color || '#fff';
+                const box = document.createElement('div');
+                box.className = 'malen-player-score-box';
+                box.style.borderLeft = '4px solid ' + color;
+                box.innerHTML = '<span style="color:' + color + '">' + t + ':</span> <span>' + (scores[t] || 0) + ' Pkt.</span>';
+                scoresEl.appendChild(box);
+            });
+        }
+
+        const container = document.getElementById('malenPlayerContent');
+        if (!container) return;
+
+        if (!me || phase === 'IDLE') {
+            _malenCurrentRole = 'WAITING';
+            if (_batchInterval) clearInterval(_batchInterval);
+            container.innerHTML = '<div class="malen-waiting"><h3>Warte auf den Spielstart...</h3><p>Der Host wählt die Maler und den Begriff aus.</p></div>';
+            return;
+        }
+
+        _malenTeam = me.team;
+        const painters = malen.painters || {};
+        const isPainter = painters[me.team] === socket.id;
+        const role = isPainter ? 'PAINTER' : 'GUESSER';
+
+        if (_malenCurrentRole !== role) {
+            _malenCurrentRole = role;
+            container.innerHTML = '';
+
+            if (isPainter) {
+                // Painter View: sees word, draws blind
+                const wordBanner = document.createElement('div');
+                wordBanner.className = 'malen-word-banner';
+                wordBanner.id = 'painterWordBanner';
+                wordBanner.innerHTML = '<div style="font-size: 0.85rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 4px;">Dein Begriff zum Malen:</div><div style="font-size: 1.8rem;">' + (malen.word || '...') + '</div>';
+                container.appendChild(wordBanner);
+
+                const info = document.createElement('div');
+                info.className = 'malen-role-info';
+                info.innerText = 'Du bist der Maler! Du siehst deine Zeichnung NICHT (blind malen). Dein Partner muss erraten!';
+                container.appendChild(info);
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'malen-canvas-wrapper malen-canvas-blind';
+                wrapper.id = 'painterPad';
+                wrapper.innerHTML = '<div class="malen-canvas-blind-notice">🎨 Hier blind zeichnen (Maus oder Finger)<br><span style="font-size: 0.85rem; font-weight: normal; opacity: 0.7;">(Du siehst deine Striche nicht)</span></div>';
+                container.appendChild(wrapper);
+
+                const controls = document.createElement('div');
+                controls.className = 'malen-player-controls';
+                controls.innerHTML = '<button class="malen-clear-btn" onclick="clearMyCanvas()">🗑️ Leinwand leeren</button>';
+                container.appendChild(controls);
+
+                _setupPainterListeners(wrapper);
+            } else {
+                // Guesser View: sees teammate's drawing in real time, does NOT see word
+                const info = document.createElement('div');
+                info.className = 'malen-role-info';
+                info.style.fontSize = '1.1rem';
+                info.style.fontWeight = 'bold';
+                info.style.color = '#fff';
+                info.innerText = 'Dein Teampartner malt!';
+                container.appendChild(info);
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'malen-canvas-wrapper';
+                const canvas = document.createElement('canvas');
+                canvas.className = 'malen-player-canvas';
+                canvas.id = 'guesserMalenCanvas';
+                canvas.width = 1200;
+                canvas.height = 900;
+                wrapper.appendChild(canvas);
+                container.appendChild(wrapper);
+
+                // Initial redraw from existing drawings in gameState
+                const myDrawings = (malen.drawings && malen.drawings[me.team]) || [];
+                _clearCanvas(canvas);
+                _drawLines(canvas.getContext('2d'), canvas, myDrawings);
+            }
+        } else {
+            // Role unchanged, just update word if painter
+            if (isPainter) {
+                const banner = document.getElementById('painterWordBanner');
+                if (banner) {
+                    banner.innerHTML = '<div style="font-size: 0.85rem; color: #a4b0be; text-transform: uppercase; margin-bottom: 4px;">Dein Begriff zum Malen:</div><div style="font-size: 1.8rem;">' + (malen.word || '...') + '</div>';
+                }
+            } else {
+                // If drawings array is empty (e.g. new round / clear), ensure guesser canvas is cleared
+                const myDrawings = (malen.drawings && malen.drawings[me.team]) || [];
+                if (myDrawings.length === 0) {
+                    const canvas = document.getElementById('guesserMalenCanvas');
+                    if (canvas) _clearCanvas(canvas);
+                }
+            }
+        }
+    };
+</script>
+

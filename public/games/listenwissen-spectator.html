@@ -1,0 +1,126 @@
+<style>
+    .spectator-listenwissen h2 {
+        margin-bottom: 6px;
+    }
+
+    .spectator-progress {
+        color: #a4b0be;
+        margin-bottom: 16px;
+    }
+
+    .spectator-score {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+    }
+
+    .spectator-score-team {
+        padding: 8px 14px;
+        border-radius: 6px;
+        background: #2c2f3c;
+        font-weight: bold;
+    }
+
+    .spectator-word-board {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-width: 760px;
+        margin: 0 auto;
+    }
+
+    .spectator-word-row {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .spectator-word-row:nth-child(even) {
+        width: calc(100% - 40px);
+        margin-left: 20px;
+    }
+
+    .spectator-word-row.is-short {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 75%;
+        align-self: center;
+    }
+
+    .spectator-word {
+        min-height: 46px;
+        padding: 8px;
+        display: grid;
+        place-items: center;
+        border-radius: 5px;
+        text-align: center;
+        font-weight: bold;
+        overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 700px) {
+        .spectator-word-row,
+        .spectator-word-row.is-short {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            width: 100%;
+            margin-left: 0;
+        }
+
+        .spectator-word {
+            min-height: 42px;
+            font-size: 0.82rem;
+        }
+    }
+</style>
+
+<section class="spectator-listenwissen">
+    <h2 id="spectatorWordTitle">Listenwissen</h2>
+    <div id="spectatorWordProgress" class="spectator-progress">Gefunden: 0 / 0</div>
+    <div id="spectatorScore" class="spectator-score"></div>
+    <div id="spectatorWordBoard" class="spectator-word-board"></div>
+</section>
+
+<script>
+    window.onSpectatorStateUpdate = function(state) {
+        const title = document.getElementById('spectatorWordTitle');
+        const progress = document.getElementById('spectatorWordProgress');
+        const score = document.getElementById('spectatorScore');
+        const board = document.getElementById('spectatorWordBoard');
+        if (!board) return;
+
+        title.innerText = state.currentWordListKey
+            ? `Listenwissen: ${state.currentWordListKey}`
+            : 'Listenwissen';
+
+        score.innerHTML = '';
+        Object.entries(state.listenwissenScores || {}).forEach(([team, points]) => {
+            const teamScore = document.createElement('div');
+            teamScore.className = 'spectator-score-team';
+            teamScore.innerText = `${team}: ${points} / 5`;
+            score.appendChild(teamScore);
+        });
+
+        const words = state.wordGameData || [];
+        progress.innerText = `Gefunden: ${words.filter(item => item.revealed).length} / ${words.length}`;
+        board.innerHTML = '';
+
+        for (let index = 0; index < words.length; index += 4) {
+            const rowItems = words.slice(index, index + 4);
+            const row = document.createElement('div');
+            row.className = `spectator-word-row${rowItems.length < 4 ? ' is-short' : ''}`;
+
+            rowItems.forEach(item => {
+                const word = document.createElement('div');
+                word.className = 'spectator-word';
+                word.style.background = item.revealed ? '#2ed573' : '#2c2c3a';
+                word.style.color = item.revealed ? '#fff' : '#a4b0be';
+                word.innerText = item.revealed ? item.word : '?';
+                row.appendChild(word);
+            });
+
+            board.appendChild(row);
+        }
+    };
+
+</script>

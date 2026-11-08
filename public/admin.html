@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #2c3e50; color: white; }
+        .card { background: #34495e; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        button { padding: 8px 12px; font-size: 14px; margin: 5px; cursor: pointer; }
+        input, select { padding: 6px; font-size: 14px; margin: 2px; }
+        .team-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; background: #2c3e50; padding: 10px; border-radius: 6px; }
+        .player-row { border-bottom: 1px solid #555; padding: 8px 0; display: flex; gap: 10px; align-items: center; }
+        
+        /* Login Overlay */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1a252f; display: flex; justify-content: center; align-items: center; z-index: 2000;
+        }
+        .login-box { background: #2c3e50; padding: 30px; border-radius: 10px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+    <!-- Login Maske -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>🔒 Admin Login</h2>
+            <p>Gib das Passwort ein:</p>
+            <input type="password" id="pwInput" style="padding: 10px; font-size: 16px;">
+            <br><br>
+            <button onclick="login()" style="padding: 10px 20px; font-size: 16px;">Einloggen</button>
+            <p id="errorMsg" style="color: #e74c3c; display: none; margin-top: 10px;">Falsches Passwort!</p>
+        </div>
+    </div>
+
+    <!-- Hauptbereich -->
+    <div id="admin-panel" style="display: none;">
+        <h1>🎛️ Admin Steuerzentrale</h1>
+
+        <div class="card">
+            <h3>1. Teams & Spielshow Gesamtwertung (Ziel: 5 Siege)</h3>
+            <p><small>Ändere den Teamnamen und klicke auf "Name speichern":</small></p>
+            <div id="teamScores"></div>
+        </div>
+
+        <div class="card">
+            <h3>2. Verbundene Spieler & Teamverwaltung</h3>
+            <div id="playerList"></div>
+        </div>
+
+        <div class="card">
+            <h3>3. Spielmodus wählen</h3>
+            <button onclick="setScreen('WAITING')">Startseite / Pause (Großes Scoreboard)</button>
+            <button onclick="startGame('LISTENWISSEN')">Listenwissen starten</button>
+            <button onclick="startGame('DISCORD_GAME')">Kam bei Discord nicht an starten</button>
+            <button onclick="startGame('PROMI_RATEN')">Promis raten starten</button>
+            <button onclick="startGame('DRUDEL')">Drudel starten</button>
+            <button onclick="startGame('DIKTAT')">Diktat starten</button>
+            <button onclick="startGame('KATEGORIEN')">Begriffe zuordnen starten</button>
+            <button onclick="startGame('PARTNERWISSEN')">Ich weiß, was mein Partner weiß starten</button>
+            <button onclick="startGame('BINGO')">Referat Bingo starten</button>
+            <button onclick="startGame('MALEN')">Blindes Malen starten</button>
+            <button onclick="startGame('KARTE')">Wo ist das auf der Karte? starten</button>
+            <button onclick="startGame('MERKEN')">Merken starten</button>
+            <button onclick="startGame('REALITAET')">Ist es real oder nicht? starten</button>
+            <button onclick="startGame('FLAGGEN')">Flaggen bauen starten</button>
+            <button onclick="startGame('BUCHSTABENSALAT')">Buchstabensalat starten</button>
+        </div>
+
+        <!-- Modulbereich für komplexere Spiele (z.B. Listenwissen) -->
+        <div id="admin-module-container"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        let loadedAdminScreen = null;
+        let latestAdminState = null;
+        let latestDiscordAdminState = { phase: 'IDLE' };
+        let latestPartnerAdminState = { phase: 'IDLE' };
+        let latestDiktatAdminState = { phase: 'IDLE', scores: {} };
+
+        let sessionAdminPw = '';
+        try { sessionStorage.removeItem('adminPw'); } catch(e) {}
+
+        function login() {
+            const pwInput = document.getElementById('pwInput');
+            if (!pwInput) return;
+            sessionAdminPw = pwInput.value;
+            socket.emit('adminLogin', sessionAdminPw);
+        }
+
+        socket.on('connect', () => {
+            if (sessionAdminPw) {
+                socket.emit('adminLogin', sessionAdminPw);
+            }
+        });
+
+        // Enter-Taste im Passwortfeld abfangen
+        document.addEventListener('DOMContentLoaded', () => {
+            const pwInput = document.getElementById('pwInput');
+            if (pwInput) {
+                pwInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.keyCode === 13) {
+                        e.preventDefault();
+                        login();
+                    }
+                });
+            }
+        });
+
+        socket.on('adminAuthResult', (res) => {
+            if (res.success) {
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('admin-panel').style.display = 'block';
+            } else {
+                document.getElementById('errorMsg').style.display = 'block';
+            }
+        });
+
+        function setScreen(screenName) {
+            socket.emit('adminChangeScreen', screenName);
+        }
+
+        function startGame(screenName) {
+            socket.emit('adminStartGame', screenName);
+        }
+
+        function savePlayerDetails(socketId) {
+            const nameInput = document.getElementById(`player-name-${socketId}`);
+            const teamSelect = document.getElementById(`player-team-${socketId}`);
+            
+            if (nameInput && teamSelect) {
+                socket.emit('adminUpdatePlayerName', { socketId, newName: nameInput.value });
+                socket.emit('adminUpdatePlayerTeam', { socketId, team: teamSelect.value });
+            }
+        }
+
+        function saveTeamName(oldName) {
+            const input = document.getElementById(`team-input-${oldName}`);
+            if (input && input.value.trim() !== '') {
+                socket.emit('adminUpdateTeamName', { oldName, newName: input.value.trim() });
+            }
+        }
+
+        function addPoint(team, amount) {
+            socket.emit('adminAddTeamPoint', { team, amount });
+        }
+
+        async function loadAdminModule(screenName) {
+            if (loadedAdminScreen === screenName) return;
+            loadedAdminScreen = screenName;
+
+            const container = document.getElementById('admin-module-container');
+            const adminModules = {
+                'LISTENWISSEN': 'games/listenwissen-admin.html',
+                'DISCORD_GAME': 'games/discord-admin.html',
+                'PROMI_RATEN': 'games/promis-admin.html',
+                'DRUDEL': 'games/drudel-admin.html',
+                'DIKTAT': 'games/diktat-admin.html',
+                'KATEGORIEN': 'games/kategorien-admin.html',
+                'PARTNERWISSEN': 'games/partnerwissen-admin.html',
+                'BINGO': 'games/bingo-admin.html',
+                'MALEN': 'games/malen-admin.html',
+                'KARTE': 'games/karte-admin.html'
+                ,'MERKEN': 'games/merken-admin.html'
+                ,'REALITAET': 'games/realitaet-admin.html'
+                ,'FLAGGEN': 'games/flaggen-admin.html'
+                ,'BUCHSTABENSALAT': 'games/buchstabensalat-admin.html'
+            };
+
+            const file = adminModules[screenName];
+            if (!file) {
+                container.innerHTML = '';
+                return;
+            }
+
+            try {
+                const res = await fetch(file);
+                const html = await res.text();
+                container.innerHTML = html;
+
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(s => eval(s.innerText));
+
+                if (window.onModuleStateUpdate && latestAdminState) {
+                    window.onModuleStateUpdate(latestAdminState);
+                }
+
+                if (window.onDiscordAdminUpdate) {
+                    window.onDiscordAdminUpdate(latestDiscordAdminState);
+                }
+
+                if (window.onPartnerAdminUpdate) {
+                    window.onPartnerAdminUpdate(latestPartnerAdminState);
+                }
+
+                if (window.onDiktatAdminUpdate) {
+                    window.onDiktatAdminUpdate(latestDiktatAdminState);
+                }
+            } catch (err) {
+                console.error("Fehler beim Laden des Admin-Moduls:", err);
+            }
+        }
+
+        socket.on('stateUpdate', (state) => {
+            latestAdminState = state;
+            const teamDiv = document.getElementById('teamScores');
+            if (teamDiv) {
+                teamDiv.innerHTML = '';
+
+                for (let t in state.teams) {
+                    const teamData = state.teams[t];
+                    const row = document.createElement('div');
+                    row.className = 'team-row';
+                    row.style.borderLeft = `6px solid ${teamData.color}`;
+                    row.innerHTML = `
+                        <input type="text" id="team-input-${t}" value="${t}" style="font-weight: bold; font-size: 15px;">
+                        <button onclick="saveTeamName('${t}')">Name speichern</button>
+                        <span>| <b>Punkte:</b> ${teamData.score} / 5</span>
+                        <button onclick="addPoint('${t}', 1)">+1 Sieg</button>
+                        <button onclick="addPoint('${t}', -1)">-1</button>
+                    `;
+                    teamDiv.appendChild(row);
+                }
+            }
+
+            const playerDiv = document.getElementById('playerList');
+            if (playerDiv) {
+                playerDiv.innerHTML = '';
+
+                for (let id in state.players) {
+                    const p = state.players[id];
+                    const row = document.createElement('div');
+                    row.className = 'player-row';
+                    row.innerHTML = `
+                        <span>ID: ${p.id.substring(0, 5)}...</span>
+                        <input type="text" id="player-name-${p.id}" value="${p.name}">
+                        <select id="player-team-${p.id}">
+                            ${Object.keys(state.teams).map(t => `<option value="${t}" ${p.team === t ? 'selected' : ''}>${t}</option>`).join('')}
+                        </select>
+                        <button onclick="savePlayerDetails('${p.id}')">Speichern</button>
+                    `;
+                    playerDiv.appendChild(row);
+                }
+            }
+
+            loadAdminModule(state.currentScreen);
+
+            if (window.onModuleStateUpdate) {
+                window.onModuleStateUpdate(state);
+            }
+        });
+
+        socket.on('discordAdminUpdate', (state) => {
+            latestDiscordAdminState = state;
+            if (window.onDiscordAdminUpdate) {
+                window.onDiscordAdminUpdate(state);
+            }
+        });
+
+        socket.on('partnerAdminUpdate', (state) => {
+            latestPartnerAdminState = state;
+            if (window.onPartnerAdminUpdate) {
+                window.onPartnerAdminUpdate(state);
+            }
+        });
+
+        socket.on('diktatAdminUpdate', (state) => {
+            latestDiktatAdminState = state;
+            if (window.onDiktatAdminUpdate) {
+                window.onDiktatAdminUpdate(state);
+            }
+        });
+    </script>
+</body>
+</html>

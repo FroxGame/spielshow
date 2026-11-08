@@ -1,0 +1,147 @@
+<style>
+    .discord-player-game h2 {
+        margin-bottom: 8px;
+    }
+
+    .discord-clue-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .discord-clue-card {
+        min-height: 58px;
+        padding: 8px 10px;
+        border: 1px solid #4c5368;
+        border-radius: 8px;
+        background: #262b3a;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: 7px;
+        text-align: left;
+    }
+
+    .discord-clue-number {
+        margin-bottom: 0;
+        color: #8f9bb5;
+        font-size: 0.78rem;
+        font-weight: bold;
+    }
+
+    .discord-clue-text {
+        color: #f4f6fb;
+        font-size: 1.05rem;
+        font-weight: bold;
+        overflow-wrap: anywhere;
+    }
+
+    .discord-target-card {
+        margin-top: 14px;
+        padding: 14px;
+        border-left: 4px solid #2ed573;
+        border-radius: 6px;
+        background: #202a2b;
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+
+    .discord-player-score {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 auto 12px;
+    }
+
+    .discord-player-score span {
+        padding: 5px 9px;
+        border-radius: 5px;
+        background: #2c2c3a;
+        font-weight: bold;
+    }
+
+    @media (max-width: 600px) {
+        .discord-clue-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<div id="discordPlayerScore" class="discord-player-score"></div>
+
+<div class="card discord-player-game">
+    <h2>Das kam bei Discord nicht an</h2>
+    <p id="discordPlayerRole">Warte auf die nächste Runde...</p>
+    <div id="discordPlayerAction"></div>
+</div>
+
+<script>
+    function addDiscordClueCards(container, clues) {
+        const grid = document.createElement('div');
+        grid.className = 'discord-clue-grid';
+
+        clues.forEach((clue, index) => {
+            const card = document.createElement('div');
+            card.className = 'discord-clue-card';
+
+            const number = document.createElement('span');
+            number.className = 'discord-clue-number';
+            number.innerText = `HINWEIS ${index + 1}`;
+
+            const text = document.createElement('span');
+            text.className = 'discord-clue-text';
+            text.innerText = clue;
+
+            card.appendChild(number);
+            card.appendChild(text);
+            grid.appendChild(card);
+        });
+
+        container.appendChild(grid);
+    }
+
+    function renderDiscordPlayer(view) {
+        const role = document.getElementById('discordPlayerRole');
+        const score = document.getElementById('discordPlayerScore');
+        const action = document.getElementById('discordPlayerAction');
+        if (!role || !action) return;
+
+        action.innerHTML = '';
+        score.innerHTML = Object.entries(view.scores || {})
+            .map(([team, points]) => `<span>${team}: ${points}</span>`)
+            .join('');
+
+        if (view.role === 'GIVER') {
+            role.innerText = view.phase === 'GIVER_CLUES'
+                ? `Dein Begriff: ${view.target}`
+                : 'Deine Hinweise wurden übermittelt.';
+            action.innerHTML = `<div class="discord-target-card">${view.target}</div>`;
+            if (view.clues && view.clues.length) {
+                addDiscordClueCards(action, view.clues);
+            }
+            return;
+        }
+
+        if (view.role === 'EXCHANGER') {
+            role.innerText = view.phase === 'EXCHANGE'
+                ? 'Die Original-Hinweise sind für dich sichtbar.'
+                : 'Warte auf das andere Team...';
+            addDiscordClueCards(action, view.clues);
+            return;
+        }
+
+        if (view.role === 'PARTNER') {
+            role.innerText = view.phase === 'COMPLETE'
+                ? 'Deine drei Hinweise:'
+                : 'Warte auf den Austausch.';
+            addDiscordClueCards(action, view.clues);
+            return;
+        }
+
+        role.innerText = 'Dir ist gerade keine Rolle zugewiesen.';
+    }
+
+    window.onDiscordPlayerUpdate = renderDiscordPlayer;
+</script>

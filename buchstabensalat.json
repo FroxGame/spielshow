@@ -1,0 +1,10 @@
+{
+  "rounds": [
+    {
+      "id": "konrad-adenauer",
+      "category": "Deutscher Bundeskanzler",
+      "answer": "Konrad Adenauer",
+      "order": ["e", "ee", "eae", "Aeae", "KAeae", "KOnAeae", "KOnaAeae", "KonAaAeae", "KonraAaAeae", "KonradAaAeae", "Konrad Aaeae", "Konrad AdAeae", "Konrad AdenAeae", "Konrad AdenauAe", "Konrad Adenauer"]
+    }
+  ]
+}
