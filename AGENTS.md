@@ -195,9 +195,89 @@ node server.js
 - Environment Variables für Konfiguration
 - Error Logging implementieren
 
+## Wichtige Lessons Learned (aus Buchstabensalat-Entwicklung)
+
+### Socket-Event Parameter Konsistenz
+- **Problem**: Server erwartete `{ change }`, Client sendete `{ team, amount }`
+- **Lösung**: Immer `{ team, amount }` verwenden (wie bei `adminAddCategoryPoint`)
+- **Beispiel**:
+```javascript
+// Client
+socket.emit('adminAddBuchstabensalatPoint', { team: team, amount: amount });
+
+// Server
+socket.on('adminAddBuchstabensalatPoint', ({ team, amount }) => {
+    if (game.scores[team] !== undefined) {
+        game.scores[team] = Math.max(0, Math.min(5, game.scores[team] + amount));
+    }
+});
+```
+
+### Event-Handler Namen pro View-Typ
+- **Admin-Seite**: Verwendet `onModuleStateUpdate` (geladen über `admin.html`)
+- **Player-Seite**: Verwendet `onModuleStateUpdate` (geladen über `index.html`)
+- **Spectator-Seite**: Verwendet `onSpectatorStateUpdate` (geladen über `spectator.html`)
+
+**Wichtig**: Falscher Handler-Namen führt dazu, dass Updates nicht empfangen werden!
+
+### Punktelogik - Konsistentes Rendering
+- **Falsch**: Punkte nur einmal anzeigen (`if (container.innerHTML === '')`)
+- **Richtig**: Punkte bei jedem Update neu rendern (`container.innerHTML = ''`)
+- **Beispiel**:
+```javascript
+// Richtig - wie bei "Begriffe Kategorien zuordnen"
+if (scoresContainer && scores && typeof scores === 'object') {
+    scoresContainer.innerHTML = ''; // Immer neu rendern!
+    Object.entries(scores).forEach(function(entry) {
+        var team = entry[0];
+        var points = entry[1] !== undefined && entry[1] !== null ? entry[1] : 0;
+        // ... render code ...
+    });
+}
+```
+
+### Default Values für Scores
+- **Problem**: `scores['Team 1'] || 0` funktioniert nicht wenn `scores['Team 1'] === null`
+- **Lösung**: Explizite Prüfung auf `undefined` und `null`:
+```javascript
+var points = entry[1] !== undefined && entry[1] !== null ? entry[1] : 0;
+```
+
+### Dynamische Script-Execution in admin.html
+- **Problem**: `eval()` in `admin.html` führt zu Scope-Problemen
+- **Lösung**: Funktionen als `window.functionName = function()` definieren
+- **Beispiel**:
+```javascript
+// FALSCH
+function adminAddBuchstabensalatPoint(team, amount) { ... }
+
+// RICHTIG
+window.adminAddBuchstabensalatPoint = function(team, amount) { ... };
+```
+
+### Dropdown Loading in Dynamisch Geladenen Modules
+- **Problem**: `DOMContentLoaded` Event wird nicht ausgelöst bei dynamisch geladenen Scripts
+- **Lösung**: Sofortige Execution mit IIFE:
+```javascript
+// FALSCH
+window.addEventListener('DOMContentLoaded', function() { ... });
+
+// RICHTIG
+(function() {
+    fetch('/buchstabensalat.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            // ... load options ...
+        });
+})();
+```
+
 ## Versionierung
-- Version: 1.0.0
-- Letzte Änderung: 2024
+- Version: 1.1.0
+- Letzte Änderung: 2026-11-09
+- **Neu**: Buchstabensalat Spiel vollständig implementiert
+- **Neu**: Punktelogik konsistent über alle Spiele hinweg
+- **Neu**: Socket-Event Parameter Standardisierung
 - Node.js: >= 14.x
 
 ## Lizenz
