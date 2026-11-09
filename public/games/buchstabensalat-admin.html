@@ -1,79 +1,93 @@
 <style>
-    .bsalat-admin-wrap { max-width: 900px; margin: 0 auto; box-sizing: border-box; }
-    .bsalat-admin-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
-    .bsalat-admin-label { font-size: 0.85rem; color: #a4b0be; margin-bottom: 4px; display: block; }
+    .bsalat-admin-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+        margin-bottom: 14px;
+    }
+    .bsalat-admin-label {
+        font-size: 0.85rem;
+        color: #a4b0be;
+        margin-bottom: 4px;
+        display: block;
+    }
     .bsalat-select, .bsalat-input {
-        padding: 8px 12px; background: #1c202c; border: 1px solid #4a5676;
-        border-radius: 6px; color: #fff; font-family: inherit; font-size: 0.95rem; min-width: 220px;
+        padding: 8px 12px;
+        background: #1c202c;
+        border: 1px solid #4a5676;
+        border-radius: 6px;
+        color: #fff;
+        font-family: inherit;
+        font-size: 0.95rem;
+        min-width: 220px;
     }
-    .bsalat-btn {
-        padding: 9px 18px; border-radius: 6px; font-weight: bold;
-        font-size: 0.95rem; cursor: pointer; border: none; transition: filter 0.15s;
+    .bsalat-admin-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0;
     }
-    .bsalat-btn:hover { filter: brightness(1.15); }
-    .bsalat-preview {
-        background: #171922; border: 1px solid #303646; border-radius: 12px;
-        padding: 24px; text-align: center; margin-top: 16px;
+    .bsalat-admin-scores {
+        margin-top: 16px;
     }
-    .bsalat-category-label {
-        font-size: 1rem; color: #a4b0be; text-transform: uppercase; font-weight: bold;
-        letter-spacing: 0.08em; margin-bottom: 10px;
-    }
-    .bsalat-answer-display {
-        font-size: 2.4rem; font-family: monospace; letter-spacing: 0.15em;
-        color: #ffd166; min-height: 60px; word-break: break-word;
-    }
-    .bsalat-status-row {
-        display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px;
-        font-size: 0.9rem; color: #a4b0be;
-    }
-    .bsalat-phase-badge {
-        padding: 3px 10px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;
-    }
-    .phase-idle { background: #2b3348; color: #a4b0be; }
-    .phase-playing { background: rgba(46,213,115,0.2); color: #2ed573; }
-    .phase-revealed { background: rgba(255,209,102,0.2); color: #ffd166; }
 </style>
 
-<div class="bsalat-admin-wrap card">
+<div class="card">
     <h2>🔤 Buchstabensalat (Admin)</h2>
-
+    
     <div class="bsalat-admin-row">
         <div>
             <label class="bsalat-admin-label">Runde wählen:</label>
             <select id="bsalatRoundSelect" class="bsalat-select">
-                <option value="">Lade Runden...</option>
+                <option value="">-- Runde wählen --</option>
             </select>
         </div>
         <div>
             <label class="bsalat-admin-label">Sekunden pro Schritt:</label>
             <input id="bsalatDuration" type="number" class="bsalat-input" value="2" min="1" max="30" style="min-width:80px;" />
         </div>
-        <button class="bsalat-btn" style="background:#2ed573;color:#111;" onclick="startBuchstabensalat()">▶ Runde starten</button>
-        <button class="bsalat-btn" style="background:#ffd166;color:#111;" onclick="revealBuchstabensalat()">👁 Aufdecken</button>
-        <button class="bsalat-btn" style="background:#e74c3c;color:#fff;" onclick="resetBuchstabensalat()">↺ Zurücksetzen</button>
     </div>
-
-    <div class="bsalat-preview">
-        <div class="bsalat-category-label" id="bsalatAdminCategory">Warte auf Runde...</div>
-        <div class="bsalat-answer-display" id="bsalatAdminRevealed">— — —</div>
-        <div class="bsalat-status-row">
-            <span>Status:</span>
-            <span id="bsalatPhaseBadge" class="bsalat-phase-badge phase-idle">IDLE</span>
-            <span id="bsalatStepInfo"></span>
-        </div>
+    
+    <div class="bsalat-admin-actions">
+        <button onclick="startBuchstabensalat()">▶ Runde starten</button>
+        <button onclick="lockBuchstabensalatBuzzer()">🔒 Buzzer locken</button>
+        <button onclick="revealBuchstabensalat()">👁 Aufdecken</button>
+        <button onclick="resetBuchstabensalat()">↺ Zurücksetzen</button>
     </div>
+    
+    <div id="bsalatAdminScores" class="bsalat-admin-scores"></div>
+    <div id="bsalatAdminWinner"></div>
+    <div id="bsalatAdminStatus">Noch keine Runde aktiv.</div>
 </div>
 
 <script>
-    // Runden direkt vom Server laden
-    (function loadBuchstabensalatRounds() {
+    var lastBuchstabensalatAdminBuzzerWinner = null;
+
+    function playBuchstabensalatAdminBuzzerSound() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const context = new AudioContext();
+        const oscillator = context.createOscillator();
+        const gain = context.createGain();
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(880, context.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(440, context.currentTime + 0.18);
+        gain.gain.setValueAtTime(0.18, context.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.22);
+        oscillator.connect(gain);
+        gain.connect(context.destination);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.22);
+    }
+
+    // Runde sofort beim Einfügen des Scripts in den Dropdown laden
+    (function() {
         fetch('/buchstabensalat.json')
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 var sel = document.getElementById('bsalatRoundSelect');
                 if (!sel) return;
-                sel.innerHTML = '<option value="">-- Runde wählen --</option>';
                 (data.rounds || []).forEach(function(r) {
                     var opt = document.createElement('option');
                     opt.value = r.id;
@@ -83,50 +97,90 @@
             })
             .catch(function(e) {
                 console.error('Buchstabensalat-Runden konnten nicht geladen werden:', e);
-                var sel = document.getElementById('bsalatRoundSelect');
-                if (sel) sel.innerHTML = '<option value="">Fehler beim Laden</option>';
             });
     })();
 
-    function startBuchstabensalat() {
+    window.startBuchstabensalat = function() {
         var sel = document.getElementById('bsalatRoundSelect');
-        var roundId = sel ? sel.value : '';
-        if (!roundId) { alert('Bitte eine Runde wählen!'); return; }
-        var durInput = document.getElementById('bsalatDuration');
-        var duration = durInput ? (parseInt(durInput.value, 10) || 2) : 2;
-        console.log('Sending adminStartBuchstabensalatRound:', roundId, duration);
-        socket.emit('adminStartBuchstabensalatRound', { roundId: roundId, duration: duration });
-    }
+        var durationInput = document.getElementById('bsalatDuration');
+        
+        if (!sel || !durationInput) {
+            console.error('Buchstabensalat-Elemente nicht gefunden');
+            return;
+        }
+        
+        var roundId = sel.value;
+        if (!roundId) {
+            alert('Bitte wähle zuerst eine Runde aus!');
+            return;
+        }
+        
+        var dur = parseInt(durationInput.value, 10) || 2;
+        if (dur < 1) dur = 1;
+        if (dur > 30) dur = 30;
+        
+        console.log('Sending adminStartBuchstabensalatRound:', roundId, dur);
+        socket.emit('adminStartBuchstabensalatRound', { roundId: roundId, duration: dur });
+    };
 
-    function revealBuchstabensalat() {
+    window.lockBuchstabensalatBuzzer = function() {
+        socket.emit('adminLockBuchstabensalatBuzzer');
+    };
+
+    window.revealBuchstabensalat = function() {
         socket.emit('adminRevealBuchstabensalat');
-    }
+    };
 
-    function resetBuchstabensalat() {
+    window.resetBuchstabensalat = function() {
         socket.emit('adminResetBuchstabensalat');
-    }
+    };
+
+    window.adminAddBuchstabensalatPoint = function(team, amount) {
+        if (typeof socket !== 'undefined') {
+            socket.emit('adminAddBuchstabensalatPoint', { team: team, amount: amount });
+        }
+    };
 
     window.onModuleStateUpdate = function(state) {
         var game = state.buchstabensalatGame || {};
-        var phase = game.phase || 'IDLE';
+        var scores = game.scores || {};
+        var buzzerWinner = game.buzzerWinner;
+        var buzzerLocked = game.buzzerLocked;
+        var winner = game.winnerTeam;
 
-        var catEl = document.getElementById('bsalatAdminCategory');
-        var revEl = document.getElementById('bsalatAdminRevealed');
-        var badgeEl = document.getElementById('bsalatPhaseBadge');
-        var stepEl = document.getElementById('bsalatStepInfo');
+        var statusEl = document.getElementById('bsalatAdminStatus');
+        var scoresContainer = document.getElementById('bsalatAdminScores');
+        var winnerEl = document.getElementById('bsalatAdminWinner');
 
-        if (!catEl) return;
+        if (!statusEl || !scoresContainer || !winnerEl) return;
 
-        catEl.textContent = game.category || 'Warte auf Runde...';
-        revEl.textContent = game.revealed || '— — —';
-
-        badgeEl.className = 'bsalat-phase-badge phase-' + phase.toLowerCase();
-        badgeEl.textContent = phase;
-
-        if (phase === 'PLAYING' && game.order && game.order.length > 0) {
-            stepEl.textContent = 'Schritt ' + game.step + ' / ' + game.order.length;
-        } else {
-            stepEl.textContent = '';
+        if (buzzerWinner && buzzerWinner !== lastBuchstabensalatAdminBuzzerWinner) {
+            playBuchstabensalatAdminBuzzerSound();
+            lastBuchstabensalatAdminBuzzerWinner = buzzerWinner;
         }
+        if (!buzzerWinner) lastBuchstabensalatAdminBuzzerWinner = null;
+
+        if (game.category) {
+            statusEl.innerText = 'Kategorie: ' + game.category + ' | Antwort: ' + (game.revealed || '— — —');
+        } else {
+            statusEl.innerText = buzzerLocked ? 'Buzzer ist gesperrt.' : 'Noch keine Runde aktiv.';
+        }
+
+        // Punktezähler anzeigen (wird bei jedem Update neu gerendert, genau wie bei anderen Spielen)
+        if (scoresContainer && scores && typeof scores === 'object') {
+            scoresContainer.innerHTML = '';
+            Object.entries(scores).forEach(function(entry) {
+                var team = entry[0];
+                var points = entry[1] !== undefined && entry[1] !== null ? entry[1] : 0;
+                var score = document.createElement('div');
+                score.style.cssText = 'margin: 8px 0; display: flex; align-items: center; gap: 8px;';
+                score.innerHTML = '<b>' + team + ': ' + points + ' / 5</b>' +
+                    '<button onclick="adminAddBuchstabensalatPoint(\'' + team + '\', -1)">-1</button>' +
+                    '<button onclick="adminAddBuchstabensalatPoint(\'' + team + '\', 1)">+1</button>';
+                scoresContainer.appendChild(score);
+            });
+        }
+
+        winnerEl.innerText = winner ? winner + ' gewinnt mit 5 Punkten.' : '';
     };
 </script>

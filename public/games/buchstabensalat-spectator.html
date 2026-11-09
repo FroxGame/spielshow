@@ -4,71 +4,151 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        max-width: 1100px;
+        max-width: 1200px;
         margin: 0 auto;
         box-sizing: border-box;
         padding: 20px 10px;
     }
+    .bsalat-spec-scores {
+        display: flex;
+        gap: 30px;
+        margin-bottom: 24px;
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    .bsalat-spec-team-score {
+        background: #171922;
+        border: 3px solid #4a5676;
+        border-radius: 12px;
+        padding: 20px 40px;
+        text-align: center;
+        min-width: 200px;
+    }
+    .bsalat-spec-team-name {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #fff;
+        margin-bottom: 8px;
+    }
+    .bsalat-spec-score-value {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #ffd166;
+    }
     .bsalat-spec-category {
-        font-size: 1.1rem;
+        font-size: 1.2rem;
         text-transform: uppercase;
         letter-spacing: 0.1em;
         color: #a4b0be;
         font-weight: bold;
-        margin-bottom: 12px;
+        margin-bottom: 16px;
         text-align: center;
     }
     .bsalat-spec-answer {
-        font-size: 3.5rem;
+        font-size: 4rem;
         font-family: monospace;
-        letter-spacing: 0.2em;
+        letter-spacing: 0.25em;
         color: #ffd166;
         background: #171922;
-        border: 3px solid #303646;
-        border-radius: 18px;
-        padding: 36px 56px;
+        border: 4px solid #303646;
+        border-radius: 20px;
+        padding: 48px 64px;
         text-align: center;
         word-break: break-word;
-        min-width: 400px;
-        min-height: 120px;
+        min-width: 500px;
+        min-height: 140px;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.7);
         transition: color 0.4s, border-color 0.4s;
+        margin-bottom: 20px;
     }
     .bsalat-spec-status {
-        margin-top: 18px;
-        font-size: 1.1rem;
+        margin-top: 20px;
+        font-size: 1.2rem;
         color: #a4b0be;
         text-align: center;
     }
     .bsalat-spec-idle {
-        font-size: 1.2rem;
+        font-size: 1.4rem;
         color: #576574;
-        margin-top: 24px;
+        margin-top: 30px;
         text-align: center;
+    }
+    .bsalat-spec-buzzer-info {
+        background: #1c202c;
+        border: 2px solid #e67e22;
+        border-radius: 12px;
+        padding: 16px 24px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #ffd166;
+    }
+    .bsalat-spec-buzzer-locked {
+        background: #1c202c;
+        border: 2px solid #2ed573;
+        border-radius: 12px;
+        padding: 16px 24px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #2ed573;
     }
 </style>
 
 <div class="bsalat-spec-container">
+    <div class="bsalat-spec-scores">
+        <div class="bsalat-spec-team-score">
+            <div class="bsalat-spec-team-name">Team 1</div>
+            <div class="bsalat-spec-score-value" id="bsalatSpecScore1">0</div>
+        </div>
+        <div class="bsalat-spec-team-score">
+            <div class="bsalat-spec-team-name">Team 2</div>
+            <div class="bsalat-spec-score-value" id="bsalatSpecScore2">0</div>
+        </div>
+    </div>
+    
     <div id="bsalatSpecCategory" class="bsalat-spec-category"></div>
     <div id="bsalatSpecAnswer" class="bsalat-spec-answer">— — —</div>
+    
+    <div id="bsalatSpecBuzzerInfo" class="bsalat-spec-buzzer-info" style="display: none;"></div>
+    <div id="bsalatSpecBuzzerLocked" class="bsalat-spec-buzzer-locked" style="display: none;"></div>
+    
     <div id="bsalatSpecStatus" class="bsalat-spec-status"></div>
     <div id="bsalatSpecIdle" class="bsalat-spec-idle">Warte auf die nächste Runde...</div>
 </div>
 
 <script>
-    window.onModuleStateUpdate = function(state) {
+    window.onSpectatorStateUpdate = function(state) {
         const game = state.buchstabensalatGame || {};
         const phase = game.phase || 'IDLE';
+        const scores = game.scores || {};
+        const buzzerWinner = game.buzzerWinner;
+        const buzzerLocked = game.buzzerLocked;
 
         const catEl = document.getElementById('bsalatSpecCategory');
         const answerEl = document.getElementById('bsalatSpecAnswer');
         const statusEl = document.getElementById('bsalatSpecStatus');
         const idleEl = document.getElementById('bsalatSpecIdle');
+        const score1El = document.getElementById('bsalatSpecScore1');
+        const score2El = document.getElementById('bsalatSpecScore2');
+        const buzzerInfoEl = document.getElementById('bsalatSpecBuzzerInfo');
+        const buzzerLockedEl = document.getElementById('bsalatSpecBuzzerLocked');
 
         if (!catEl) return;
+
+        // Update scores (schlicht und einfach, wird bei jedem Update neu gerendert)
+        if (score1El) {
+            score1El.textContent = scores['Team 1'] !== undefined && scores['Team 1'] !== null ? scores['Team 1'] : 0;
+        }
+        if (score2El) {
+            score2El.textContent = scores['Team 2'] !== undefined && scores['Team 2'] !== null ? scores['Team 2'] : 0;
+        }
 
         if (phase === 'IDLE') {
             catEl.textContent = '';
@@ -77,11 +157,27 @@
             answerEl.style.borderColor = '#303646';
             statusEl.textContent = '';
             idleEl.style.display = 'block';
+            buzzerInfoEl.style.display = 'none';
+            buzzerLockedEl.style.display = 'none';
             return;
         }
 
         idleEl.style.display = 'none';
         catEl.textContent = '🏷 Kategorie: ' + (game.category || '');
+        
+        // Show buzzer info
+        if (buzzerLocked) {
+            buzzerLockedEl.style.display = 'block';
+            buzzerLockedEl.textContent = '✅ Buzzer verriegelt!';
+            buzzerInfoEl.style.display = 'none';
+        } else if (buzzerWinner) {
+            buzzerInfoEl.style.display = 'block';
+            buzzerInfoEl.textContent = '🏆 ' + buzzerWinner + ' hat gebuzzt!';
+            buzzerLockedEl.style.display = 'none';
+        } else {
+            buzzerInfoEl.style.display = 'none';
+            buzzerLockedEl.style.display = 'none';
+        }
 
         if (phase === 'REVEALED') {
             answerEl.textContent = game.answer || '';

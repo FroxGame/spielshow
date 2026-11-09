@@ -9,6 +9,15 @@
         box-sizing: border-box;
         padding: 20px 10px;
     }
+    .bsalat-player-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
     .bsalat-category-box {
         font-size: 1rem;
         text-transform: uppercase;
@@ -16,6 +25,15 @@
         color: #a4b0be;
         font-weight: bold;
         margin-bottom: 8px;
+    }
+    .bsalat-score-display {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #ffd166;
+        background: #1c202c;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 2px solid #4a5676;
     }
     .bsalat-answer-box {
         font-size: 2.8rem;
@@ -35,6 +53,7 @@
         justify-content: center;
         box-shadow: 0 6px 20px rgba(0,0,0,0.5);
         transition: color 0.3s;
+        margin-bottom: 20px;
     }
     .bsalat-status {
         margin-top: 16px;
@@ -48,26 +67,146 @@
         text-align: center;
         margin-top: 20px;
     }
+    .bsalat-buzzer-btn {
+        padding: 16px 48px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #fff;
+        background: #e74c3c;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 15px rgba(231,76,60,0.4);
+        margin-bottom: 20px;
+    }
+    .bsalat-buzzer-btn:hover {
+        background: #c0392b;
+        transform: scale(1.05);
+    }
+    .bsalat-buzzer-btn:disabled {
+        background: #576574;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    .bsalat-guess-input {
+        font-size: 1.8rem;
+        padding: 12px 20px;
+        border: 3px solid #3498db;
+        border-radius: 10px;
+        background: #1c202c;
+        color: #fff;
+        text-align: center;
+        letter-spacing: 0.15em;
+        width: 100%;
+        max-width: 500px;
+        margin-bottom: 12px;
+    }
+    .bsalat-guess-input:focus {
+        outline: none;
+        border-color: #2ecc71;
+    }
+    .bsalat-guess-btn {
+        padding: 12px 32px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #fff;
+        background: #3498db;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: filter 0.2s;
+    }
+    .bsalat-guess-btn:hover {
+        filter: brightness(1.15);
+    }
+    .bsalat-guess-btn:disabled {
+        background: #576574;
+        cursor: not-allowed;
+    }
+    .bsalat-guess-status {
+        margin-top: 12px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-align: center;
+    }
+    .guess-correct {
+        color: #2ed573;
+    }
+    .guess-wrong {
+        color: #e74c3c;
+    }
 </style>
 
 <div class="bsalat-player-container">
-    <div id="bsalatPlayerCategory" class="bsalat-category-box"></div>
+    <div class="bsalat-player-header">
+        <div id="bsalatPlayerCategory" class="bsalat-category-box"></div>
+        <div id="bsalatScoreDisplay" class="bsalat-score-display" style="display: flex; gap: 20px; align-items: center;"></div>
+    </div>
+    
     <div id="bsalatPlayerAnswer" class="bsalat-answer-box">— — —</div>
+    
+    <button id="bsalatBuzzerBtn" class="bsalat-buzzer-btn" onclick="pressBuchstabensalatBuzzer()" disabled>🔔 BUZZER!</button>
+    
+    <div id="bsalatGuessSection" style="display: none; text-align: center; width: 100%;">
+        <div style="margin-bottom: 12px; color: #a4b0be;">Dein Name:</div>
+        <input type="text" id="bsalatPlayerNameInput" class="bsalat-guess-input" placeholder="Dein Name" maxlength="20">
+        <div style="margin-bottom: 12px; color: #a4b0be;">Deine Antwort:</div>
+        <input type="text" id="bsalatGuessInput" class="bsalat-guess-input" placeholder="Antwort eingeben" maxlength="50" disabled>
+        <button id="bsalatSubmitGuessBtn" class="bsalat-guess-btn" onclick="submitBuchstabensalatGuess()" disabled>✅ Absenden</button>
+        <div id="bsalatGuessStatus" class="bsalat-guess-status"></div>
+    </div>
+    
     <div id="bsalatPlayerStatus" class="bsalat-status"></div>
     <div id="bsalatPlayerIdleHint" class="bsalat-idle-hint">Warte auf den Start der nächsten Runde...</div>
 </div>
 
 <script>
+    var playerName = '';
+    
     window.onModuleStateUpdate = function(state) {
         const game = state.buchstabensalatGame || {};
         const phase = game.phase || 'IDLE';
-
+        const scores = game.scores || {};
+        const buzzerWinner = game.buzzerWinner;
+        const buzzerLocked = game.buzzerLocked;
+        const myPlayer = state.players && state.players[socket.id];
+        const myTeam = myPlayer ? myPlayer.team : null;
+        
         const catEl = document.getElementById('bsalatPlayerCategory');
         const answerEl = document.getElementById('bsalatPlayerAnswer');
         const statusEl = document.getElementById('bsalatPlayerStatus');
         const idleHint = document.getElementById('bsalatPlayerIdleHint');
+        const buzzerBtn = document.getElementById('bsalatBuzzerBtn');
+        const scoreEl = document.getElementById('bsalatScoreDisplay');
+        const guessSection = document.getElementById('bsalatGuessSection');
+        const nameInput = document.getElementById('bsalatPlayerNameInput');
+        const guessInput = document.getElementById('bsalatGuessInput');
+        const submitGuessBtn = document.getElementById('bsalatSubmitGuessBtn');
+        const guessStatus = document.getElementById('bsalatGuessStatus');
 
         if (!catEl) return;
+
+        // Update score display for ALL teams (schlicht wie bei anderen Spielen, wird bei jedem Update neu gerendert)
+        if (scoreEl && scores && typeof scores === 'object') {
+            scoreEl.innerHTML = '';
+            Object.entries(scores).forEach(function(entry) {
+                var team = entry[0];
+                var points = entry[1] !== undefined && entry[1] !== null ? entry[1] : 0;
+                var teamSpan = document.createElement('span');
+                teamSpan.textContent = team + ': ' + points;
+                if (team === myTeam) {
+                    teamSpan.style.cssText = 'color: #2ed573; font-size: 1.8rem;';
+                }
+                scoreEl.appendChild(teamSpan);
+                scoreEl.appendChild(document.createTextNode(' | '));
+            });
+            // Remove last separator
+            if (scoreEl.lastChild?.nodeType === 3) {
+                scoreEl.removeChild(scoreEl.lastChild);
+            }
+        }
 
         if (phase === 'IDLE') {
             catEl.textContent = '';
@@ -75,24 +214,97 @@
             answerEl.style.color = '#ffd166';
             statusEl.textContent = '';
             idleHint.style.display = 'block';
+            guessSection.style.display = 'none';
+            buzzerBtn.disabled = true;
+            buzzerBtn.textContent = '🔔 BUZZER!';
+            guessInput.value = '';
+            guessInput.disabled = true;
+            submitGuessBtn.disabled = true;
+            guessStatus.textContent = '';
+            guessStatus.className = 'bsalat-guess-status';
             return;
         }
 
         idleHint.style.display = 'none';
         catEl.textContent = '🏷 Kategorie: ' + (game.category || '');
+        answerEl.textContent = game.revealed || '…';
+        answerEl.style.color = '#ffd166';
+        
+        if (game.order && game.order.length > 0) {
+            statusEl.textContent = `${game.step} von ${game.order.length} Buchstaben aufgedeckt`;
+        } else {
+            statusEl.textContent = '';
+        }
 
-        if (phase === 'REVEALED') {
+        // Buzzer logic
+        if (phase === 'PLAYING' && !buzzerLocked) {
+            idleHint.style.display = 'none';
+            
+            if (buzzerWinner === socket.id) {
+                // I won the buzzer!
+                buzzerBtn.disabled = true;
+                buzzerBtn.textContent = '✅ Du hast gebuzzt!';
+                guessSection.style.display = 'block';
+                
+                if (!playerName && nameInput) {
+                    nameInput.focus();
+                }
+                
+                if (playerName) {
+                    guessInput.disabled = false;
+                    submitGuessBtn.disabled = false;
+                }
+            } else if (buzzerWinner) {
+                // Someone else won the buzzer
+                buzzerBtn.disabled = true;
+                buzzerBtn.textContent = '⏳ Warte...';
+                guessSection.style.display = 'none';
+            } else {
+                // No one has buzzed yet
+                buzzerBtn.disabled = false;
+                buzzerBtn.textContent = '🔔 BUZZER!';
+                guessSection.style.display = 'none';
+            }
+        } else if (phase === 'REVEALED' || buzzerLocked) {
+            buzzerBtn.disabled = true;
+            buzzerBtn.textContent = '⏳ Runde beendet';
+            guessSection.style.display = 'none';
             answerEl.textContent = game.answer || '';
             answerEl.style.color = '#2ed573';
             statusEl.textContent = '✅ Auflösung!';
-        } else {
-            answerEl.textContent = game.revealed || '…';
-            answerEl.style.color = '#ffd166';
-            if (game.order && game.order.length > 0) {
-                statusEl.textContent = `${game.step} von ${game.order.length} Buchstaben aufgedeckt`;
-            } else {
-                statusEl.textContent = '';
-            }
         }
     };
+
+    function pressBuchstabensalatBuzzer() {
+        socket.emit('pressBuchstabensalatBuzzer');
+    }
+
+    function submitBuchstabensalatGuess() {
+        const name = nameInput.value.trim();
+        const guess = guessInput.value.trim();
+        
+        if (!name) {
+            alert('Bitte gib deinen Namen ein!');
+            nameInput.focus();
+            return;
+        }
+        
+        if (!guess) {
+            alert('Bitte gib deine Antwort ein!');
+            guessInput.focus();
+            return;
+        }
+        
+        playerName = name;
+        socket.emit('adminSubmitBuchstabensalatGuess', { guess: guess });
+        
+        // Disable input after submission
+        guessInput.disabled = true;
+        submitGuessBtn.disabled = true;
+        
+        // Show waiting message
+        const guessStatus = document.getElementById('bsalatGuessStatus');
+        guessStatus.textContent = 'Warte auf Bestätigung...';
+        guessStatus.className = 'bsalat-guess-status';
+    }
 </script>

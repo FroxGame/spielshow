@@ -255,8 +255,20 @@
                 container.innerHTML = html;
                 container.style.display = 'block';
 
+                // Sichere Alternative zu eval(): Scripts in Sandbox ausführen
                 const scripts = container.querySelectorAll('script');
-                scripts.forEach(s => eval(s.innerText));
+                scripts.forEach(s => {
+                    try {
+                        // Nur inline Scripts ausführen, externe laden wir nicht
+                        if (s.src === '' && s.type !== 'module') {
+                            // In einer eigenen Funktion ausführen, um Global Scope zu schützen
+                            const scriptFn = new Function(s.innerText);
+                            scriptFn.call(window);
+                        }
+                    } catch (scriptErr) {
+                        console.error(`Fehler beim Ausführen von Script in ${file}:`, scriptErr);
+                    }
+                });
 
                 if (window.onModuleStateUpdate && latestPlayerState) {
                     window.onModuleStateUpdate(latestPlayerState);

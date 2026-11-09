@@ -83,6 +83,8 @@
         width: 100%;
         height: 100%;
         display: block;
+        background-color: #ffffff;
+        object-fit: contain;
     }
     .malen-player-controls {
         display: flex;
@@ -124,6 +126,7 @@
     let _lastY = 0;
     let _lineBatch = [];
     let _batchInterval = null;
+    let _currentPainterPad = null; // Reference to current canvas element
 
     if (typeof socket !== 'undefined') {
         socket.off('malenLinesAdded');
@@ -174,54 +177,102 @@
         }
     }
 
+    // ============================================================================
+    // Event Handler Definitions - Defined ONCE at top level
+    // ============================================================================
+    
+    function _malenGetCoords(pad, e) {
+        if (!pad) {
+            console.error('_malenGetCoords called with null/undefined pad');
+            return { x: 0, y: 0 };
+        }
+        const rect = pad.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: (clientX - rect.left) / rect.width,
+            y: (clientY - rect.top) / rect.height
+        };
+    }
+
+    function _malenOnStart(e) {
+        e.preventDefault();
+        _isDrawing = true;
+        const pos = _malenGetCoords(_currentPainterPad, e);
+        _lastX = pos.x;
+        _lastY = pos.y;
+    }
+
+    function _malenOnMove(e) {
+        if (!_isDrawing) return;
+        e.preventDefault();
+        const pos = _malenGetCoords(_currentPainterPad, e);
+        _lineBatch.push({
+            x0: _lastX,
+            y0: _lastY,
+            x1: pos.x,
+            y1: pos.y
+        });
+        _lastX = pos.x;
+        _lastY = pos.y;
+    }
+
+    function _malenOnEnd(e) {
+        if (!_isDrawing) return;
+        _isDrawing = false;
+        _sendBatch();
+    }
+
+    // ============================================================================
+    // Listener Management Functions
+    // ============================================================================
+
+    function _removePainterListeners() {
+        // Remove listeners from old pad element if it exists
+        if (_currentPainterPad) {
+            _currentPainterPad.removeEventListener('mousedown', _malenOnStart);
+            _currentPainterPad.removeEventListener('touchstart', _malenOnStart);
+            // Note: Don't set _currentPainterPad = null here, it will be set in _setupPainterListeners
+        }
+        
+        // Remove window listeners
+        window.removeEventListener('mousemove', _malenOnMove);
+        window.removeEventListener('mouseup', _malenOnEnd);
+        window.removeEventListener('touchmove', _malenOnMove, { passive: false });
+        window.removeEventListener('touchend', _malenOnEnd);
+        window.removeEventListener('touchcancel', _malenOnEnd);
+        
+        // Clear batch interval
+        if (_batchInterval) {
+            clearInterval(_batchInterval);
+            _batchInterval = null;
+        }
+        
+        // Reset coordinates
+        _lastX = 0;
+        _lastY = 0;
+        _isDrawing = false;
+    }
+
     function _setupPainterListeners(pad) {
-        function getCoords(e) {
-            const rect = pad.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: (clientX - rect.left) / rect.width,
-                y: (clientY - rect.top) / rect.height
-            };
-        }
-
-        function onStart(e) {
-            e.preventDefault();
-            _isDrawing = true;
-            const pos = getCoords(e);
-            _lastX = pos.x;
-            _lastY = pos.y;
-        }
-
-        function onMove(e) {
-            if (!_isDrawing) return;
-            e.preventDefault();
-            const pos = getCoords(e);
-            _lineBatch.push({
-                x0: _lastX,
-                y0: _lastY,
-                x1: pos.x,
-                y1: pos.y
-            });
-            _lastX = pos.x;
-            _lastY = pos.y;
-        }
-
-        function onEnd(e) {
-            if (!_isDrawing) return;
-            _isDrawing = false;
-            _sendBatch();
-        }
-
-        pad.addEventListener('mousedown', onStart);
-        window.addEventListener('mousemove', onMove);
-        window.addEventListener('mouseup', onEnd);
-
-        pad.addEventListener('touchstart', onStart, { passive: false });
-        window.addEventListener('touchmove', onMove, { passive: false });
-        window.addEventListener('touchend', onEnd);
-        window.addEventListener('touchcancel', onEnd);
-
+        // Remove any existing listeners first (this sets _currentPainterPad to null)
+        _removePainterListeners();
+        
+        // Store reference to current pad
+        _currentPainterPad = pad;
+        
+        // Add listeners to new pad
+        pad.addEventListener('mousedown', _malenOnStart);
+        pad.addEventListener('touchstart', _malenOnStart, { passive: false });
+        
+        // Add window listeners
+        window.addEventListener('mousemove', _malenOnMove);
+        window.addEventListener('mouseup', _malenOnEnd);
+        window.addEventListener('touchmove', _malenOnMove, { passive: false });
+        window.addEventListener('touchend', _malenOnEnd);
+        window.addEventListener('touchcancel', _malenOnEnd);
+        
+        // Start batch interval
         if (_batchInterval) clearInterval(_batchInterval);
         _batchInterval = setInterval(_sendBatch, 50);
     }
@@ -270,6 +321,10 @@
 
         if (_malenCurrentRole !== role) {
             _malenCurrentRole = role;
+            // Reset coordinates when switching roles
+            _lastX = 0;
+            _lastY = 0;
+            _isDrawing = false;
             container.innerHTML = '';
 
             if (isPainter) {
@@ -309,13 +364,26 @@
 
                 const wrapper = document.createElement('div');
                 wrapper.className = 'malen-canvas-wrapper';
+                wrapper.style.position = 'relative';
+                wrapper.style.overflow = 'hidden';
+                wrapper.style.height = '70vh';
+                wrapper.style.maxHeight = '70vh';
                 const canvas = document.createElement('canvas');
                 canvas.className = 'malen-player-canvas';
                 canvas.id = 'guesserMalenCanvas';
                 canvas.width = 1200;
                 canvas.height = 900;
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                canvas.style.display = 'block';
+                canvas.style.backgroundColor = '#ffffff';
+                canvas.style.position = 'absolute';
+                canvas.style.top = '0';
+                canvas.style.left = '0';
                 wrapper.appendChild(canvas);
                 container.appendChild(wrapper);
+                console.log('Guesser canvas created:', canvas);
+                console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
 
                 // Initial redraw from existing drawings in gameState
                 const myDrawings = (malen.drawings && malen.drawings[me.team]) || [];

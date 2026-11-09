@@ -1,11 +1,50 @@
-# Server starten:
+## 🚀 Schnell-Setup
+
+### 1. Installation
+```bash
+npm install
+```
+
+### 2. Umgebungsvariablen einrichten
+```bash
+# Vorlage kopieren
+cp .env.example .env
+
+# Passwörter anpassen (WICHTIG: Sichere Passwörter eingeben!)
+# Bearbeite die .env Datei und setze deine eigenen Passwörter
+```
+
+### 3. Server starten
+```bash
 node server.js
+```
 
-# Server Public Accessible machen:
+### 4. Server öffentlich zugänglich machen (optional)
+```bash
 cloudflared.exe tunnel --url http://localhost:3000/
+```
 
-# Nächste TODOs:
-1. Eine md erstellen lassen mit Regeln für AI-Agents, wie sie die Spiele zu bauen haben
+## 📁 Zugriffsadressen
+
+- **Admin**: `http://localhost:3000/admin.html`
+- **Spieler**: `http://localhost:3000/`
+- **Zuschauer**: `http://localhost:3000/spectator.html`
+
+## 🔐 Passwörter konfigurieren
+
+Erstelle eine `.env` Datei im Projektverzeichnis mit folgenden Inhalten:
+
+```env
+ADMIN_PASSWORD=dein_sicheres_admin_passwort
+SPECTATOR_PASSWORD=dein_sicheres_spectator_passwort
+```
+
+**Wichtig**: 
+- `.env` wird nicht ins Git-Repository hochgeladen (in `.gitignore`)
+- `.env.example` ist die Vorlage im Repository
+- Bei jedem neuen Setup musst du die Passwörter neu einpflegen
+
+# 📝 Nächste TODOs:
 2. Frage zu Bild
 3. Buchstabensalat
 4. 10 gegen Willy
@@ -15,7 +54,7 @@ cloudflared.exe tunnel --url http://localhost:3000/
 3. Tabu
 
 
-# Ideen für Sachen in Spielen:
+# 💡 Ideen für Sachen in Spielen:
 
 ### Videos für Fragen
 #### Schwierige Fragen
@@ -33,7 +72,7 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 - Geschehenisse und ihre Jahrhunderte
 - GoT Character und ihre Häuser
 
-# Implementierte Spiele
+# 🎮 Implementierte Spiele
 - Referatbingo
 - Diktat
 - Das kam im Discord nicht an

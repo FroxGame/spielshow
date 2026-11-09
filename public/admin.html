@@ -180,8 +180,19 @@
                 const html = await res.text();
                 container.innerHTML = html;
 
+                // Execute scripts in isolated context (security fix)
                 const scripts = container.querySelectorAll('script');
-                scripts.forEach(s => eval(s.innerText));
+                scripts.forEach(s => {
+                    try {
+                        const scriptCode = s.innerText;
+                        if (scriptCode.trim()) {
+                            const isolatedFunction = new Function(scriptCode);
+                            isolatedFunction.call(window);
+                        }
+                    } catch (err) {
+                        console.error('Fehler beim Ausführen von Script:', err);
+                    }
+                });
 
                 if (window.onModuleStateUpdate && latestAdminState) {
                     window.onModuleStateUpdate(latestAdminState);

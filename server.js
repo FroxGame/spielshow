@@ -25,6 +25,7 @@ const flaggenRoundsPath = path.join(__dirname, 'flaggen.json');
 const buchstabensalatRoundsPath = path.join(__dirname, 'buchstabensalat.json');
 
 const listenwissen = require('./listenwissen.js');
+const utils = require('./utils');
 
 const app = express();
 
@@ -32,8 +33,12 @@ const server = http.createServer(app);
 
 const io = new Server(server);
 
-const ADMIN_PASSWORD = "1234";
-const SPECTATOR_PASSWORD = "1234";
+// Umgebungsvariablen für Passwörter (ersetze "1234" durch sichere Passwörter)
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "1234";
+const SPECTATOR_PASSWORD = process.env.SPECTATOR_PASSWORD || "1234";
+
+// Spieler-Zähler für automatische Namensvergabe
+let playerCounter = 1;
 
 const gameIntroDetails = {
     LISTENWISSEN: { number: 1, name: 'Listenwissen' },
@@ -87,7 +92,84 @@ function createFlaggenElements(countryName) {
     return elements;
 }
 
-let playerCounter = 1;
+// Helper-Funktion: Umbenennung von Team-Daten in allen Game-Scores
+function renameTeamData(gameState, oldName, newName) {
+    // Haupt-Team-Daten
+    gameState.teams[newName] = gameState.teams[oldName];
+    delete gameState.teams[oldName];
+
+    // Listenwissen
+    if (gameState.listenwissenScores[oldName] !== undefined) {
+        gameState.listenwissenScores[newName] = gameState.listenwissenScores[oldName];
+        delete gameState.listenwissenScores[oldName];
+    }
+
+    // Discord Game
+    if (discordGame.scores[oldName] !== undefined) {
+        discordGame.scores[newName] = discordGame.scores[oldName];
+        delete discordGame.scores[oldName];
+    }
+
+    // Promi Game
+    if (gameState.promiGame.scores[oldName] !== undefined) {
+        gameState.promiGame.scores[newName] = gameState.promiGame.scores[oldName];
+        delete gameState.promiGame.scores[oldName];
+    }
+
+    // Drudel Game
+    if (gameState.drudelGame.scores[oldName] !== undefined) {
+        gameState.drudelGame.scores[newName] = gameState.drudelGame.scores[oldName];
+        delete gameState.drudelGame.scores[oldName];
+    }
+
+    // Diktat Game
+    if (gameState.diktatGame.scores[oldName] !== undefined) {
+        gameState.diktatGame.scores[newName] = gameState.diktatGame.scores[oldName];
+        delete gameState.diktatGame.scores[oldName];
+    }
+
+    // Partner Game (scores und teams)
+    if (gameState.partnerGame.scores[oldName] !== undefined) {
+        gameState.partnerGame.scores[newName] = gameState.partnerGame.scores[oldName];
+        delete gameState.partnerGame.scores[oldName];
+    }
+    if (gameState.partnerGame.teams[oldName]) {
+        gameState.partnerGame.teams[newName] = gameState.partnerGame.teams[oldName];
+        delete gameState.partnerGame.teams[oldName];
+    }
+
+    // Malen, Karte, Referat Bingo, Merken, Realität
+    [gameState.malenGame, gameState.karteGame, gameState.referatBingo, gameState.merkenGame, gameState.realitaetGame].forEach(game => {
+        if (!game || !game.scores || game.scores[oldName] === undefined) return;
+        game.scores[newName] = game.scores[oldName];
+        delete game.scores[oldName];
+    });
+
+    // Flaggen Game (scores und boards)
+    if (gameState.flaggenGame.scores[oldName] !== undefined) {
+        gameState.flaggenGame.scores[newName] = gameState.flaggenGame.scores[oldName];
+        delete gameState.flaggenGame.scores[oldName];
+    }
+    if (gameState.flaggenGame.boards[oldName]) {
+        gameState.flaggenGame.boards[newName] = gameState.flaggenGame.boards[oldName];
+        delete gameState.flaggenGame.boards[oldName];
+    }
+
+    // Buchstabensalat Game
+    if (gameState.buchstabensalatGame.scores[oldName] !== undefined) {
+        gameState.buchstabensalatGame.scores[newName] = gameState.buchstabensalatGame.scores[oldName];
+        delete gameState.buchstabensalatGame.scores[oldName];
+    }
+}
+
+// Helper-Funktion: Umbenennung von Team-Zuordnungen bei Spielern
+function renameTeamPlayers(gameState, oldName, newName) {
+    for (let id in gameState.players) {
+        if (gameState.players[id].team === oldName) {
+            gameState.players[id].team = newName;
+        }
+    }
+}
 
 app.get('/kategorien.json', (req, res) => {
 
@@ -126,89 +208,23 @@ app.get('/buchstabensalat.json', (req, res) => {
 });
 
 function getFlaggenRounds() {
-    try {
-        if (!fs.existsSync(flaggenRoundsPath)) return { rounds: [] };
-        return JSON.parse(fs.readFileSync(flaggenRoundsPath, 'utf8'));
-    } catch (e) {
-        console.error('Fehler beim Lesen von flaggen.json:', e);
-        return { rounds: [] };
-    }
+    return utils.readJsonFile(flaggenRoundsPath);
 }
 
 function getBuchstabensalatRounds() {
-    try {
-        if (!fs.existsSync(buchstabensalatRoundsPath)) return { rounds: [] };
-        return JSON.parse(fs.readFileSync(buchstabensalatRoundsPath, 'utf8'));
-    } catch (e) {
-        console.error('Fehler beim Lesen von buchstabensalat.json:', e);
-        return { rounds: [] };
-    }
+    return utils.readJsonFile(buchstabensalatRoundsPath);
 }
 
 function getKartePlaces() {
-
-    try {
-
-        if (!fs.existsSync(kartePlacesPath)) return [];
-
-        const raw = fs.readFileSync(kartePlacesPath, 'utf8');
-
-        const data = JSON.parse(raw);
-
-        return Array.isArray(data) ? data : [];
-
-    } catch (e) {
-
-        console.error('Fehler beim Laden von karte.json:', e);
-
-        return [];
-
-    }
-
+    return utils.readJsonArray(kartePlacesPath);
 }
 
 function getMalenWords() {
-
-    try {
-
-        if (!fs.existsSync(malenWordsPath)) return [];
-
-        const raw = fs.readFileSync(malenWordsPath, 'utf8');
-
-        const data = JSON.parse(raw);
-
-        return Array.isArray(data) ? data.filter(t => typeof t === 'string' && t.trim()) : [];
-
-    } catch (e) {
-
-        console.error('Fehler beim Laden von malen.json:', e);
-
-        return [];
-
-    }
-
+    return utils.readJsonArray(malenWordsPath, t => typeof t === 'string' && t.trim());
 }
 
 function getReferatTopics() {
-
-    try {
-
-        if (!fs.existsSync(referatTopicsPath)) return [];
-
-        const raw = fs.readFileSync(referatTopicsPath, 'utf8');
-
-        const data = JSON.parse(raw);
-
-        return Array.isArray(data) ? data.filter(t => typeof t === 'string' && t.trim()) : [];
-
-    } catch (e) {
-
-        console.error('Fehler beim Laden von bingo.json:', e);
-
-        return [];
-
-    }
-
+    return utils.readJsonArray(referatTopicsPath, t => typeof t === 'string' && t.trim());
 }
 
 // ZENTRALER GAME STATE
@@ -532,7 +548,11 @@ let gameState = {
         order: [],
         step: 0,
         duration: 0,
-        timerRunning: false
+        timerRunning: false,
+        scores: {
+            'Team 1': 0,
+            'Team 2': 0
+        }
     }
 
 };
@@ -1404,9 +1424,17 @@ io.on('connection', (socket) => {
 
     socket.on('adminLogin', (password) => {
 
+        // Input-Validierung: Passwort muss String sein
+        if (typeof password !== 'string') {
+            console.warn('Ungültiger Admin-Login-Versuch: Passwort ist kein String');
+            socket.emit('adminAuthResult', { success: false, error: 'Ungültige Eingabe' });
+            return;
+        }
+
         if (password === ADMIN_PASSWORD) {
 
             adminSockets.add(socket.id);
+            console.log(`Admin von ${socket.id} eingeloggt`);
 
             socket.emit('adminAuthResult', { success: true });
             socket.emit('stateUpdate', gameState);
@@ -1421,7 +1449,8 @@ io.on('connection', (socket) => {
 
         } else {
 
-            socket.emit('adminAuthResult', { success: false });
+            console.warn(`Fehlgeschlagener Admin-Login-Versuch von ${socket.id}`);
+            socket.emit('adminAuthResult', { success: false, error: 'Falsches Passwort' });
 
         }
 
@@ -1448,12 +1477,22 @@ io.on('connection', (socket) => {
     });
 
     socket.on('spectatorLogin', (password) => {
+
+        // Input-Validierung: Passwort muss String sein
+        if (typeof password !== 'string') {
+            console.warn('Ungültiger Spectator-Login-Versuch: Passwort ist kein String');
+            socket.emit('spectatorAuthResult', { success: false, error: 'Ungültige Eingabe' });
+            return;
+        }
+
         if (password !== SPECTATOR_PASSWORD) {
-            socket.emit('spectatorAuthResult', { success: false });
+            console.warn(`Fehlgeschlagener Spectator-Login-Versuch von ${socket.id}`);
+            socket.emit('spectatorAuthResult', { success: false, error: 'Falsches Passwort' });
             return;
         }
 
         spectatorSockets.add(socket.id);
+        console.log(`Spectator von ${socket.id} eingeloggt`);
         socket.emit('spectatorAuthResult', { success: true });
         socket.emit('stateUpdate', gameState);
 
@@ -1477,9 +1516,18 @@ io.on('connection', (socket) => {
 
     socket.on('adminUpdatePlayerName', ({ socketId, newName }) => {
 
+        // Input-Validierung
+        if (typeof socketId !== 'string' || typeof newName !== 'string') {
+            console.warn('Ungültige Player-Namen-Änderung');
+            return;
+        }
+
         if (gameState.players[socketId]) {
 
-            gameState.players[socketId].name = newName;
+            const oldName = gameState.players[socketId].name;
+            gameState.players[socketId].name = newName.trim();
+
+            console.log(`Spieler-Name geändert: ${oldName} → ${gameState.players[socketId].name}`);
 
             io.emit('stateUpdate', gameState);
 
@@ -1493,11 +1541,24 @@ io.on('connection', (socket) => {
 
     socket.on('adminUpdatePlayerTeam', ({ socketId, team }) => {
 
+        // Input-Validierung
+        if (typeof socketId !== 'string' || typeof team !== 'string') {
+            console.warn('Ungültige Team-Zuweisung');
+            return;
+        }
+
         if (gameState.players[socketId]) {
 
             const oldTeam = gameState.players[socketId].team;
 
+            if (oldTeam === team) {
+                console.log(`Spieler ${gameState.players[socketId].name} bleibt im Team ${oldTeam}`);
+                return;
+            }
+
             gameState.players[socketId].team = team;
+
+            console.log(`Spieler ${gameState.players[socketId].name} wechselt von ${oldTeam} nach ${team}`);
 
             io.emit('stateUpdate', gameState);
 
@@ -1514,116 +1575,44 @@ io.on('connection', (socket) => {
     // 5. Admin Team Management
 
     socket.on('adminUpdateTeamName', ({ oldName, newName }) => {
-
         const trimmedNew = newName.trim();
 
-        if (gameState.teams[oldName] && trimmedNew && oldName !== trimmedNew) {
-
-            if (gameState.teams[trimmedNew]) return;
-
-            gameState.teams[trimmedNew] = gameState.teams[oldName];
-
-            delete gameState.teams[oldName];
-
-            if (gameState.listenwissenScores[oldName] !== undefined) {
-
-                gameState.listenwissenScores[trimmedNew] = gameState.listenwissenScores[oldName];
-
-                delete gameState.listenwissenScores[oldName];
-
-            }
-
-            if (discordGame.scores[oldName] !== undefined) {
-
-                discordGame.scores[trimmedNew] = discordGame.scores[oldName];
-
-                delete discordGame.scores[oldName];
-
-            }
-
-            if (gameState.promiGame.scores[oldName] !== undefined) {
-
-                gameState.promiGame.scores[trimmedNew] = gameState.promiGame.scores[oldName];
-
-                delete gameState.promiGame.scores[oldName];
-
-            }
-
-            if (gameState.drudelGame.scores[oldName] !== undefined) {
-
-                gameState.drudelGame.scores[trimmedNew] = gameState.drudelGame.scores[oldName];
-
-                delete gameState.drudelGame.scores[oldName];
-
-            }
-
-            if (gameState.diktatGame.scores[oldName] !== undefined) {
-
-                gameState.diktatGame.scores[trimmedNew] = gameState.diktatGame.scores[oldName];
-
-                delete gameState.diktatGame.scores[oldName];
-
-            }
-
-            if (gameState.partnerGame.scores[oldName] !== undefined) {
-
-                gameState.partnerGame.scores[trimmedNew] = gameState.partnerGame.scores[oldName];
-
-                delete gameState.partnerGame.scores[oldName];
-
-            }
-
-            if (gameState.partnerGame.teams[oldName]) {
-
-                gameState.partnerGame.teams[trimmedNew] = gameState.partnerGame.teams[oldName];
-
-                delete gameState.partnerGame.teams[oldName];
-
-            }
-
-            [gameState.malenGame, gameState.karteGame, gameState.referatBingo, gameState.merkenGame, gameState.realitaetGame].forEach(game => {
-                if (!game || !game.scores || game.scores[oldName] === undefined) return;
-                game.scores[trimmedNew] = game.scores[oldName];
-                delete game.scores[oldName];
-            });
-
-            if (gameState.flaggenGame.scores[oldName] !== undefined) {
-                gameState.flaggenGame.scores[trimmedNew] = gameState.flaggenGame.scores[oldName];
-                delete gameState.flaggenGame.scores[oldName];
-            }
-            if (gameState.flaggenGame.boards[oldName]) {
-                gameState.flaggenGame.boards[trimmedNew] = gameState.flaggenGame.boards[oldName];
-                delete gameState.flaggenGame.boards[oldName];
-            }
-
-            for (let id in gameState.players) {
-
-                if (gameState.players[id].team === oldName) {
-
-                    gameState.players[id].team = trimmedNew;
-
-                }
-
-            }
-
-            io.emit('stateUpdate', gameState);
-
-            emitTeamNotesToTeam(trimmedNew);
-
-            emitSpectatorNotes();
-
+        // Input-Validierung
+        if (typeof oldName !== 'string' || typeof trimmedNew !== 'string' || !trimmedNew) {
+            console.warn('Ungültige Team-Namen-Änderung');
+            return;
         }
 
+        if (oldName === trimmedNew) return;
+        if (!gameState.teams[oldName]) {
+            console.warn(`Team "${oldName}" existiert nicht`);
+            return;
+        }
+        if (gameState.teams[trimmedNew]) {
+            console.warn(`Team-Name "${trimmedNew}" existiert bereits`);
+            return;
+        }
+
+        renameTeamData(gameState, oldName, trimmedNew);
+        renameTeamPlayers(gameState, oldName, trimmedNew);
+
+        io.emit('stateUpdate', gameState);
+        emitTeamNotesToTeam(trimmedNew);
+        emitSpectatorNotes();
     });
 
     socket.on('adminAddTeamPoint', ({ team, amount }) => {
 
+        if (!utils.isValidTeamName(team)) {
+            console.warn('Ungültiger Team-Name bei Punktestand');
+            return;
+        }
+
         if (gameState.teams[team]) {
-
-            gameState.teams[team].score = Math.max(0, Math.min(5, gameState.teams[team].score + amount));
-
+            const oldScore = gameState.teams[team].score;
+            utils.addScore(gameState.teams[team], 'score', amount, 5);
+            console.log(`Team ${team}: ${oldScore} → ${gameState.teams[team].score} Punkte`);
             io.emit('stateUpdate', gameState);
-
         }
 
     });
@@ -1818,12 +1807,9 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminAddFlaggenPoint', ({ team, amount }) => {
-        if (!gameState.flaggenGame) return;
-        if (gameState.flaggenGame.scores[team] === undefined) return;
-        gameState.flaggenGame.scores[team] = Math.max(
-            0,
-            gameState.flaggenGame.scores[team] + (parseInt(amount, 10) || 0)
-        );
+        if (!gameState.flaggenGame || !utils.isValidTeamName(team)) return;
+        if (!gameState.flaggenGame.scores[team]) return;
+        utils.addScore(gameState.flaggenGame.scores, team, amount);
         io.emit('stateUpdate', gameState);
     });
 
@@ -1916,20 +1902,15 @@ io.on('connection', (socket) => {
 
     socket.on('adminAddPromiPoint', ({ team, amount }) => {
 
-        if (!adminSockets.has(socket.id) || gameState.promiGame.scores[team] === undefined) return;
+        if (!adminSockets.has(socket.id) || !utils.isValidTeamName(team)) return;
 
-        gameState.promiGame.scores[team] = Math.max(
+        if (!gameState.promiGame.scores[team]) return;
 
-            0,
+        utils.addScore(gameState.promiGame.scores, team, amount);
 
-            Math.min(5, gameState.promiGame.scores[team] + Number(amount || 0))
-
-        );
-
-        if (gameState.promiGame.scores[team] >= 5) {
+        if (gameState.promiGame.scores[team] >= MAX_POINTS_PER_GAME) {
 
             gameState.promiGame.winnerTeam = team;
-
             gameState.promiGame.buzzerLocked = true;
 
         } else if (gameState.promiGame.winnerTeam === team) {
@@ -2004,20 +1985,15 @@ io.on('connection', (socket) => {
 
     socket.on('adminAddDrudelPoint', ({ team, amount }) => {
 
-        if (!adminSockets.has(socket.id) || gameState.drudelGame.scores[team] === undefined) return;
+        if (!adminSockets.has(socket.id) || !utils.isValidTeamName(team)) return;
 
-        gameState.drudelGame.scores[team] = Math.max(
+        if (!gameState.drudelGame.scores[team]) return;
 
-            0,
+        utils.addScore(gameState.drudelGame.scores, team, amount);
 
-            Math.min(5, gameState.drudelGame.scores[team] + Number(amount || 0))
-
-        );
-
-        if (gameState.drudelGame.scores[team] >= 5) {
+        if (gameState.drudelGame.scores[team] >= MAX_POINTS_PER_GAME) {
 
             gameState.drudelGame.winnerTeam = team;
-
             gameState.drudelGame.buzzerLocked = true;
 
         } else if (gameState.drudelGame.winnerTeam === team) {
@@ -2052,9 +2028,12 @@ io.on('connection', (socket) => {
 
         if (!adminSockets.has(socket.id)) return;
 
-        const cleanSentence = String(sentence || '').trim().slice(0, 500);
+        const cleanSentence = utils.sanitizeString(sentence, MAX_DIKTAT_LENGTH);
 
-        if (!cleanSentence) return;
+        if (!cleanSentence) {
+            console.warn('Leerer Diktat-Satz abgelehnt');
+            return;
+        }
 
         Object.keys(diktatTexts).forEach(playerId => delete diktatTexts[playerId]);
 
@@ -2082,7 +2061,7 @@ io.on('connection', (socket) => {
 
         if (!player || gameState.diktatGame.phase !== 'WRITING' || gameState.diktatGame.locked) return;
 
-        diktatTexts[socket.id] = String(text || '').slice(0, 500);
+        diktatTexts[socket.id] = utils.sanitizeString(text, MAX_DIKTAT_LENGTH);
 
         socket.emit('diktatPlayerUpdate', {
 
@@ -2142,9 +2121,11 @@ io.on('connection', (socket) => {
 
     socket.on('adminAddDiktatPoint', ({ team, amount }) => {
 
-        if (!adminSockets.has(socket.id) || gameState.diktatGame.scores[team] === undefined) return;
+        if (!adminSockets.has(socket.id) || !utils.isValidTeamName(team)) return;
 
-        gameState.diktatGame.scores[team] = Math.max(0, gameState.diktatGame.scores[team] + Number(amount || 0));
+        if (!gameState.diktatGame.scores[team]) return;
+
+        utils.addScore(gameState.diktatGame.scores, team, amount);
 
         emitDiktatUpdates();
 
@@ -2274,7 +2255,7 @@ io.on('connection', (socket) => {
 
     socket.on('adminAddCategoryPoint', ({ team, amount }) => {
 
-        if (!adminSockets.has(socket.id)) return;
+        if (!adminSockets.has(socket.id) || !utils.isValidTeamName(team)) return;
 
         if (!gameState.categoryGame.scores) {
 
@@ -2288,7 +2269,7 @@ io.on('connection', (socket) => {
 
         }
 
-        gameState.categoryGame.scores[team] = Math.max(0, gameState.categoryGame.scores[team] + Number(amount || 0));
+        utils.addScore(gameState.categoryGame.scores, team, amount);
 
         emitCategoryState();
 
@@ -2380,7 +2361,10 @@ io.on('connection', (socket) => {
 
         if (!adminSockets.has(socket.id)) return;
 
-        if (gameState.partnerGame.round >= 4) return;
+        if (gameState.partnerGame.round >= MAX_PARTNER_QUESTIONS) {
+            console.warn('Maximale Anzahl an Partner-Runden erreicht');
+            return;
+        }
 
         const catalogs = getPartnerCatalogs();
 
@@ -2388,7 +2372,10 @@ io.on('connection', (socket) => {
 
         const questions = catalogs[selectedCatalog] || [];
 
-        if (questions.length < 4) return;
+        if (questions.length < MAX_PARTNER_QUESTIONS) {
+            console.warn('Nicht genügend Fragen im Katalog');
+            return;
+        }
 
         const teams = Object.keys(gameState.teams);
 
@@ -2472,7 +2459,10 @@ io.on('connection', (socket) => {
 
         const game = gameState.partnerGame;
 
-        if (game.phase !== 'PLAYING' || !Array.isArray(allocations)) return;
+        if (game.phase !== 'PLAYING' || !Array.isArray(allocations)) {
+            console.warn('Ungültige Partner-Allokation: Phase oder Array-Format');
+            return;
+        }
 
         const team = Object.keys(game.teams).find(teamName => game.teams[teamName].raterId === socket.id);
 
@@ -2480,11 +2470,23 @@ io.on('connection', (socket) => {
 
         const teamGame = game.teams[team];
 
+        // Validierung der Allokationen
+        if (allocations.length !== MAX_PARTNER_QUESTIONS) {
+            console.warn('Falsche Anzahl Allokationen:', allocations.length);
+            return;
+        }
+
         const cleanAllocations = allocations.map(value => Number(value));
 
-        if (cleanAllocations.length !== 4 || cleanAllocations.some(value => !Number.isInteger(value) || value < 0 || value > 4)) return;
+        if (cleanAllocations.some(value => !Number.isInteger(value) || value < 0 || value > MAX_ALLOCATION_VALUE)) {
+            console.warn('Allokationswerte außerhalb des Bereichs 0-4');
+            return;
+        }
 
-        if (cleanAllocations.reduce((sum, value) => sum + value, 0) !== 10) return;
+        if (cleanAllocations.reduce((sum, value) => sum + value, 0) !== TOTAL_ALLOCATION_POINTS) {
+            console.warn('Summe der Allokationen muss 10 sein');
+            return;
+        }
 
         teamGame.allocations = cleanAllocations;
 
@@ -2496,11 +2498,24 @@ io.on('connection', (socket) => {
 
         if (!adminSockets.has(socket.id) || gameState.partnerGame.phase !== 'PLAYING') return;
 
+        if (!utils.isValidTeamName(team)) {
+            console.warn('Ungültiger Team-Name bei Partner-Frage');
+            return;
+        }
+
         const teamGame = gameState.partnerGame.teams[team];
 
-        const cleanIndex = Number(index);
+        if (!teamGame) {
+            console.warn('Team nicht gefunden:', team);
+            return;
+        }
 
-        if (!teamGame || !Number.isInteger(cleanIndex) || cleanIndex < 0 || cleanIndex > 3) return;
+        if (!utils.isValidIndex(index, 0, MAX_PARTNER_QUESTIONS - 1)) {
+            console.warn('Ungültiger Index bei Partner-Frage:', index);
+            return;
+        }
+
+        const cleanIndex = Number(index);
 
         if (!teamGame.revealedIndexes.includes(cleanIndex)) {
 
@@ -2516,13 +2531,34 @@ io.on('connection', (socket) => {
 
         if (!adminSockets.has(socket.id) || gameState.partnerGame.phase !== 'PLAYING') return;
 
+        if (!utils.isValidTeamName(team)) {
+            console.warn('Ungültiger Team-Name bei Partner-Antwort');
+            return;
+        }
+
         const teamGame = gameState.partnerGame.teams[team];
+
+        if (!teamGame) {
+            console.warn('Team nicht gefunden:', team);
+            return;
+        }
+
+        if (!utils.isValidIndex(index, 0, MAX_PARTNER_QUESTIONS - 1)) {
+            console.warn('Ungültiger Index bei Partner-Antwort:', index);
+            return;
+        }
 
         const cleanIndex = Number(index);
 
-        if (!teamGame || !teamGame.revealedIndexes.includes(cleanIndex) || teamGame.allocations[cleanIndex] === null) return;
+        if (!teamGame.revealedIndexes.includes(cleanIndex) || teamGame.allocations[cleanIndex] === null) {
+            console.warn('Frage nicht freigegeben oder keine Allokation');
+            return;
+        }
 
-        if (teamGame.results[cleanIndex] !== null) return;
+        if (teamGame.results[cleanIndex] !== null) {
+            console.warn('Frage bereits bewertet');
+            return;
+        }
 
         const isCorrect = Boolean(correct);
 
@@ -2552,9 +2588,11 @@ io.on('connection', (socket) => {
 
     socket.on('adminAddPartnerPoint', ({ team, amount }) => {
 
-        if (!adminSockets.has(socket.id) || gameState.partnerGame.scores[team] === undefined) return;
+        if (!adminSockets.has(socket.id) || !utils.isValidTeamName(team)) return;
 
-        gameState.partnerGame.scores[team] = Math.max(0, gameState.partnerGame.scores[team] + Number(amount || 0));
+        if (!gameState.partnerGame.scores[team]) return;
+
+        utils.addScore(gameState.partnerGame.scores, team, amount);
 
         emitPartnerUpdates();
 
@@ -2564,11 +2602,19 @@ io.on('connection', (socket) => {
 
     socket.on('adminStartDiscordGame', ({ giverId, target }) => {
 
+        if (typeof giverId !== 'string' || typeof target !== 'string') {
+            console.warn('Ungültige Discord-Game-Parameter');
+            return;
+        }
+
         const giver = gameState.players[giverId];
 
-        const cleanTarget = String(target || '').trim().slice(0, 100);
+        const cleanTarget = utils.sanitizeString(target, MAX_DISCORD_TARGET_LENGTH);
 
-        if (!giver || !cleanTarget) return;
+        if (!giver || !cleanTarget) {
+            console.warn('Ungültiger Discord-Game-Start: Spieler nicht gefunden oder leerer Zielbegriff');
+            return;
+        }
 
         const partner = Object.values(gameState.players).find(player => (
 
@@ -3694,12 +3740,15 @@ io.on('connection', (socket) => {
             order: round.order,
             step: 0,
             duration: duration || 0,
-            timerRunning: true
+            timerRunning: true,
+            buzzerWinner: null,
+            buzzerLocked: false,
+            scores: Object.fromEntries(Object.keys(gameState.teams).map(team => [team, 0]))
         };
 
         buchstabensalatTimerInterval = setInterval(() => {
             const game = gameState.buchstabensalatGame;
-            if (!game || game.phase !== 'PLAYING') {
+            if (!game || game.phase !== 'PLAYING' || game.buzzerLocked) {
                 clearInterval(buchstabensalatTimerInterval);
                 buchstabensalatTimerInterval = null;
                 return;
@@ -3718,6 +3767,70 @@ io.on('connection', (socket) => {
             io.emit('stateUpdate', gameState);
         }, (duration || 2) * 1000);
 
+        io.emit('stateUpdate', gameState);
+    });
+
+    socket.on('adminLockBuchstabensalatBuzzer', () => {
+        if (!adminSockets.has(socket.id)) return;
+        const game = gameState.buchstabensalatGame;
+        if (!game || game.phase !== 'PLAYING') return;
+        
+        game.buzzerLocked = true;
+        io.emit('stateUpdate', gameState);
+    });
+
+    socket.on('pressBuchstabensalatBuzzer', () => {
+        const game = gameState.buchstabensalatGame;
+        if (!game || game.phase !== 'PLAYING') return;
+        if (game.buzzerWinner || game.buzzerLocked) return;
+        
+        // First person to buzz wins
+        game.buzzerWinner = socket.id;
+        
+        // Store team and player name for scoring
+        const player = gameState.players[socket.id];
+        if (player) {
+            game.buzzerTeam = player.team;
+            game.buzzerName = player.name;
+        }
+        
+        io.emit('stateUpdate', gameState);
+    });
+
+    socket.on('adminSubmitBuchstabensalatGuess', ({ guess }) => {
+        const game = gameState.buchstabensalatGame;
+        if (!game || game.phase !== 'PLAYING') return;
+        if (!game.buzzerWinner || game.buzzerWinner !== socket.id) return;
+        
+        // Check if guess is correct (case-insensitive)
+        const correctGuess = guess.trim().toLowerCase() === game.answer.trim().toLowerCase();
+        
+        if (correctGuess) {
+            // Award 1 point per correct guess, max 5 points
+            const currentScore = game.scores[game.buzzerTeam] || 0;
+            if (currentScore < 5) {
+                game.scores[game.buzzerTeam] = currentScore + 1;
+                console.log(`Player ${game.buzzerName} from ${game.buzzerTeam} got 1 point! Total: ${game.scores[game.buzzerTeam]}/5`);
+            } else {
+                console.log(`Team ${game.buzzerTeam} already has 5 points!`);
+            }
+        } else {
+            console.log(`Wrong guess from player ${socket.id}: "${guess}"`);
+        }
+        
+        io.emit('stateUpdate', gameState);
+    });
+
+    socket.on('adminAddBuchstabensalatPoint', ({ team, amount }) => {
+        if (!adminSockets.has(socket.id)) return;
+        const game = gameState.buchstabensalatGame;
+        if (!game || !team) return;
+        
+        // Add points to specific team
+        if (game.scores[team] !== undefined) {
+            game.scores[team] = Math.max(0, Math.min(5, game.scores[team] + amount));
+        }
+        
         io.emit('stateUpdate', gameState);
     });
 
@@ -3749,7 +3862,10 @@ io.on('connection', (socket) => {
             order: [],
             step: 0,
             duration: 0,
-            timerRunning: false
+            timerRunning: false,
+            buzzerWinner: null,
+            buzzerLocked: false,
+            scores: Object.fromEntries(Object.keys(gameState.teams).map(team => [team, 0]))
         };
         io.emit('stateUpdate', gameState);
     });
