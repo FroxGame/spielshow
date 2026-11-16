@@ -1,0 +1,321 @@
+<style>
+    .teekesselchen-player-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+        box-sizing: border-box;
+        padding: 20px 10px;
+    }
+    .teekesselchen-player-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .teekesselchen-category-box {
+        font-size: 1.2rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #a4b0be;
+        font-weight: bold;
+        margin-bottom: 8px;
+        text-align: center;
+    }
+    .teekesselchen-score-display {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #ffd166;
+        background: #1c202c;
+        padding: 8px 16px;
+        border-radius: 8px;
+        border: 2px solid #4a5676;
+    }
+    .teekesselchen-input-box {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #fff;
+        background: #171922;
+        border: 3px solid #3498db;
+        border-radius: 12px;
+        padding: 20px 30px;
+        text-align: center;
+        width: 100%;
+        max-width: 500px;
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .teekesselchen-status {
+        margin-top: 16px;
+        font-size: 1.1rem;
+        color: #a4b0be;
+        text-align: center;
+    }
+    .teekesselchen-idle-hint {
+        font-size: 1.2rem;
+        color: #576574;
+        text-align: center;
+        margin-top: 20px;
+    }
+    .teekesselchen-buzzer-btn {
+        padding: 16px 48px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #fff;
+        background: #e74c3c;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 15px rgba(231,76,60,0.4);
+        margin-bottom: 20px;
+    }
+    .teekesselchen-buzzer-btn:hover {
+        background: #c0392b;
+        transform: scale(1.05);
+    }
+    .teekesselchen-buzzer-btn:disabled {
+        background: #576574;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    .teekesselchen-guess-section {
+        display: none;
+        text-align: center;
+        width: 100%;
+    }
+    .teekesselchen-guess-input {
+        font-size: 1.5rem;
+        padding: 12px 20px;
+        border: 3px solid #3498db;
+        border-radius: 10px;
+        background: #1c202c;
+        color: #fff;
+        text-align: center;
+        width: 100%;
+        max-width: 400px;
+        margin-bottom: 12px;
+    }
+    .teekesselchen-guess-input:focus {
+        outline: none;
+        border-color: #2ecc71;
+    }
+    .teekesselchen-guess-btn {
+        padding: 12px 32px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #fff;
+        background: #3498db;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: filter 0.2s;
+    }
+    .teekesselchen-guess-btn:hover {
+        filter: brightness(1.15);
+    }
+    .teekesselchen-guess-btn:disabled {
+        background: #576574;
+        cursor: not-allowed;
+    }
+    .teekesselchen-guess-status {
+        margin-top: 12px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        text-align: center;
+    }
+    .guess-correct {
+        color: #2ed573;
+    }
+    .guess-wrong {
+        color: #e74c3c;
+    }
+    .teekesselchen-timer {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #e74c3c;
+        margin: 16px 0;
+    }
+</style>
+
+<div class="teekesselchen-player-container">
+    <div class="teekesselchen-player-header">
+        <div id="teekesselchenPlayerCategory" class="teekesselchen-category-box"></div>
+        <div id="teekesselchenScoreDisplay" class="teekesselchen-score-display" style="display: flex; gap: 20px; align-items: center;"></div>
+    </div>
+    
+    <div id="teekesselchenPlayerInput" class="teekesselchen-input-box" contenteditable="true" placeholder="Deine Antwort eingeben..."></div>
+    
+    <div id="teekesselchenTimer" class="teekesselchen-timer" style="display: none;"></div>
+    
+    <button id="teekesselchenBuzzerBtn" class="teekesselchen-buzzer-btn" onclick="pressTeekesselchenBuzzer()" disabled>🔔 BUZZER!</button>
+    
+    <div id="teekesselchenGuessSection" class="teekesselchen-guess-section">
+        <div style="margin-bottom: 12px; color: #a4b0be;">Dein Name:</div>
+        <input type="text" id="teekesselchenPlayerNameInput" class="teekesselchen-guess-input" placeholder="Dein Name" maxlength="20">
+        <div style="margin-bottom: 12px; color: #a4b0be;">Deine Vermutung:</div>
+        <input type="text" id="teekesselchenGuessInput" class="teekesselchen-guess-input" placeholder="Was ist das Teekesselchen?" maxlength="50" disabled>
+        <button id="teekesselchenSubmitGuessBtn" class="teekesselchen-guess-btn" onclick="submitTeekesselchenGuess()" disabled>✅ Absenden</button>
+        <div id="teekesselchenGuessStatus" class="teekesselchen-guess-status"></div>
+    </div>
+    
+    <div id="teekesselchenPlayerStatus" class="teekesselchen-status"></div>
+    <div id="teekesselchenPlayerIdleHint" class="teekesselchen-idle-hint">Warte auf den Start der nächsten Runde...</div>
+</div>
+
+<script>
+    var playerName = '';
+    
+    window.onModuleStateUpdate = function(state) {
+        const game = state.teekesselchenGame || {};
+        const phase = game.phase || 'IDLE';
+        const scores = game.scores || {};
+        const buzzerWinner = game.buzzerWinner;
+        const buzzerLocked = game.buzzerLocked;
+        const myPlayer = state.players && state.players[socket.id];
+        const myTeam = myPlayer ? myPlayer.team : null;
+        
+        const catEl = document.getElementById('teekesselchenPlayerCategory');
+        const inputEl = document.getElementById('teekesselchenPlayerInput');
+        const statusEl = document.getElementById('teekesselchenPlayerStatus');
+        const idleHint = document.getElementById('teekesselchenPlayerIdleHint');
+        const buzzerBtn = document.getElementById('teekesselchenBuzzerBtn');
+        const scoreEl = document.getElementById('teekesselchenScoreDisplay');
+        const guessSection = document.getElementById('teekesselchenGuessSection');
+        const nameInput = document.getElementById('teekesselchenPlayerNameInput');
+        const guessInput = document.getElementById('teekesselchenGuessInput');
+        const submitGuessBtn = document.getElementById('teekesselchenSubmitGuessBtn');
+        const guessStatus = document.getElementById('teekesselchenGuessStatus');
+        const timerEl = document.getElementById('teekesselchenTimer');
+
+        if (!catEl) return;
+
+        // Update score display for ALL teams
+        if (scoreEl && scores && typeof scores === 'object') {
+            scoreEl.innerHTML = '';
+            Object.entries(scores).forEach(function(entry) {
+                var team = entry[0];
+                var points = entry[1] !== undefined && entry[1] !== null ? entry[1] : 0;
+                var teamSpan = document.createElement('span');
+                teamSpan.textContent = team + ': ' + points;
+                if (team === myTeam) {
+                    teamSpan.style.cssText = 'color: #2ed573; font-size: 1.8rem;';
+                }
+                scoreEl.appendChild(teamSpan);
+                scoreEl.appendChild(document.createTextNode(' | '));
+            });
+            // Remove last separator
+            if (scoreEl.lastChild?.nodeType === 3) {
+                scoreEl.removeChild(scoreEl.lastChild);
+            }
+        }
+
+        if (phase === 'IDLE') {
+            catEl.textContent = '';
+            inputEl.textContent = '';
+            inputEl.style.borderColor = '#3498db';
+            statusEl.textContent = '';
+            idleHint.style.display = 'block';
+            guessSection.style.display = 'none';
+            buzzerBtn.disabled = true;
+            buzzerBtn.textContent = '🔔 BUZZER!';
+            guessInput.value = '';
+            guessInput.disabled = true;
+            submitGuessBtn.disabled = true;
+            guessStatus.textContent = '';
+            guessStatus.className = 'teekesselchen-guess-status';
+            timerEl.style.display = 'none';
+            return;
+        }
+
+        idleHint.style.display = 'none';
+        catEl.textContent = '🏷 Kategorie: ' + (game.myCategory || '');
+        
+        // Show timer
+        if (game.timeRemaining !== undefined) {
+            timerEl.style.display = 'block';
+            timerEl.textContent = game.timeRemaining + 's';
+        } else {
+            timerEl.style.display = 'none';
+        }
+
+        // Buzzer logic
+        if (phase === 'PLAYING' && !buzzerLocked) {
+            idleHint.style.display = 'none';
+            
+            if (buzzerWinner === socket.id) {
+                // I won the buzzer!
+                buzzerBtn.disabled = true;
+                buzzerBtn.textContent = '✅ Du hast gebuzzt!';
+                guessSection.style.display = 'block';
+                
+                if (!playerName && nameInput) {
+                    nameInput.focus();
+                }
+                
+                if (playerName) {
+                    guessInput.disabled = false;
+                    submitGuessBtn.disabled = false;
+                }
+            } else if (buzzerWinner) {
+                // Someone else won the buzzer
+                buzzerBtn.disabled = true;
+                buzzerBtn.textContent = '⏳ Warte...';
+                guessSection.style.display = 'none';
+            } else {
+                // No one has buzzed yet
+                buzzerBtn.disabled = false;
+                buzzerBtn.textContent = '🔔 BUZZER!';
+                guessSection.style.display = 'none';
+            }
+        } else if (phase === 'ANSWERS_CLOSED' || buzzerLocked) {
+            buzzerBtn.disabled = true;
+            buzzerBtn.textContent = '⏳ Runde beendet';
+            guessSection.style.display = 'none';
+            statusEl.textContent = '✅ Antworten geschlossen!';
+        }
+    };
+
+    function pressTeekesselchenBuzzer() {
+        socket.emit('pressTeekesselchenBuzzer');
+    }
+
+    function submitTeekesselchenGuess() {
+        const name = nameInput.value.trim();
+        const guess = guessInput.value.trim();
+        
+        if (!name) {
+            alert('Bitte gib deinen Namen ein!');
+            nameInput.focus();
+            return;
+        }
+        
+        if (!guess) {
+            alert('Bitte gib deine Vermutung ein!');
+            guessInput.focus();
+            return;
+        }
+        
+        playerName = name;
+        socket.emit('adminSubmitTeekesselchenGuess', { guess: guess });
+        
+        // Disable input after submission
+        guessInput.disabled = true;
+        submitGuessBtn.disabled = true;
+        
+        // Show waiting message
+        const guessStatus = document.getElementById('teekesselchenGuessStatus');
+        guessStatus.textContent = 'Warte auf Bestätigung...';
+        guessStatus.className = 'teekesselchen-guess-status';
+    }
+</script>

@@ -23,6 +23,7 @@ const malenWordsPath = path.join(__dirname, 'malen.json');
 const kartePlacesPath = path.join(__dirname, 'karte.json');
 const flaggenRoundsPath = path.join(__dirname, 'flaggen.json');
 const buchstabensalatRoundsPath = path.join(__dirname, 'buchstabensalat.json');
+const teekesselchenRoundsPath = path.join(__dirname, 'teekesselchen.json');
 
 const listenwissen = require('./listenwissen.js');
 const utils = require('./utils');
@@ -54,7 +55,8 @@ const gameIntroDetails = {
     MERKEN: { number: 11, name: 'Merken' },
     REALITAET: { number: 12, name: 'Ist es real oder ist es nicht Wirklichkeit?' },
     FLAGGEN: { number: 13, name: 'Flaggen bauen' },
-    BUCHSTABENSALAT: { number: 14, name: 'Buchstabensalat' }
+    BUCHSTABENSALAT: { number: 14, name: 'Buchstabensalat' },
+    TEEKESELCHEN: { number: 15, name: 'Teekesselchen' }
 };
 
 const merkenCards = [
@@ -207,12 +209,20 @@ app.get('/buchstabensalat.json', (req, res) => {
     res.sendFile(buchstabensalatRoundsPath);
 });
 
+app.get('/teekesselchen.json', (req, res) => {
+    res.sendFile(teekesselchenRoundsPath);
+});
+
 function getFlaggenRounds() {
     return utils.readJsonFile(flaggenRoundsPath);
 }
 
 function getBuchstabensalatRounds() {
     return utils.readJsonFile(buchstabensalatRoundsPath);
+}
+
+function getTeekesselchenRounds() {
+    return utils.readJsonArray(teekesselchenRoundsPath);
 }
 
 function getKartePlaces() {
@@ -553,6 +563,25 @@ let gameState = {
             'Team 1': 0,
             'Team 2': 0
         }
+    },
+
+    teekesselchenGame: {
+        phase: 'IDLE',
+        roundId: null,
+        roundData: null,
+        team1Category: null,
+        team2Category: null,
+        answer: null,
+        team1Revealed: false,
+        team2Revealed: false,
+        answersClosed: false,
+        buzzerWinner: null,
+        buzzerLocked: false,
+        timeRemaining: null,
+        scores: {
+            'Team 1': 0,
+            'Team 2': 0
+        }
     }
 
 };
@@ -612,6 +641,7 @@ let merkenTimerInterval = null;
 let realitaetTimerInterval = null;
 let flaggenTimerInterval = null;
 let buchstabensalatTimerInterval = null;
+let teekesselchenTimerInterval = null;
 
 function getPartnerCatalogs() {
 
@@ -3865,6 +3895,157 @@ io.on('connection', (socket) => {
             timerRunning: false,
             buzzerWinner: null,
             buzzerLocked: false,
+            scores: Object.fromEntries(Object.keys(gameState.teams).map(team => [team, 0]))
+        };
+        io.emit('stateUpdate', gameState);
+    });
+
+    // Teekesselchen Events
+    socket.on('adminStartTeekesselchenRound', ({ roundId, duration }) => {
+        if (!adminSockets.has(socket.id)) return;
+        const rounds = getTeekesselchenRounds();
+        const roundData = rounds.find(r => r.id === roundId);
+        if (!roundData) return;
+        
+        const game = gameState.teekesselchenGame;
+        game.phase = 'PLAYING';
+        game.roundId = roundId;
+        game.roundData = roundData;
+        game.answer = roundData.answer;
+        game.team1Category = roundData.category1;
+        game.team2Category = roundData.category2;
+        game.team1Revealed = false;
+        game.team2Revealed = false;
+        game.answersClosed = false;
+        game.buzzerWinner = null;
+        game.buzzerLocked = false;
+        game.timeRemaining = duration;
+        
+        // Reset scores to 0
+        Object.keys(game.scores).forEach(team => {
+            game.scores[team] = 0;
+        });
+        
+        io.emit('stateUpdate', gameState);
+        
+        // Start timer
+        if (teekesselchenTimerInterval) {
+            clearInterval(teekesselchenTimerInterval);
+        }
+        
+        teekesselchenTimerInterval = setInterval(() => {
+            if (game.phase !== 'PLAYING') {
+                clearInterval(teekesselchenTimerInterval);
+                teekesselchenTimerInterval = null;
+                return;
+            }
+            
+            game.timeRemaining--;
+            
+            if (game.timeRemaining <= 0) {
+                game.answersClosed = true;
+                game.phase = 'ANSWERS_CLOSED';
+                io.emit('stateUpdate', gameState);
+                clearInterval(teekesselchenTimerInterval);
+                teekesselchenTimerInterval = null;
+            } else {
+                io.emit('stateUpdate', gameState);
+            }
+        }, 1000);
+    });
+
+    socket.on('adminCloseTeekesselchenInputs', () => {
+        if (!adminSockets.has(socket.id)) return;
+        const game = gameState.teekesselchenGame;
+        if (game.phase === 'PLAYING') {
+            game.answersClosed = true;
+            game.phase = 'ANSWERS_CLOSED';
+            if (teekesselchenTimerInterval) {
+                clearInterval(teekesselchenTimerInterval);
+                teekesselchenTimerInterval = null;
+            }
+            io.emit('stateUpdate', gameState);
+        }
+    });
+
+    socket.on('adminRevealTeekesselchenTeam1', () => {
+        if (!adminSockets.has(socket.id)) return;
+        const game = gameState.teekesselchenGame;
+        if (game.team1Category && !game.team1Revealed) {
+            game.team1Revealed = true;
+            io.emit('stateUpdate', gameState);
+        }
+    });
+
+    socket.on('adminRevealTeekesselchenTeam2', () => {
+        if (!adminSockets.has(socket.id)) return;
+        const game = gameState.teekesselchenGame;
+        if (game.team2Category && !game.team2Revealed) {
+            game.team2Revealed = true;
+            io.emit('stateUpdate', gameState);
+        }
+    });
+
+    socket.on('pressTeekesselchenBuzzer', () => {
+        if (!spectatorSockets.has(socket.id)) return;
+        const game = gameState.teekesselchenGame;
+        if (game.phase === 'PLAYING' && !game.buzzerLocked && !game.answersClosed) {
+            game.buzzerWinner = socket.id;
+            game.buzzerLocked = true;
+            game.phase = 'GUESSING';
+            io.emit('stateUpdate', gameState);
+        }
+    });
+
+    socket.on('adminSubmitTeekesselchenGuess', ({ guess }) => {
+        if (!spectatorSockets.has(socket.id)) return;
+        const game = gameState.teekesselchenGame;
+        if (game.phase === 'GUESSING') {
+            // Check if guess is correct
+            if (guess.toLowerCase().trim() === game.answer.toLowerCase().trim()) {
+                // Award point to player's team
+                const player = gameState.players && gameState.players[socket.id];
+                if (player && game.scores[player.team] !== undefined) {
+                    game.scores[player.team] = Math.max(0, Math.min(5, game.scores[player.team] + 1));
+                }
+            }
+            game.phase = 'ANSWERS_CLOSED';
+            io.emit('stateUpdate', gameState);
+        }
+    });
+
+    socket.on('adminAddTeekesselchenPoint', ({ team, amount }) => {
+        if (!adminSockets.has(socket.id)) return;
+        const game = gameState.teekesselchenGame;
+        if (!game || !team) return;
+        
+        // Add points to specific team
+        if (game.scores[team] !== undefined) {
+            game.scores[team] = Math.max(0, Math.min(5, game.scores[team] + amount));
+        }
+        
+        io.emit('stateUpdate', gameState);
+    });
+
+    socket.on('adminResetTeekesselchen', () => {
+        if (!adminSockets.has(socket.id)) return;
+        if (teekesselchenTimerInterval) {
+            clearInterval(teekesselchenTimerInterval);
+            teekesselchenTimerInterval = null;
+        }
+        gameState.teekesselchenGame = {
+            phase: 'IDLE',
+            roundId: null,
+            roundData: null,
+            team1Category: null,
+            team2Category: null,
+            answer: null,
+            team1Revealed: false,
+            team2Revealed: false,
+            answersClosed: false,
+            buzzerWinner: null,
+            buzzerLocked: false,
+            timeRemaining: null,
             scores: Object.fromEntries(Object.keys(gameState.teams).map(team => [team, 0]))
         };
         io.emit('stateUpdate', gameState);

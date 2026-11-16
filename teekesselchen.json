@@ -1,0 +1,64 @@
+{
+  "rounds": [
+    {
+      "id": "schreiben",
+      "answer": "Stift",
+      "category1": "etwas auf das man schreiben kann",
+      "category2": "Teil einer Pflanze"
+    },
+    {
+      "id": "pflanze",
+      "answer": "Blatt",
+      "category1": "Teil einer Pflanze",
+      "category2": "etwas das man wegwerfen kann"
+    },
+    {
+      "id": "bank",
+      "answer": "Bank",
+      "category1": "etwas zum Sitzen im Park",
+      "category2": "etwas zum Geld aufbewahren"
+    },
+    {
+      "id": "mauer",
+      "answer": "Mauer",
+      "category1": "etwas das man bauen kann",
+      "category2": "etwas das man überqueren muss"
+    },
+    {
+      "id": "boot",
+      "answer": "Boot",
+      "category1": "etwas das auf dem Wasser fährt",
+      "category2": "etwas das man anziehen kann"
+    },
+    {
+      "id": "fuss",
+      "answer": "Fuss",
+      "category1": "Teil des Körpers",
+      "category2": "etwas das man treten kann"
+    },
+    {
+      "id": "salz",
+      "answer": "Salz",
+      "category1": "etwas zum Würzen",
+      "category2": "etwas das im Meer ist"
+    },
+    {
+      "id": "teich",
+      "answer": "Teich",
+      "category1": "etwas mit Wasser",
+      "category2": "etwas das man graben kann"
+    },
+    {
+      "id": "kamm",
+      "answer": "Kamm",
+      "category1": "etwas zum Kämmen",
+      "category2": "Teil eines Gebirges"
+    },
+    {
+      "id": "licht",
+      "answer": "Licht",
+      "category1": "etwas das man anzünden kann",
+      "category2": "das Gegenteil von Dunkel"
+    }
+  ]
+}
