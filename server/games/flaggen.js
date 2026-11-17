@@ -44,6 +44,7 @@ module.exports = function createFlaggenGame(ctx) {
 
     function register(socket) {
         socket.on('getFlaggenData', () => {
+            if (!adminSockets.has(socket.id)) return;
             socket.emit('receiveFlaggenData', getFlaggenRounds());
         });
 
@@ -185,12 +186,6 @@ module.exports = function createFlaggenGame(ctx) {
         renameKey(gameState.flaggenGame.builders, oldName, newName);
     }
 
-    function registerRoutes(app) {
-        app.get('/flaggen.json', (req, res) => {
-            res.sendFile(flaggenRoundsPath);
-        });
-    }
-
     return {
         id: 'FLAGGEN',
         title: 'Flaggen bauen',
@@ -200,7 +195,6 @@ module.exports = function createFlaggenGame(ctx) {
         createState,
         reset,
         register,
-        renameTeam,
-        registerRoutes
+        renameTeam
     };
 };

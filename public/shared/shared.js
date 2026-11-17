@@ -95,6 +95,76 @@
         return gameState.buzzerOpen ? 'Der Buzzer ist offen.' : 'Der Buzzer ist noch nicht freigegeben.';
     }
 
+    /* ---------- Globaler Timer ---------- */
+
+    const LOW_TIME_SECONDS = 10;
+
+    function formatTime(seconds) {
+        const total = Math.max(0, Math.floor(seconds || 0));
+        return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+    }
+
+    /** Zeigt nur die Zeit, solange der Admin den Timer eingeschaltet hat und ein Spiel laeuft. */
+    function createTimerView(element) {
+        return {
+            update(state) {
+                const timer = state.timer;
+                const visible = Boolean(timer && timer.enabled && state.currentScreen !== 'WAITING');
+                element.classList.toggle('sp-visible', visible);
+                if (visible) {
+                    element.textContent = formatTime(timer.remaining);
+                    element.classList.toggle('sp-low', timer.remaining <= LOW_TIME_SECONDS && (timer.running || timer.remaining === 0));
+                }
+                if (document.body.classList.contains('sp-timer-open') !== visible) {
+                    document.body.classList.toggle('sp-timer-open', visible);
+                    window.dispatchEvent(new Event('resize'));
+                }
+            }
+        };
+    }
+
+    /** Admin-Steuerung: ein-/ausschalten, Zeit einstellen, Start/Fortsetzen, Pause, Zuruecksetzen. */
+    function createAdminTimerControls({ socket, container }) {
+        const enabledBox = createElement('input');
+        enabledBox.type = 'checkbox';
+        enabledBox.addEventListener('change', () => socket.emit('adminSetTimerEnabled', enabledBox.checked));
+        const enabledLabel = createElement('label');
+        enabledLabel.append(enabledBox, ' Timer für alle anzeigen');
+
+        const display = createElement('span', 'sp-admin-timer-display');
+        const seconds = createElement('input');
+        seconds.type = 'number';
+        seconds.min = '1';
+        seconds.max = '3600';
+        seconds.style.width = '80px';
+        seconds.addEventListener('change', () => socket.emit('adminSetTimerDuration', Number(seconds.value)));
+        const secondsLabel = createElement('label');
+        secondsLabel.append('Sekunden: ', seconds);
+
+        const startButton = createAdminButton('Start', () => socket.emit('adminStartTimer'));
+        const pauseButton = createAdminButton('Pause', () => socket.emit('adminPauseTimer'));
+        const resetButton = createAdminButton('Zurücksetzen', () => socket.emit('adminResetTimer'));
+
+        const topRow = createElement('div', 'sp-admin-timer-row');
+        topRow.append(enabledLabel, secondsLabel);
+        const controlRow = createElement('div', 'sp-admin-timer-row');
+        controlRow.append(display, startButton, pauseButton, resetButton);
+        container.replaceChildren(createElement('h3', '', 'Timer'), topRow, controlRow);
+
+        return {
+            update(state) {
+                const timer = state.timer || {};
+                enabledBox.checked = Boolean(timer.enabled);
+                if (document.activeElement !== seconds) seconds.value = timer.duration;
+                display.textContent = formatTime(timer.remaining);
+                startButton.disabled = !timer.enabled || Boolean(timer.running);
+                startButton.textContent = !timer.running && timer.remaining > 0 && timer.remaining < timer.duration ? 'Fortsetzen' : 'Start';
+                pauseButton.disabled = !timer.enabled || !timer.running;
+                resetButton.disabled = !timer.enabled;
+            }
+        };
+    }
+
     /* ---------- Team-Notizen ---------- */
 
     const MAX_NOTE_LENGTH = 500;
@@ -136,8 +206,9 @@
 
     /* ---------- Spieler: Punkte und Buzzer unter/ueber dem Spiel ---------- */
 
-    function createPlayerChrome({ socket, scorebar, buzzerBar, notesContainer }) {
+    function createPlayerChrome({ socket, scorebar, buzzerBar, notesContainer, timerElement }) {
         const watcher = createBuzzerWatcher();
+        const timerView = createTimerView(timerElement);
         const notes = createTeamNotes({ socket, container: notesContainer });
         const button = createElement('button', 'sp-buzzer-btn', 'BUZZER (Leertaste)');
         const status = createElement('div', 'sp-buzzer-status');
@@ -175,6 +246,7 @@
             update(state) {
                 const game = getGame(state.currentScreen);
                 const me = state.players && state.players[socket.id];
+                timerView.update(state);
                 const notesOpen = Boolean(state.notesEnabled && me && me.team);
                 notesContainer.style.display = notesOpen ? 'grid' : 'none';
                 if (document.body.classList.contains('sp-notes-open') !== notesOpen) {
@@ -197,10 +269,12 @@
 
     /* ---------- Zuschauer: Punkte und Buzzer-Banner ---------- */
 
-    function createSpectatorChrome({ scorebar, buzzerBanner }) {
+    function createSpectatorChrome({ scorebar, buzzerBanner, timerElement }) {
         const watcher = createBuzzerWatcher();
+        const timerView = createTimerView(timerElement);
         return {
             update(state) {
+                timerView.update(state);
                 const game = getGame(state.currentScreen);
                 scorebar.style.display = game ? 'flex' : 'none';
                 if (game) renderScoreChips(scorebar, state, game, null);
@@ -303,6 +377,8 @@
         createBuzzerWatcher,
         createPlayerChrome,
         createSpectatorChrome,
-        createAdminChrome
+        formatTime,
+        createAdminChrome,
+        createAdminTimerControls
     };
 }());

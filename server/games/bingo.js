@@ -44,6 +44,7 @@ module.exports = function createBingoGame(ctx) {
 
     function register(socket) {
         socket.on('getReferatTopics', () => {
+            if (!adminSockets.has(socket.id)) return;
             socket.emit('receiveReferatTopics', getReferatTopics());
         });
 
@@ -198,12 +199,6 @@ module.exports = function createBingoGame(ctx) {
         });
     }
 
-    function registerRoutes(app) {
-        app.get('/bingo.json', (req, res) => {
-            res.sendFile(referatTopicsPath);
-        });
-    }
-
     return {
         id: 'BINGO',
         title: 'Referat Bingo',
@@ -213,7 +208,6 @@ module.exports = function createBingoGame(ctx) {
         createState,
         reset,
         register,
-        renameTeam,
-        registerRoutes
+        renameTeam
     };
 };

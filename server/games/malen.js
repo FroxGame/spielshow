@@ -48,6 +48,7 @@ module.exports = function createMalenGame(ctx) {
 
     function register(socket) {
         socket.on('getMalenWords', () => {
+            if (!adminSockets.has(socket.id)) return;
             socket.emit('receiveMalenWords', getMalenWords());
         });
 
@@ -132,12 +133,6 @@ module.exports = function createMalenGame(ctx) {
         renameKey(gameState.malenGame.drawings, oldName, newName);
     }
 
-    function registerRoutes(app) {
-        app.get('/malen.json', (req, res) => {
-            res.sendFile(malenWordsPath);
-        });
-    }
-
     return {
         id: 'MALEN',
         title: 'Blindes Malen',
@@ -148,7 +143,6 @@ module.exports = function createMalenGame(ctx) {
         createState,
         reset,
         register,
-        renameTeam,
-        registerRoutes
+        renameTeam
     };
 };

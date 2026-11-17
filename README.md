@@ -61,6 +61,7 @@ Ein KI-Agent baut ein neues Spiel am besten, wenn er von dir alle Spielregeln un
 - **Reset-Button "Spiel zurücksetzen"** im Admin. Er setzt das ganze Spiel inklusive Punkte auf den Startzustand
 - Buzzer, **falls das Spiel einen hat**: Button für Spieler (unten fixiert), Ton, Anzeige für Zuschauer, im Admin "Buzzer sperren" und "Buzzer freigeben"
 - Textfelder für die Teams. Die schaltest du im Admin-Dashboard für alle Spiele gemeinsam ein oder aus
+- **Timer** (optional, von Hand): Im Admin-Dashboard per Checkbox einblenden, Zeit einstellen (Standard 30 Sekunden), Start/Fortsetzen, Pause, Zurücksetzen. Spieler und Zuschauer sehen nur die Zeit. Nach Ablauf passiert nichts automatisch
 - Teamzuweisung, Teams umbenennen, Gesamtwertung
 
 ### Das musst du angeben
@@ -72,7 +73,7 @@ Ein KI-Agent baut ein neues Spiel am besten, wenn er von dir alle Spielregeln un
 | **Höchstpunktzahl** | Gibt es eine? Wie hoch? Oder zählen die Punkte einfach hoch (dann zeigt die Anzeige nur "n" statt "n / 5")? | "Maximal 5" oder "keine Grenze" |
 | **Punkte vergeben** | Vergibt der Admin per Klick, oder automatisch (wann)? Gibt es eine Gewinnbedingung (z. B. wer 5 erreicht, gewinnt und der Buzzer sperrt)? | "Admin klickt +1. Bei 5 gewinnt das Team" |
 | **Buzzer** | Ja/Nein. Wer darf buzzern, ab wann, was passiert danach (pausiert ein Timer, wertet der Admin)? | "Ja, ab Rundenstart, danach wertet der Admin" |
-| **Timer** | Ja/Nein. Feste Dauer oder vom Admin einstellbar? Was passiert bei 0? | "Admin stellt Sekunden ein, bei 0 schließen die Eingaben" |
+| **Timer** | Der manuelle Host-Timer ist immer dabei (siehe oben). Nur angeben, wenn das Spiel einen **eigenen Timer mit Folgen** braucht. Dann: feste Dauer oder vom Admin einstellbar? Was passiert bei 0? | "Admin stellt Sekunden ein, bei 0 schließen die Eingaben" |
 | **Rollen** | Gibt es besondere Spieler (Maler, Referent, Rater)? Wer wird bestimmt und wie (Admin wählt im Dashboard)? | "Pro Team ein Rater, Admin wählt" |
 | **Teams** | Spielen beide Teams gleichzeitig oder abwechselnd? | "Abwechselnd, 15 Sekunden pro Zug" |
 | **Eingaben der Spieler** | Nichts, Text, Zahl, Auswahl, Klicken, Zeichnen? Wer sieht sie wann? Prüft der Admin oder das System automatisch? | "Zahl eintippen, erst nach Aufdecken für alle sichtbar" |

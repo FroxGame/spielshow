@@ -158,13 +158,12 @@
     let flaggenLatestState = null;
 
     function loadFlaggenJson() {
-        fetch('/flaggen.json')
-            .then(res => res.json())
-            .then(data => {
-                flaggenData = data;
-                populatePresets(data.rounds || []);
-            })
-            .catch(err => console.error("Konnte flaggen.json nicht laden:", err));
+        socket.off('receiveFlaggenData');
+        socket.on('receiveFlaggenData', data => {
+            flaggenData = data;
+            populatePresets((data && data.rounds) || []);
+        });
+        socket.emit('getFlaggenData');
     }
     window.loadFlaggenJson = loadFlaggenJson;
 

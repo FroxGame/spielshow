@@ -170,10 +170,6 @@
         });
         socket.emit('getReferatTopics');
     }
-    // Also fetch via HTTP endpoint as fallback
-    fetch('/bingo.json').then(r => r.json()).then(topics => {
-        populateBingoTopics(topics);
-    }).catch(() => {});
 
     window.startBingo = function() {
         const topic = document.getElementById('bingoTopicInput').value.trim();

@@ -176,7 +176,7 @@ module.exports = function createTeekesselchenGame(ctx) {
     }
 
     return {
-        id: 'TEEKESELCHEN',
+        id: 'TEEKESSELCHEN',
         title: 'Teekesselchen',
         stateKey: 'teekesselchenGame',
         clientModule: 'teekesselchen',

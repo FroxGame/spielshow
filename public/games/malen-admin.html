@@ -188,7 +188,6 @@
         });
     }
 
-    fetch('/malen.json').then(r => r.json()).then(populateMalenWords).catch(() => {});
 
     function clearCanvas(canvas) {
         const ctx = canvas.getContext('2d');

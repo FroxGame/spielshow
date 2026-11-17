@@ -58,6 +58,8 @@
             <span id="game-buttons"></span>
         </div>
 
+        <div id="admin-timer" class="card"></div>
+
         <!-- Modulbereich für komplexere Spiele (z.B. Listenwissen) -->
         <div id="admin-module-container"></div>
         <div id="admin-game-controls" class="card sp-admin-controls" style="display: none;"></div>
@@ -65,6 +67,7 @@
 
     <script>
         const socket = io();
+        const timerControls = Spielshow.createAdminTimerControls({ socket, container: document.getElementById('admin-timer') });
         const gameChrome = Spielshow.createAdminChrome({ socket, container: document.getElementById('admin-game-controls') });
         Spielshow.ready.then(games => {
             const holder = document.getElementById('game-buttons');
@@ -206,6 +209,7 @@
 
         socket.on('stateUpdate', (state) => {
             latestAdminState = state;
+            timerControls.update(state);
             document.getElementById('notesToggle').checked = Boolean(state.notesEnabled);
             Spielshow.ready.then(() => gameChrome.update(state));
             const teamDiv = document.getElementById('teamScores');

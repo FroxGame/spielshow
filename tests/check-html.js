@@ -38,6 +38,11 @@ files.forEach(file => {
                 console.log(`ID fehlt ${name}: ${id}`);
             }
         });
+        const jsonFetches = [...code.matchAll(/fetch\(\s*['"`]\/[^'"`]*\.json/g)].map(m => m[0]);
+        if (jsonFetches.length) {
+            problems++;
+            console.log(`JSON-FETCH ${name}: ${jsonFetches.join(', ')} (Inhalte nur per Admin-Event laden)`);
+        }
         const oldEvents = [...new Set(code.match(OLD_EVENTS) || [])];
         if (oldEvents.length) {
             problems++;

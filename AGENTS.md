@@ -46,6 +46,7 @@ server/
     teams.js                 Teams umbenennen (ruft renameTeam jedes Spiels), Gesamtpunkte
     screens.js               Spielwechsel, Spiel starten (Intro-Animation)
     notes.js                 Team-Textfelder (Notizen), globaler Schalter
+    timer.js                 globaler manueller Timer
     game-controls.js         Generische Events: Punkte, Reset, Buzzer
     safe-socket.js           fängt Fehler in Handlern ab, loggt den Event-Namen
   games/<spiel>.js           ein Modul pro Spiel. image-guess.js ist die Basis für Promis/Drudel
@@ -82,9 +83,7 @@ Die Spieleliste hat eine einzige Quelle: `server/registry.js`. Die Shells laden 
 | 12 | REALITAET | realitaet | Timer, ohne Limit | Timer |
 | 13 | FLAGGEN | flaggen | Bauen per Drag, Timer | komplexe Spielereingaben |
 | 14 | BUCHSTABENSALAT | buchstabensalat | Buzzer, Schritt-Timer, Lösung im Server | **Buzzer + Timer (beste Vorlage)** |
-| 15 | TEEKESELCHEN | teekesselchen | Buzzer, Schreibphase, private Kategorie je Team | **private Daten pro Team, Phasen** |
-
-(Die ID von Teekesselchen heißt `TEEKESELCHEN` mit einem S. Sie ist so im Code und in Tests verankert.)
+| 15 | TEEKESSELCHEN | teekesselchen | Buzzer, Schreibphase, private Kategorie je Team | **private Daten pro Team, Phasen** |
 
 ## 4. Der Standard: Was der Kern automatisch liefert
 
@@ -101,6 +100,7 @@ Baue das **nicht** in ein Spiel. Es ist für jedes Spiel schon da.
 | Buzzer sperren / freigeben | Admin | `adminLockBuzzer`, `adminResetBuzzer` |
 | Buzzer-Anzeige + Ton | Zuschauer | wenn `buzzer: true` |
 | Textfelder (Notizen) für Teams | Spieler unten, Zuschauer | **global**, vom Admin im Dashboard ein-/ausschaltbar (`adminSetNotesEnabled`, `gameState.notesEnabled`, Standard aus). Ein Spiel tut dafür nichts |
+| **Timer** (manuell, optional) | Admin-Dashboard, Spieler, Zuschauer | **global**, nicht pro Spiel. Admin schaltet ihn ein (Checkbox), stellt die Zeit ein (Standard 30 s), bedient Start/Fortsetzen, Pause, Zurücksetzen. Spieler und Zuschauer sehen nur die Zeit (m:ss), rot ab 10 s. Zustand in gameState.timer { enabled, duration, remaining, running }, Events dminSetTimerEnabled, dminSetTimerDuration, dminStartTimer, dminPauseTimer, dminResetTimer. Nach Ablauf passiert **nichts** automatisch (stoppt bei 0:00). Ein Spiel muss dafür nichts tun und darf keinen eigenen Anzeige-Timer bauen |
 | Teamzuweisung, Umbenennen, Gesamtwertung | Admin | Kern |
 | Admin-Schutz, Fehlerabfang in Handlern | Server | `isAdmin`, `safe-socket.js` |
 
@@ -206,7 +206,7 @@ module.exports = function createMeinSpielGame(ctx) {
 | `onScreenEnter()` | wenn dieses Spiel aktiv wird (nach `stateUpdate`) |
 | `onPlayerRegistered()` | wenn sich ein Spieler anmeldet, während dieses Spiel läuft (private Ansichten nachsenden) |
 | `onAdminLogin(socket)`, `onSpectatorLogin(socket)` | Admin/Zuschauer nach dem Login mit Spieldaten versorgen |
-| `registerRoutes(app)` | eigene HTTP-Route. **Nie** Lösungen darüber ausliefern |
+| `registerRoutes(app)` | eigene HTTP-Route. Wird derzeit von keinem Spiel genutzt. **Nie** Inhalte oder Lösungen darüber ausliefern |
 
 ### 5.4 Kontext `ctx`
 
@@ -233,7 +233,7 @@ module.exports = function createMeinSpielGame(ctx) {
 - **Geheimnisse** (Lösung, Begriff, Rundendaten mit Antworten) bleiben in privaten Variablen im Modul. Jeder Client bekommt `stateUpdate` mit dem ganzen State, im State steht also nur, was alle sehen dürfen. Die Lösung kommt erst beim "Auflösen" in den State.
   - Nur für Admins (z. B. Rundenliste mit Lösungen): Event `getXRounds` mit `if (!isAdmin(socket)) return;` und Antwort `receiveXRounds` (Vorlage: `buchstabensalat.js`).
   - Nur für einzelne Spieler (z. B. eigene Kategorie): `io.to(player.id).emit('xPlayerUpdate', view)`, dazu Hook `onPlayerRegistered` und ein Abruf-Event `getXView` für Seiten, die nach dem Start laden (Vorlage: `teekesselchen.js`).
-- Timer: `setInterval` im Modul, jede Sekunde `emitState()`, Handle in `reset()` und beim Beenden löschen. Der Client zeigt nur an.
+- Timer: Den manuellen Timer für den Host liefert der Kern (siehe Abschnitt 4), nicht neu bauen. Nur wenn ein Spiel einen Timer **mit Spielfolgen** braucht (z. B. Zug wechselt, Eingaben schließen), baue ihn im Modul: `setInterval`, jede Sekunde `emitState()`, Handle in `reset()` und beim Beenden löschen. Der Client zeigt nur an.
 - Teamnamen nie hartkodieren (`'Team 1'`). Nutze `createScores()`, `byTeam()`, `teamNames()`.
 - Neue Zustandsfelder immer in `createState()`, damit Reset sie zurücksetzt.
 - Event-Namen: `admin<Aktion><Spiel>` für den Admin (`adminStartMeinSpielRound`), `get<Daten>` zum Abrufen, `<Aktion><Spiel>` oder `player<Aktion>` für Spieler. Keine eigenen Punkte-, Reset-, Buzzer-Events.
@@ -363,7 +363,8 @@ Private Daten und Sonderkanäle (z. B. eigene Kategorie je Team): in der Spieler
 ## 7. Inhalte
 
 - JSON im Projektroot (`<spiel>.json`) oder in `public/games/<spiel>/`. Bilder in `public/games/<spiel>/images/`. Beschreibe das Format in einem kurzen Kommentar im Servermodul.
-- Dateien in `public/` sind für alle abrufbar. Inhalte mit Lösungen gehören ins Projektroot und werden **nur** per Admin-Event (`getXRounds`) ausgeliefert. Die älteren Spiele (Kategorien, Bingo, Malen, Karte, Flaggen) liefern ihre JSON noch öffentlich über `registerRoutes` aus. Bei neuen Spielen nicht nachahmen.
+- Dateien in `public/` sind für alle abrufbar. Inhalte mit Lösungen gehören ins Projektroot und werden **nur** per Admin-Event ausgeliefert (`getXRounds`, `if (!isAdmin(socket)) return;`), nie über eine HTTP-Route und nie per `fetch` aus einer Spielseite. Das gilt für alle Spiele. `tests/check-html.js` schlägt an, wenn eine Spielseite eine `.json` per `fetch` lädt, und der Rauchtest prüft, dass keine Inhalts-JSON öffentlich erreichbar ist und Spieler die Abruf-Events nicht nutzen können.
+- Ausnahme `public/games/<ordner>/`: Bei Bilder-raten-Spielen (Promis, Drudel) liegen Bilder und Namensliste in `public/`. Bilddateinamen mit dem Lösungswort (z. B. `1_miley_cyrus.jpg`) sind für Spieler in der Browser-Entwicklerkonsole sichtbar. Wer das vermeiden will, nennt die Bilder neutral (`1.jpg`) und ordnet sie über die Namensliste zu.
 - Hat der Nutzer keine Inhalte geliefert, lege wenige klar gekennzeichnete Beispielinhalte an und sage das im Ergebnis.
 
 ## 8. Tests
@@ -415,15 +416,14 @@ Ein grüner Check ersetzt keinen Blick in den Browser. Sage dem Nutzer, was du *
 - Doppelte Aktionen: `socket.on` ohne vorheriges `socket.off` in einer Seite.
 - Reset lässt etwas stehen: Feld fehlt in `createState()`, Timer nicht gestoppt oder private Variable nicht geleert.
 - Eingabefeld springt auf alte Größe: Elemente bei jedem Update komplett neu aufbauen. Nur neu aufbauen, wenn sich die Struktur ändert, sonst nur Werte aktualisieren.
-- Vollbild-Layout und Textfelder: Im Vollbild liegt der Textfeld-Streifen am unteren Rand und die Seite schrumpft über `--app-height`. Vollbild-Seiten dürfen deshalb nicht fest `100vh` verwenden, sondern `var(--app-height, 100vh)`.
+- Vollbild-Layout, Timer und Textfelder: Im Vollbild liegt der Timer als Streifen oben und der Textfeld-Streifen unten. Die Seite schrumpft dafür über `--app-height` (und beginnt bei `--app-top`). Vollbild-Seiten dürfen deshalb nicht fest `100vh` verwenden, sondern `var(--app-height, 100vh)`; die Shell setzt `top` über `var(--app-top, 0px)`.
 - `EADDRINUSE` im Test: ein alter Test-Server belegt Port 3999.
 - Mojibake (kaputte Umlaute) beim Lesen mit älteren PowerShell-Befehlen ist nur Anzeige. Dateien sind UTF-8.
 
 ## 13. Bekannte offene Punkte
 
-- Spiele mit eigenen Timern (Bingo, Merken, Realität, Flaggen, Kategorien) haben noch keine gemeinsame Timer-Hilfe.
-- JSON-Dateien von Kategorien, Bingo, Malen, Karte und Flaggen sind noch öffentlich abrufbar und enthalten Lösungen.
-- Teekesselchen-ID mit einem S (`TEEKESELCHEN`).
+- Spiele mit eigenen Spiel-Timern (Bingo, Merken, Realität, Flaggen, Kategorien, Buchstabensalat, Teekesselchen) laufen weiter getrennt vom globalen Host-Timer. Eine gemeinsame Hilfe dafür gibt es nicht.
+- **Optionales TODO:** Aktionen bei Timer-Ablauf. Idee: Der Admin wählt im Dashboard, was bei 0:00 passieren soll (nichts, Buzzer sperren, Eingaben schließen, Signalton, nächstes Team). Dafür bräuchte jedes Spiel einen kleinen Hook (z. B. onTimerEnd) und die Auswahl im Admin. Bisher bewusst nicht gebaut: Der Host löst Folgen von Hand aus.
 
 ## 14. Code-Qualität
 

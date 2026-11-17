@@ -15,6 +15,7 @@ function createContext(io) {
     const gameState = {
         currentScreen: 'WAITING',
         notesEnabled: false,
+        timer: { enabled: false, duration: 30, remaining: 30, running: false },
         teams: structuredClone(DEFAULT_TEAMS),
         players: {}
     };

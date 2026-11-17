@@ -229,12 +229,6 @@ module.exports = function createKategorienGame(ctx) {
         });
     }
 
-    function registerRoutes(app) {
-        app.get('/kategorien.json', (req, res) => {
-            res.sendFile(categoryRoundsPath);
-        });
-    }
-
     return {
         id: 'KATEGORIEN',
         title: 'Begriffe Kategorien zuordnen',
@@ -247,7 +241,6 @@ module.exports = function createKategorienGame(ctx) {
         register,
         renameTeam,
         onScreenEnter,
-        onAdminLogin,
-        registerRoutes
+        onAdminLogin
     };
 };

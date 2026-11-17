@@ -13,6 +13,7 @@ const { createPlayers } = require('./server/core/players');
 const { createTeams } = require('./server/core/teams');
 const { createScreens } = require('./server/core/screens');
 const { createGameControls } = require('./server/core/game-controls');
+const { createTimer } = require('./server/core/timer');
 const { guardSocket } = require('./server/core/safe-socket');
 
 const app = express();
@@ -29,6 +30,7 @@ const coreModules = [
     createTeams(ctx, games, notes),
     createScreens(ctx, games),
     createGameControls(ctx, games),
+    createTimer(ctx),
     notes
 ];
 

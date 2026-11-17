@@ -33,6 +33,7 @@ module.exports = function createKarteGame(ctx) {
 
     function register(socket) {
         socket.on('getKartePlaces', () => {
+            if (!adminSockets.has(socket.id)) return;
             socket.emit('receiveKartePlaces', getKartePlaces());
         });
 
@@ -132,12 +133,6 @@ module.exports = function createKarteGame(ctx) {
         renameKey(gameState.karteGame.revealed, oldName, newName);
     }
 
-    function registerRoutes(app) {
-        app.get('/karte.json', (req, res) => {
-            res.sendFile(kartePlacesPath);
-        });
-    }
-
     return {
         id: 'KARTE',
         title: 'Wo ist das auf der Karte?',
@@ -148,7 +143,6 @@ module.exports = function createKarteGame(ctx) {
         createState,
         reset,
         register,
-        renameTeam,
-        registerRoutes
+        renameTeam
     };
 };

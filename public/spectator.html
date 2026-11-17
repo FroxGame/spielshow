@@ -74,7 +74,7 @@
             border: none;
             border-radius: 0;
             position: absolute;
-            top: 0;
+            top: var(--app-top, 0px);
             left: 0;
             background: #0e1626;
             background: #11131a;
@@ -447,6 +447,7 @@
     </header>
 
     <section id="teams-overview"></section>
+    <div id="game-timer" class="sp-timer sp-timer-large"></div>
     <div id="game-scorebar" class="sp-scorebar sp-large" style="display: none; max-width: 1400px;"></div>
     <div id="game-buzzer-banner" class="sp-buzzer-banner" style="max-width: 1400px;"></div>
     <main id="spectator-content"></main>
@@ -456,7 +457,8 @@
         const socket = io();
         const gameChrome = Spielshow.createSpectatorChrome({
             scorebar: document.getElementById('game-scorebar'),
-            buzzerBanner: document.getElementById('game-buzzer-banner')
+            buzzerBanner: document.getElementById('game-buzzer-banner'),
+            timerElement: document.getElementById('game-timer')
         });
         let loadedScreen = null;
         let latestSpectatorState = null;

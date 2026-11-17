@@ -92,6 +92,48 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     admin.emit('adminSetNotesEnabled', false);
     await sleep(150);
     check('Admin schaltet Textfelder aus', admin.state.notesEnabled === false);
+    // Globaler Timer: manuell, nur Admin, keine Folgen bei Ablauf
+    check('Timer standardmäßig aus, 30 Sekunden', admin.state.timer.enabled === false && admin.state.timer.duration === 30 && admin.state.timer.remaining === 30);
+    player.emit('adminSetTimerEnabled', true);
+    player.emit('adminStartTimer');
+    await sleep(150);
+    check('Spieler kann den Timer nicht steuern', admin.state.timer.enabled === false && admin.state.timer.running === false);
+    admin.emit('adminSetTimerEnabled', 'ja');
+    admin.emit('adminSetTimerDuration', 0);
+    admin.emit('adminSetTimerDuration', 'abc');
+    await sleep(150);
+    check('Ungültige Timer-Werte werden ignoriert', admin.state.timer.enabled === false && admin.state.timer.duration === 30);
+    admin.emit('adminStartGame', 'PROMI_RATEN');
+    admin.emit('adminSetTimerEnabled', true);
+    admin.emit('adminSetTimerDuration', 3);
+    await sleep(150);
+    check('Timer einschalten und Zeit einstellen', admin.state.timer.enabled === true && admin.state.timer.duration === 3 && admin.state.timer.remaining === 3);
+    admin.emit('adminStartTimer');
+    await sleep(1300);
+    check('Timer läuft herunter', admin.state.timer.running === true && admin.state.timer.remaining < 3);
+    admin.emit('adminPauseTimer');
+    await sleep(100);
+    const pausedAt = admin.state.timer.remaining;
+    await sleep(1200);
+    check('Pause hält die Zeit an', admin.state.timer.running === false && admin.state.timer.remaining === pausedAt);
+    admin.emit('adminStartTimer');
+    await sleep(100);
+    check('Start setzt nach Pause fort', admin.state.timer.running === true && admin.state.timer.remaining <= pausedAt);
+    await sleep(3300);
+    check('Bei Ablauf stoppt der Timer bei 0', admin.state.timer.running === false && admin.state.timer.remaining === 0);
+    check('Ablauf löst nichts im Spiel aus', admin.state.currentScreen === 'PROMI_RATEN' && admin.state.promiGame.buzzerLocked === false && admin.state.promiGame.winnerTeam === null);
+    admin.emit('adminResetTimer');
+    await sleep(100);
+    check('Zurücksetzen stellt die eingestellte Zeit wieder her', admin.state.timer.remaining === 3 && admin.state.timer.running === false);
+    admin.emit('adminStartTimer');
+    await sleep(200);
+    admin.emit('adminSetTimerEnabled', false);
+    await sleep(150);
+    check('Ausschalten pausiert den Timer', admin.state.timer.enabled === false && admin.state.timer.running === false);
+    admin.emit('adminSetTimerDuration', 30);
+    admin.emit('adminResetTimer');
+    await sleep(100);
+
     // Jedes Spiel: starten, Punkt von 0 aus, generischer Reset nullt Punkte
     for (const game of games) {
         admin.emit('adminStartGame', game.id);
@@ -114,7 +156,7 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
         await sleep(100);
         check(`Reset nullt Punkte: ${game.id}`, sumScores(admin.state[game.stateKey].scores) === 0);
     }
-    check('Intro-Nummern 1..n', admin.intros.map(i => i.number).join(',') === Array.from({ length: games.length }, (_, i) => i + 1).join(','));
+    check('Intro-Nummer passt zur Spielnummer', games.every(g => admin.intros.some(i => i.screen === g.id && i.number === g.number)) && games.map(g => g.number).join(',') === Array.from({ length: games.length }, (_, i) => i + 1).join(','));
 
     admin.emit('adminAddTeamPoint', { team: 'Team 1', amount: 1 });
     await sleep(80);
@@ -224,7 +266,7 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     // Teekesselchen (neu)
     let privateView = null;
     player.on('teekesselchenPlayerUpdate', v => { privateView = v; });
-    admin.emit('adminStartGame', 'TEEKESELCHEN');
+    admin.emit('adminStartGame', 'TEEKESSELCHEN');
     const tRounds = await new Promise(resolve => { admin.once('receiveTeekesselchenRounds', resolve); admin.emit('getTeekesselchenRounds'); });
     check('Teekesselchen: Runden per Admin-Event', tRounds.length > 0);
     admin.emit('adminStartTeekesselchenRound', { roundId: tRounds[0].id, duration: 10 });
@@ -301,11 +343,27 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     check('Umbenennen: Spieler zieht um', Object.values(st.players).every(p => p.team !== 'Team 1'));
 
     // Routen: Lösungen der neuen Spiele sind nicht mehr öffentlich
-    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json']) {
-        check(`Route ${url}`, (await fetch(URL + url)).ok);
-    }
-    for (const url of ['/buchstabensalat.json', '/teekesselchen.json']) {
+    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json']) {
         check(`Nicht öffentlich ${url}`, !(await fetch(URL + url)).ok);
+    }
+
+    const contentEvents = [
+        ['getReferatTopics', 'receiveReferatTopics'],
+        ['getMalenWords', 'receiveMalenWords'],
+        ['getKartePlaces', 'receiveKartePlaces'],
+        ['getFlaggenData', 'receiveFlaggenData']
+    ];
+    for (const [request, response] of contentEvents) {
+        const adminData = await Promise.race([
+            new Promise(resolve => { admin.once(response, resolve); admin.emit(request); }),
+            sleep(1500).then(() => null)
+        ]);
+        check(`Admin bekommt Inhalte: ${request}`, adminData !== null && (Array.isArray(adminData) ? adminData.length > 0 : Object.keys(adminData).length > 0));
+        const playerData = await Promise.race([
+            new Promise(resolve => { player.once(response, () => resolve(true)); player.emit(request); }),
+            sleep(400).then(() => false)
+        ]);
+        check(`Spieler bekommt keine Inhalte: ${request}`, playerData === false);
     }
 
     check('Server hat keine Handler-Fehler geloggt', !serverLog.includes('Fehler im Event'), serverLog.split('\n').filter(l => l.includes('Fehler im Event')).slice(0, 5).join(' | '));

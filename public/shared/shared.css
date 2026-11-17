@@ -174,8 +174,23 @@ body.fullscreen-mode .sp-buzzer-banner {
     --sp-notes-height: 128px;
 }
 
+/* Vollbild: oben Platz fuer den Timer, unten fuer die Textfelder. Das Spiel nutzt --app-top und --app-height. */
+:root {
+    --sp-timer-height: 64px;
+}
+
+body.fullscreen-mode {
+    --app-top: 0px;
+    --app-bottom: 0px;
+    --app-height: calc(100vh - var(--app-top) - var(--app-bottom));
+}
+
 body.fullscreen-mode.sp-notes-open {
-    --app-height: calc(100vh - var(--sp-notes-height));
+    --app-bottom: var(--sp-notes-height);
+}
+
+body.fullscreen-mode.sp-timer-open {
+    --app-top: var(--sp-timer-height);
 }
 
 body.fullscreen-mode .sp-notes {
@@ -204,4 +219,58 @@ body.fullscreen-mode .sp-note-input {
     min-height: 64px;
     height: 64px;
     resize: none;
+}
+
+/* Globaler Timer: nur die Zeit, kein Text */
+.sp-timer {
+    display: none;
+    margin: 0 auto 12px;
+    text-align: center;
+    font-size: 3rem;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 2px;
+    color: #fff;
+}
+
+.sp-timer.sp-visible {
+    display: block;
+}
+
+.sp-timer.sp-timer-large {
+    font-size: 5rem;
+}
+
+.sp-timer.sp-low {
+    color: #ff6b6b;
+}
+
+body.fullscreen-mode .sp-timer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 5;
+    height: var(--sp-timer-height);
+    margin: 0;
+    line-height: var(--sp-timer-height);
+    font-size: 2.2rem;
+    background: #141c2b;
+    border-bottom: 2px solid #3d4763;
+}
+
+/* Admin: Timer-Steuerung */
+.sp-admin-timer-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.sp-admin-timer-display {
+    min-width: 90px;
+    font-size: 2rem;
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
 }
