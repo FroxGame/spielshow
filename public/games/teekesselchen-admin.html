@@ -1,252 +1,66 @@
-<style>
-    .teekesselchen-admin-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        align-items: flex-end;
-        margin-bottom: 14px;
-    }
-    .teekesselchen-admin-label {
-        font-size: 0.85rem;
-        color: #a4b0be;
-        margin-bottom: 4px;
-        display: block;
-    }
-    .teekesselchen-select, .teekesselchen-input {
-        padding: 8px 12px;
-        background: #1c202c;
-        border: 1px solid #4a5676;
-        border-radius: 6px;
-        color: #fff;
-        font-family: inherit;
-        font-size: 0.95rem;
-        min-width: 220px;
-    }
-    .teekesselchen-admin-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin: 10px 0;
-    }
-    .teekesselchen-admin-scores {
-        margin-top: 16px;
-    }
-    .teekesselchen-reveal-section {
-        margin-top: 20px;
-        padding: 16px;
-        background: #1c202c;
-        border-radius: 8px;
-        border: 1px solid #4a5676;
-    }
-    .teekesselchen-reveal-row {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 12px;
-        align-items: center;
-    }
-    .teekesselchen-reveal-input {
-        flex: 1;
-        padding: 8px 12px;
-        background: #14161f;
-        border: 1px solid #363e54;
-        border-radius: 6px;
-        color: #fff;
-        font-size: 0.95rem;
-    }
-    .teekesselchen-reveal-btn {
-        padding: 6px 12px;
-        font-size: 0.85rem;
-        background: #3498db;
-        color: #fff;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    }
-    .teekesselchen-reveal-btn:hover {
-        background: #2980b9;
-    }
-    .teekesselchen-reveal-btn.revealed {
-        background: #2ed573;
-        cursor: not-allowed;
-    }
-</style>
-
 <div class="card">
-    <h2>☕ Teekesselchen (Admin)</h2>
-    
-    <div class="teekesselchen-admin-row">
-        <div>
-            <label class="teekesselchen-admin-label">Runde wählen:</label>
-            <select id="teekesselchenRoundSelect" class="teekesselchen-select">
-                <option value="">-- Runde wählen --</option>
-            </select>
-        </div>
-        <div>
-            <label class="teekesselchen-admin-label">Zeit pro Runde (Sekunden):</label>
-            <input id="teekesselchenDuration" type="number" class="teekesselchen-input" value="20" min="10" max="120" style="min-width:80px;" />
-        </div>
+    <h2>Teekesselchen</h2>
+    <label>Runde:</label>
+    <select id="teeRoundSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+    <label>Schreibzeit in Sekunden:</label>
+    <input id="teeDuration" type="number" min="10" max="300" value="60" style="width:80px;">
+    <div style="margin: 10px 0;">
+        <button onclick="startTeekesselchen()">Runde starten</button>
+        <button onclick="closeTeekesselchenInputs()">Textfelder schließen</button>
+        <button onclick="revealTeekesselchen()">Wort auflösen</button>
     </div>
-    
-    <div class="teekesselchen-admin-actions">
-        <button onclick="startTeekesselchen()">▶ Runde starten</button>
-        <button onclick="closeTeekesselchenInputs()">🔒 Textfelder schließen</button>
-        <button onclick="resetTeekesselchen()">↺ Zurücksetzen</button>
-    </div>
-    
-    <div id="teekesselchenRevealSection" class="teekesselchen-reveal-section" style="display: none;">
-        <h3 style="margin-top: 0; color: #ffd166;">Antworten verbergen/zeigen</h3>
-        <div class="teekesselchen-reveal-row">
-            <span style="color: #a4b0be;">Team 1 Antwort:</span>
-            <input type="text" id="teekesselchenTeam1Answer" class="teekesselchen-reveal-input" readonly>
-            <button id="teekesselchenRevealTeam1Btn" class="teekesselchen-reveal-btn" onclick="revealTeekesselchenTeam1()">👁 Zeigen</button>
-        </div>
-        <div class="teekesselchen-reveal-row">
-            <span style="color: #a4b0be;">Team 2 Antwort:</span>
-            <input type="text" id="teekesselchenTeam2Answer" class="teekesselchen-reveal-input" readonly>
-            <button id="teekesselchenRevealTeam2Btn" class="teekesselchen-reveal-btn" onclick="revealTeekesselchenTeam2()">👁 Zeigen</button>
-        </div>
-    </div>
-    
-    <div id="teekesselchenAdminScores" class="teekesselchen-admin-scores"></div>
-    <div id="teekesselchenAdminStatus">Noch keine Runde aktiv.</div>
+    <div id="teeRevealButtons" style="margin: 10px 0;"></div>
+    <p id="teeAdminStatus">Noch keine Runde aktiv.</p>
+    <p>Lösung (nur für dich sichtbar): <b id="teeAdminSolution">-</b></p>
 </div>
 
 <script>
-    // Runde beim Laden der Seite in den Dropdown laden
-    (function() {
-        var sel = document.getElementById('teekesselchenRoundSelect');
-        if (!sel) {
-            console.log('Dropdown not found, will retry...');
-            setTimeout(arguments.callee, 100);
-            return;
-        }
-        
-        fetch('/teekesselchen.json')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                console.log('Loaded Teekesselchen rounds:', data.rounds);
-                (data.rounds || []).forEach(function(r) {
-                    var opt = document.createElement('option');
-                    opt.setAttribute('value', r.id);
-                    opt.textContent = r.answer + ' (' + r.category1 + ' / ' + r.category2 + ')';
-                    sel.appendChild(opt);
-                });
-                console.log('Options added:', sel.options.length);
-            })
-            .catch(function(e) {
-                console.error('Teekesselchen-Runden konnten nicht geladen werden:', e);
-            });
-    })();
+    let teeRounds = [];
+
+    socket.off('receiveTeekesselchenRounds');
+    socket.on('receiveTeekesselchenRounds', rounds => {
+        teeRounds = rounds;
+        const select = document.getElementById('teeRoundSelect');
+        if (!select) return;
+        select.replaceChildren(...rounds.map(round => {
+            const option = document.createElement('option');
+            option.value = round.id;
+            option.textContent = `${round.answer} (${round.category1} / ${round.category2})`;
+            return option;
+        }));
+    });
+    socket.emit('getTeekesselchenRounds');
 
     window.startTeekesselchen = function() {
-        var sel = document.getElementById('teekesselchenRoundSelect');
-        var roundId = sel ? sel.value : '';
-        if (!roundId) { alert('Bitte eine Runde wählen!'); return; }
-        var durInput = document.getElementById('teekesselchenDuration');
-        var duration = durInput ? (parseInt(durInput.value, 10) || 20) : 20;
-        console.log('Sending adminStartTeekesselchenRound:', roundId, duration);
-        socket.emit('adminStartTeekesselchenRound', { roundId: roundId, duration: duration });
+        const roundId = document.getElementById('teeRoundSelect').value;
+        if (!roundId) return alert('Bitte eine Runde wählen!');
+        socket.emit('adminStartTeekesselchenRound', {
+            roundId,
+            duration: Number(document.getElementById('teeDuration').value) || 60
+        });
     };
-
-    window.closeTeekesselchenInputs = function() {
-        console.log('Sending adminCloseTeekesselchenInputs');
-        socket.emit('adminCloseTeekesselchenInputs');
-    };
-
-    window.revealTeekesselchenTeam1 = function() {
-        console.log('Sending adminRevealTeekesselchenTeam1');
-        socket.emit('adminRevealTeekesselchenTeam1');
-    };
-
-    window.revealTeekesselchenTeam2 = function() {
-        console.log('Sending adminRevealTeekesselchenTeam2');
-        socket.emit('adminRevealTeekesselchenTeam2');
-    };
-
-    window.resetTeekesselchen = function() {
-        console.log('Sending adminResetTeekesselchen');
-        socket.emit('adminResetTeekesselchen');
-    };
+    window.closeTeekesselchenInputs = () => socket.emit('adminCloseTeekesselchenInputs');
+    window.revealTeekesselchen = () => socket.emit('adminRevealTeekesselchen');
 
     window.onModuleStateUpdate = function(state) {
-        var game = state.teekesselchenGame || {};
-        var scores = game.scores || {};
-        var winner = game.winnerTeam;
+        const game = state.teekesselchenGame || {};
+        const status = document.getElementById('teeAdminStatus');
+        if (!status) return;
 
-        var statusEl = document.getElementById('teekesselchenAdminStatus');
-        var scoresContainer = document.getElementById('teekesselchenAdminScores');
-        var revealSection = document.getElementById('teekesselchenRevealSection');
-        var team1AnswerInput = document.getElementById('teekesselchenTeam1Answer');
-        var team2AnswerInput = document.getElementById('teekesselchenTeam2Answer');
-        var revealTeam1Btn = document.getElementById('teekesselchenRevealTeam1Btn');
-        var revealTeam2Btn = document.getElementById('teekesselchenRevealTeam2Btn');
+        const round = teeRounds.find(entry => entry.id === game.roundId);
+        document.getElementById('teeAdminSolution').textContent = round ? round.answer : '-';
+        status.textContent = game.phase === 'IDLE'
+            ? 'Noch keine Runde aktiv.'
+            : `${game.phase}${game.phase === 'WRITING' ? ` | noch ${game.timeRemaining}s` : ''}`;
 
-        if (!statusEl || !scoresContainer) return;
-
-        // Update status
-        if (game.roundId) {
-            var roundData = game.roundData || {};
-            statusEl.innerText = 'Runde: ' + roundData.answer + ' | Status: ' + (game.phase || 'IDLE');
-            
-            // Show reveal section if game is active
-            if (game.phase === 'GUESSING' || game.phase === 'ANSWERS_CLOSED') {
-                revealSection.style.display = 'block';
-                
-                // Update answer inputs
-                if (team1AnswerInput && roundData.category1) {
-                    team1AnswerInput.value = roundData.category1;
-                }
-                if (team2AnswerInput && roundData.category2) {
-                    team2AnswerInput.value = roundData.category2;
-                }
-                
-                // Update reveal buttons
-                if (revealTeam1Btn && game.team1Revealed) {
-                    revealTeam1Btn.classList.add('revealed');
-                    revealTeam1Btn.innerText = '✅ Gezeigt';
-                } else if (revealTeam1Btn) {
-                    revealTeam1Btn.classList.remove('revealed');
-                    revealTeam1Btn.innerText = '👁 Zeigen';
-                }
-                
-                if (revealTeam2Btn && game.team2Revealed) {
-                    revealTeam2Btn.classList.add('revealed');
-                    revealTeam2Btn.innerText = '✅ Gezeigt';
-                } else if (revealTeam2Btn) {
-                    revealTeam2Btn.classList.remove('revealed');
-                    revealTeam2Btn.innerText = '👁 Zeigen';
-                }
-            } else {
-                revealSection.style.display = 'none';
-            }
-        } else {
-            statusEl.innerText = 'Noch keine Runde aktiv.';
-            revealSection.style.display = 'none';
-        }
-
-        // Render scores
-        if (scoresContainer && scores && typeof scores === 'object') {
-            scoresContainer.innerHTML = '';
-            Object.entries(scores).forEach(function(entry) {
-                var team = entry[0];
-                var points = entry[1] !== undefined && entry[1] !== null ? entry[1] : 0;
-                var score = document.createElement('div');
-                score.style.cssText = 'margin: 8px 0; display: flex; align-items: center; gap: 8px;';
-                score.innerHTML = '<b>' + team + ': ' + points + ' / 5</b>' +
-                    '<button onclick="adminAddTeekesselchenPoint(\'' + team + '\', -1)">-1</button>' +
-                    '<button onclick="adminAddTeekesselchenPoint(\'' + team + '\', 1)">+1</button>';
-                scoresContainer.appendChild(score);
-            });
-        }
-
-        if (winner) {
-            statusEl.innerText += ' | Gewinner: ' + winner;
-        }
-    };
-
-    window.adminAddTeekesselchenPoint = function(team, amount) {
-        if (typeof socket !== 'undefined') {
-            socket.emit('adminAddTeekesselchenPoint', { team: team, amount: amount });
-        }
+        const buttons = document.getElementById('teeRevealButtons');
+        buttons.replaceChildren(...Object.keys(state.teams).map(team => {
+            const button = document.createElement('button');
+            const revealed = Boolean(game.revealedTeams && game.revealedTeams[team]);
+            button.textContent = revealed ? `${team}: gezeigt` : `${team}: Beschreibung zeigen`;
+            button.disabled = game.phase === 'IDLE' || game.phase === 'WRITING';
+            button.onclick = () => socket.emit('adminRevealTeekesselchenTeam', team);
+            return button;
+        }));
     };
 </script>

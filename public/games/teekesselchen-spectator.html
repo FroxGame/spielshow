@@ -1,251 +1,45 @@
 <style>
-    .teekesselchen-spec-container {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
-        max-width: 1400px;
-        margin: 0 auto;
-        box-sizing: border-box;
-        padding: 20px 10px;
-    }
-    .teekesselchen-spec-scores {
-        display: flex;
-        gap: 30px;
-        margin-bottom: 24px;
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    .teekesselchen-spec-team-score {
-        background: #171922;
-        border: 3px solid #4a5676;
-        border-radius: 12px;
-        padding: 20px 40px;
-        text-align: center;
-        min-width: 200px;
-    }
-    .teekesselchen-spec-team-name {
-        font-size: 1.3rem;
-        font-weight: bold;
-        color: #fff;
-        margin-bottom: 8px;
-    }
-    .teekesselchen-spec-score-value {
-        font-size: 3rem;
-        font-weight: bold;
-        color: #ffd166;
-    }
-    .teekesselchen-spec-teams {
-        display: flex;
-        gap: 40px;
-        margin-bottom: 24px;
-        width: 100%;
-        justify-content: center;
-        flex-wrap: wrap;
-    }
-    .teekesselchen-spec-team {
-        background: #1c202c;
-        border: 2px solid #363e54;
-        border-radius: 12px;
-        padding: 20px;
-        min-width: 300px;
-        flex: 1;
-    }
-    .teekesselchen-spec-team-title {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #ffd166;
-        margin-bottom: 12px;
-    }
-    .teekesselchen-spec-category {
-        font-size: 1rem;
-        color: #a4b0be;
-        margin-bottom: 8px;
-    }
-    .teekesselchen-spec-answer {
-        font-size: 1.3rem;
-        color: #fff;
-        font-weight: bold;
-        padding: 12px;
-        background: #14161f;
-        border-radius: 8px;
-        min-height: 60px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .teekesselchen-spec-answer.hidden {
-        color: #576574;
-        font-style: italic;
-    }
-    .teekesselchen-spec-answer-box {
-        font-size: 3rem;
-        font-weight: bold;
-        color: #ffd166;
-        background: #171922;
-        border: 4px solid #303646;
-        border-radius: 20px;
-        padding: 48px 64px;
-        text-align: center;
-        margin-bottom: 20px;
-        min-height: 120px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.7);
-    }
-    .teekesselchen-spec-answer-box.hidden {
-        color: #576574;
-        font-style: italic;
-    }
-    .teekesselchen-spec-status {
-        margin-top: 20px;
-        font-size: 1.2rem;
-        color: #a4b0be;
-        text-align: center;
-    }
-    .teekesselchen-spec-idle {
-        font-size: 1.4rem;
-        color: #576574;
-        margin-top: 30px;
-        text-align: center;
-    }
-    .teekesselchen-spec-buzzer-info {
-        background: #1c202c;
-        border: 2px solid #e67e22;
-        border-radius: 12px;
-        padding: 16px 24px;
-        margin-bottom: 20px;
-        text-align: center;
-        font-size: 1.3rem;
-        font-weight: bold;
-        color: #ffd166;
-    }
-    .teekesselchen-spec-buzzer-locked {
-        background: #1c202c;
-        border: 2px solid #2ed573;
-        border-radius: 12px;
-        padding: 16px 24px;
-        margin-bottom: 20px;
-        text-align: center;
-        font-size: 1.3rem;
-        font-weight: bold;
-        color: #2ed573;
-    }
+    .tee-spec { text-align: center; }
+    .tee-spec-timer { font-size: 3rem; font-weight: bold; }
+    .tee-spec-team { margin: 12px auto; padding: 14px; max-width: 800px; border: 1px solid #566078; border-radius: 8px; text-align: left; }
+    .tee-spec-answer { margin-top: 16px; font-size: 3rem; font-weight: bold; color: #2ed573; }
 </style>
 
-<div class="teekesselchen-spec-container">
-    <div class="teekesselchen-spec-scores">
-        <div class="teekesselchen-spec-team-score">
-            <div class="teekesselchen-spec-team-name">Team 1</div>
-            <div class="teekesselchen-spec-score-value" id="teekesselchenSpecScore1">0</div>
-        </div>
-        <div class="teekesselchen-spec-team-score">
-            <div class="teekesselchen-spec-team-name">Team 2</div>
-            <div class="teekesselchen-spec-score-value" id="teekesselchenSpecScore2">0</div>
-        </div>
-    </div>
-    
-    <div id="teekesselchenSpecTeams" class="teekesselchen-spec-teams" style="display: none;">
-        <div class="teekesselchen-spec-team">
-            <div class="teekesselchen-spec-team-title">Team 1</div>
-            <div class="teekesselchen-spec-category">Kategorie:</div>
-            <div id="teekesselchenSpecTeam1Category" class="teekesselchen-spec-answer hidden"></div>
-        </div>
-        <div class="teekesselchen-spec-team">
-            <div class="teekesselchen-spec-team-title">Team 2</div>
-            <div class="teekesselchen-spec-category">Kategorie:</div>
-            <div id="teekesselchenSpecTeam2Category" class="teekesselchen-spec-answer hidden"></div>
-        </div>
-    </div>
-    
-    <div id="teekesselchenSpecAnswer" class="teekesselchen-spec-answer-box hidden">— — —</div>
-    
-    <div id="teekesselchenSpecBuzzerInfo" class="teekesselchen-spec-buzzer-info" style="display: none;"></div>
-    <div id="teekesselchenSpecBuzzerLocked" class="teekesselchen-spec-buzzer-locked" style="display: none;"></div>
-    
-    <div id="teekesselchenSpecStatus" class="teekesselchen-spec-status"></div>
-    <div id="teekesselchenSpecIdle" class="teekesselchen-spec-idle">Warte auf die nächste Runde...</div>
-</div>
+<section class="card tee-spec">
+    <h2>Teekesselchen</h2>
+    <p id="teeSpecStatus">Warte auf die nächste Runde...</p>
+    <div id="teeSpecTimer" class="tee-spec-timer"></div>
+    <div id="teeSpecTeams"></div>
+    <div id="teeSpecAnswer" class="tee-spec-answer"></div>
+</section>
 
 <script>
     window.onSpectatorStateUpdate = function(state) {
         const game = state.teekesselchenGame || {};
-        const phase = game.phase || 'IDLE';
-        const scores = game.scores || {};
-        const buzzerWinner = game.buzzerWinner;
-        const buzzerLocked = game.buzzerLocked;
+        const teams = document.getElementById('teeSpecTeams');
+        if (!teams) return;
 
-        const teamsEl = document.getElementById('teekesselchenSpecTeams');
-        const team1CategoryEl = document.getElementById('teekesselchenSpecTeam1Category');
-        const team2CategoryEl = document.getElementById('teekesselchenSpecTeam2Category');
-        const answerEl = document.getElementById('teekesselchenSpecAnswer');
-        const statusEl = document.getElementById('teekesselchenSpecStatus');
-        const idleEl = document.getElementById('teekesselchenSpecIdle');
-        const score1El = document.getElementById('teekesselchenSpecScore1');
-        const score2El = document.getElementById('teekesselchenSpecScore2');
-        const buzzerInfoEl = document.getElementById('teekesselchenSpecBuzzerInfo');
-        const buzzerLockedEl = document.getElementById('teekesselchenSpecBuzzerLocked');
+        document.getElementById('teeSpecStatus').textContent = {
+            IDLE: 'Warte auf die nächste Runde...',
+            WRITING: 'Die Teams beschreiben ihr Wort...',
+            GUESSING: 'Welches Wort ist gemeint?',
+            REVEALED: 'Auflösung'
+        }[game.phase] || '';
+        document.getElementById('teeSpecTimer').textContent = game.phase === 'WRITING' ? `${game.timeRemaining}s` : '';
 
-        if (!teamsEl) return;
-
-        // Update scores
-        if (score1El) {
-            score1El.textContent = scores['Team 1'] !== undefined && scores['Team 1'] !== null ? scores['Team 1'] : 0;
-        }
-        if (score2El) {
-            score2El.textContent = scores['Team 2'] !== undefined && scores['Team 2'] !== null ? scores['Team 2'] : 0;
-        }
-
-        if (phase === 'IDLE') {
-            teamsEl.style.display = 'none';
-            answerEl.classList.add('hidden');
-            statusEl.textContent = '';
-            idleEl.style.display = 'block';
-            buzzerInfoEl.style.display = 'none';
-            buzzerLockedEl.style.display = 'none';
-            return;
-        }
-
-        idleEl.style.display = 'none';
-        teamsEl.style.display = 'flex';
-        
-        // Show team categories
-        if (game.team1Category) {
-            team1CategoryEl.textContent = game.team1Category;
-            team1CategoryEl.classList.remove('hidden');
-        } else {
-            team1CategoryEl.classList.add('hidden');
-        }
-        
-        if (game.team2Category) {
-            team2CategoryEl.textContent = game.team2Category;
-            team2CategoryEl.classList.remove('hidden');
-        } else {
-            team2CategoryEl.classList.add('hidden');
-        }
-
-        // Show answer
-        if (game.answer) {
-            answerEl.textContent = game.answer;
-            answerEl.classList.remove('hidden');
-        } else {
-            answerEl.classList.add('hidden');
-        }
-        
-        // Show buzzer info
-        if (buzzerLocked) {
-            buzzerLockedEl.style.display = 'block';
-            buzzerLockedEl.textContent = '✅ Runde beendet!';
-            buzzerInfoEl.style.display = 'none';
-        } else if (buzzerWinner) {
-            buzzerInfoEl.style.display = 'block';
-            buzzerInfoEl.textContent = '🏆 ' + buzzerWinner + ' hat gebuzzt!';
-            buzzerLockedEl.style.display = 'none';
-        } else {
-            buzzerInfoEl.style.display = 'none';
-            buzzerLockedEl.style.display = 'none';
-        }
+        teams.replaceChildren(...Object.entries(game.revealedTeams || {}).map(([team, info]) => {
+            const box = document.createElement('div');
+            box.className = 'tee-spec-team';
+            const heading = document.createElement('b');
+            heading.textContent = `${team}: ${info.category}`;
+            box.appendChild(heading);
+            info.texts.forEach(entry => {
+                const line = document.createElement('div');
+                line.textContent = `${entry.name}: ${entry.text}`;
+                box.appendChild(line);
+            });
+            return box;
+        }));
+        document.getElementById('teeSpecAnswer').textContent = game.answer || '';
     };
 </script>

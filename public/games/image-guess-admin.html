@@ -1,0 +1,45 @@
+<style>
+    .ig-admin-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0;
+    }
+</style>
+
+<div class="card">
+    <h2 id="igAdminTitle"></h2>
+    <p id="igAdminStatus">Noch kein Bild ausgewählt.</p>
+    <p>Lösung (nur für dich sichtbar): <b id="igAdminSolution">-</b></p>
+    <div class="ig-admin-actions">
+        <button onclick="igNextImage()">Nächstes Bild</button>
+        <button onclick="igRevealName()">Lösung aufdecken</button>
+    </div>
+    <div id="igAdminWinner"></div>
+</div>
+
+<script>
+    window.igNextImage = () => socket.emit('adminNextImage');
+    window.igRevealName = () => socket.emit('adminRevealImageName');
+
+    socket.off('imageGuessAdminUpdate');
+    socket.on('imageGuessAdminUpdate', info => {
+        const solution = document.getElementById('igAdminSolution');
+        if (solution) solution.textContent = info.name || '-';
+    });
+    socket.emit('getImageGuessInfo');
+
+    window.onModuleStateUpdate = function(state) {
+        const game = Spielshow.getGame(state.currentScreen);
+        const data = game && state[game.stateKey];
+        const title = document.getElementById('igAdminTitle');
+        if (!data || !title) return;
+
+        title.textContent = game.title;
+        document.getElementById('igAdminStatus').textContent = data.currentImage
+            ? `Bild ${data.imageIndex + 1}${data.revealedName ? ' (aufgedeckt)' : ''}`
+            : 'Noch kein Bild ausgewählt.';
+        document.getElementById('igAdminWinner').textContent = data.winnerTeam
+            ? `${data.winnerTeam} gewinnt mit ${game.maxScore} Punkten.` : '';
+    };
+</script>

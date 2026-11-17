@@ -24,11 +24,9 @@
         <button onclick="startMerken()" style="background:#2ed573;color:#000;font-weight:bold;">▶ Spiel / Merken starten</button>
         <button onclick="stopMerkenTimer()" style="background:#e67e22;color:#fff;">⏭ Merken beenden</button>
         <button onclick="revealAllMerkenCards()" style="background:#3742fa;color:#fff;">Alle aufdecken</button>
-        <button onclick="resetMerken()" style="background:#c0392b;color:#fff;">Spiel zurücksetzen</button>
     </div>
     <div class="merken-admin-info">
         <div id="merkenAdminPhase" class="merken-admin-badge">Noch nicht gestartet</div>
-        <div id="merkenAdminScores" class="merken-admin-badge"></div>
     </div>
     <p id="merkenAdminHint">Während der Abfrage eine verdeckte Karte anklicken und danach aufdecken.</p>
     <div id="merkenAdminGrid" class="merken-admin-grid"></div>
@@ -41,24 +39,14 @@
     };
     window.stopMerkenTimer = function() { socket.emit('adminStopMerkenTimer'); };
     window.revealAllMerkenCards = function() { socket.emit('adminRevealAllMerkenCards'); };
-    window.resetMerken = function() { socket.emit('adminResetMerken'); };
     window.selectMerkenCard = function(id) { socket.emit('adminSelectMerkenCard', id); };
     window.onModuleStateUpdate = function(state) {
         const game = state.merkenGame || {};
-        const teams = Object.keys(state.teams || {});
         const phase = document.getElementById('merkenAdminPhase');
-        const scores = document.getElementById('merkenAdminScores');
-        if (!phase || !scores) return;
+        if (!phase) return;
         phase.textContent = game.phase === 'MEMORIZING'
             ? `Merken: ${game.remaining || 0} Sekunden`
             : (game.phase === 'PLAYING' ? 'Abfrage läuft' : (game.phase === 'FINISHED' ? 'Spiel beendet' : 'Noch nicht gestartet'));
-        scores.innerHTML = teams.map(team => `
-            <span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;">
-                <strong>${team}: ${(game.scores || {})[team] || 0} / 7</strong>
-                <button onclick="changeMerkenScore('${team}', -1)" style="padding:2px 7px;">−</button>
-                <button onclick="changeMerkenScore('${team}', 1)" style="padding:2px 7px;">+</button>
-            </span>
-        `).join('');
 
         const grid = document.getElementById('merkenAdminGrid');
         grid.innerHTML = '';
@@ -81,7 +69,4 @@
         }
     };
 
-    window.changeMerkenScore = function(team, amount) {
-        socket.emit('adminAdjustMerkenScore', { team, amount });
-    };
 </script>

@@ -1,17 +1,28 @@
 {
-  "name": "spielshow",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "express": "^5.2.1",
-    "socket.io": "^4.8.4"
-  }
+    "name":  "spielshow",
+    "version":  "1.0.0",
+    "description":  "Lokale Spielshow fuer Freunde (Express + Socket.IO)",
+    "main":  "server.js",
+    "scripts":  {
+                    "start":  "node --env-file-if-exists=.env server.js",
+                    "lint":  "eslint server.js server tests",
+                    "test":  "node tests/smoke.js",
+                    "check:html":  "node tests/check-html.js",
+                    "check":  "npm run lint && npm run check:html && npm test"
+                },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "type":  "commonjs",
+    "dependencies":  {
+                         "express":  "^5.2.1",
+                         "socket.io":  "^4.8.4"
+                     },
+    "devDependencies":  {
+                            "eslint":  "10.15.0",
+                            "globals":  "17.14.0",
+                            "socket.io-client":  "4.8.4"
+                        }
 }

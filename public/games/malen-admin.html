@@ -2,7 +2,6 @@
     .malen-admin-section { margin-bottom: 16px; }
     .malen-admin-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
     .malen-admin-label { font-size: 0.85rem; color: #a4b0be; margin-bottom: 4px; display: block; }
-    .malen-admin-scores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
     .malen-score-row {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 5px 14px; border-radius: 6px; background: #1c202c;
@@ -61,7 +60,6 @@
 
 <div class="card">
     <h2>Blindes Malen (Montagsmaler)</h2>
-    <div id="malenScores" class="malen-admin-scores"></div>
 
     <div class="malen-admin-section">
         <div class="malen-admin-row">
@@ -98,8 +96,8 @@
 
         <div class="malen-admin-row" style="margin-top: 12px; gap: 8px;">
             <button onclick="startMalenRound()" style="background: #2ed573; color: #000; font-weight: bold; font-size: 1rem; padding: 8px 16px;">▶ Runde starten / Neuer Begriff</button>
+            <button onclick="revealMalenWord()" style="background: #3742fa; color: #fff; font-weight: bold;">👁 Begriff aufdecken</button>
             <button onclick="clearAllCanvases()" style="background: #e67e22; color: #fff; font-weight: bold;">🗑️ Beide Canvas leeren</button>
-            <button onclick="resetMalenGame()" style="background: #c0392b; color: #fff;">Spiel zurücksetzen</button>
         </div>
     </div>
 
@@ -225,7 +223,7 @@
         const p1 = document.getElementById('malenPainterTeam1').value || null;
         const p2 = document.getElementById('malenPainterTeam2').value || null;
         if (typeof socket !== 'undefined') {
-            socket.emit('adminSetMalenPainters', { 'Team 1': p1, 'Team 2': p2 });
+            socket.emit('adminSetMalenPainters', { [window._malenFirstTeam]: p1, [window._malenSecondTeam]: p2 });
         }
     };
 
@@ -240,7 +238,7 @@
         if (typeof socket !== 'undefined') {
             socket.emit('adminStartMalenRound', {
                 word,
-                painters: { 'Team 1': p1, 'Team 2': p2 }
+                painters: { [window._malenFirstTeam]: p1, [window._malenSecondTeam]: p2 }
             });
         }
     };
@@ -274,23 +272,17 @@
         }
     };
 
+    window.revealMalenWord = function() {
+        socket.emit('adminRevealMalenWord');
+    };
+
     window.clearAllCanvases = function() {
         if (typeof socket !== 'undefined') {
             socket.emit('adminClearAllMalenCanvases');
         }
     };
 
-    window.addMalenPoint = function(team, amount) {
-        if (typeof socket !== 'undefined') {
-            socket.emit('adminAddMalenPoint', { team, amount });
-        }
-    };
 
-    window.resetMalenGame = function() {
-        if (confirm('Blindes Malen wirklich zurücksetzen?') && typeof socket !== 'undefined') {
-            socket.emit('adminResetMalen');
-        }
-    };
 
     window.onModuleStateUpdate = function(state) {
         const malen = state.malenGame || {};
@@ -303,63 +295,28 @@
         window._malenSecondTeam = secondTeam;
         const phase = malen.phase || 'IDLE';
 
-        // Update scores
-        const scoresEl = document.getElementById('malenScores');
-        if (scoresEl) {
-            scoresEl.innerHTML = '';
-            const scores = malen.scores || {};
-            Object.keys(teams).forEach(t => {
-                const color = (teams[t] || {}).color || '#fff';
-                const row = document.createElement('div');
-                row.className = 'malen-score-row';
-                row.style.borderLeft = '5px solid ' + color;
-                row.innerHTML = '<span style="font-weight:bold;color:' + color + '">' + t + ': ' + (scores[t] || 0) + ' Pkt.</span>';
-                
-                const minus = document.createElement('button');
-                minus.className = 'malen-score-btn';
-                minus.innerText = '-1';
-                minus.onclick = () => addMalenPoint(t, -1);
-
-                const plus = document.createElement('button');
-                plus.className = 'malen-score-btn';
-                plus.innerText = '+1';
-                plus.onclick = () => addMalenPoint(t, 1);
-
-                row.appendChild(minus);
-                row.appendChild(plus);
-                scoresEl.appendChild(row);
-            });
-        }
 
         // Update painter selects
         const s1 = document.getElementById('malenPainterTeam1');
         const s2 = document.getElementById('malenPainterTeam2');
         const painters = malen.painters || {};
 
-        if (s1) {
-            const cur1 = s1.value || painters[firstTeam] || painters['Team 1'];
-            s1.innerHTML = '<option value="">-- Maler Team 1 wählen --</option>';
-            Object.values(players).filter(p => p.team === firstTeam).forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.innerText = p.name;
-                if (p.id === cur1) opt.selected = true;
-                s1.appendChild(opt);
-            });
-        }
-
-        if (s2) {
-            const cur2 = s2.value || painters[secondTeam] || painters['Team 2'];
-            s2.innerHTML = '<option value="">-- Maler Team 2 wählen --</option>';
-            Object.values(players).filter(p => p.team === secondTeam).forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.innerText = p.name;
-                if (p.id === cur2) opt.selected = true;
-                s2.appendChild(opt);
-            });
-        }
-
+        [[s1, firstTeam], [s2, secondTeam]].forEach(([select, team]) => {
+            if (!select) return;
+            const candidates = Object.values(players).filter(p => p.team === team);
+            const signature = candidates.map(p => `${p.id}:${p.name}`).join('|');
+            if (select.dataset.signature !== signature) {
+                select.dataset.signature = signature;
+                select.innerHTML = `<option value="">-- Maler ${team} wählen --</option>`;
+                candidates.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = p.name;
+                    select.appendChild(option);
+                });
+            }
+            select.value = painters[team] || '';
+        });
         const activeDiv = document.getElementById('malenActiveInfo');
         if (activeDiv) {
             activeDiv.style.display = phase === 'PLAYING' ? 'block' : 'none';
@@ -367,10 +324,10 @@
 
         if (phase === 'PLAYING') {
             const wordEl = document.getElementById('malenCurrentWordDisplay');
-            if (wordEl) wordEl.innerText = malen.word || '-';
+            if (wordEl) wordEl.innerText = (malen.word || '-') + (malen.wordRevealed ? ' (aufgedeckt)' : '');
 
-            const p1Obj = players[painters[firstTeam] || painters['Team 1']];
-            const p2Obj = players[painters[secondTeam] || painters['Team 2']];
+            const p1Obj = players[painters[firstTeam]];
+            const p2Obj = players[painters[secondTeam]];
             const h1 = document.getElementById('malenCardHeader1');
             const h2 = document.getElementById('malenCardHeader2');
             if (h1) h1.innerText = firstTeam + ' ' + (p1Obj ? '(Malt: ' + p1Obj.name + ')' : '');
@@ -380,8 +337,8 @@
             const drawings = malen.drawings || {};
             const c1 = document.getElementById('adminMalenCanvas1');
             const c2 = document.getElementById('adminMalenCanvas2');
-            if (c1) redrawWholeCanvas(c1, drawings[firstTeam] || drawings['Team 1'] || []);
-            if (c2) redrawWholeCanvas(c2, drawings[secondTeam] || drawings['Team 2'] || []);
+            if (c1) redrawWholeCanvas(c1, drawings[firstTeam] || []);
+            if (c2) redrawWholeCanvas(c2, drawings[secondTeam] || []);
         }
     };
 </script>

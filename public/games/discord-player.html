@@ -47,20 +47,7 @@
         font-weight: bold;
     }
 
-    .discord-player-score {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin: 0 auto 12px;
-    }
 
-    .discord-player-score span {
-        padding: 5px 9px;
-        border-radius: 5px;
-        background: #2c2c3a;
-        font-weight: bold;
-    }
 
     @media (max-width: 600px) {
         .discord-clue-grid {
@@ -69,7 +56,6 @@
     }
 </style>
 
-<div id="discordPlayerScore" class="discord-player-score"></div>
 
 <div class="card discord-player-game">
     <h2>Das kam bei Discord nicht an</h2>
@@ -104,14 +90,10 @@
 
     function renderDiscordPlayer(view) {
         const role = document.getElementById('discordPlayerRole');
-        const score = document.getElementById('discordPlayerScore');
         const action = document.getElementById('discordPlayerAction');
         if (!role || !action) return;
 
         action.innerHTML = '';
-        score.innerHTML = Object.entries(view.scores || {})
-            .map(([team, points]) => `<span>${team}: ${points}</span>`)
-            .join('');
 
         if (view.role === 'GIVER') {
             role.innerText = view.phase === 'GIVER_CLUES'

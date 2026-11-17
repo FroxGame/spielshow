@@ -1,0 +1,207 @@
+/* Gemeinsame Bausteine fuer alle Spiele (Spieler, Zuschauer, Admin).
+   Alles hier hat den Praefix "sp-", damit es nicht mit Spiel-CSS kollidiert. */
+
+/* Punkteanzeige des aktiven Spiels */
+.sp-scorebar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 0 auto 10px;
+}
+
+.sp-score-chip {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 2px solid #555;
+    background: #2c2c3a;
+    color: #fff;
+    font-weight: bold;
+}
+
+.sp-score-chip.sp-mine {
+    box-shadow: 0 0 10px currentColor;
+}
+
+.sp-scorebar.sp-large .sp-score-chip {
+    padding: 10px 20px;
+    font-size: 1.6rem;
+}
+
+/* Buzzer fuer Spieler: fest am unteren Bildschirmrand, ab Spielbeginn an derselben Stelle.
+   Der Inhalt bekommt unten Platz (body.sp-buzzer-open), damit nichts verdeckt wird. */
+body.sp-buzzer-open {
+    padding-bottom: 140px;
+}
+
+.sp-buzzer-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 0 12px;
+    background: linear-gradient(to top, #121212 70%, rgba(18, 18, 18, 0));
+}
+
+.sp-buzzer-bar.sp-visible {
+    display: flex;
+}
+
+.sp-buzzer-btn {
+    min-width: 220px;
+    padding: 14px 40px;
+    border: none;
+    border-radius: 10px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.sp-buzzer-btn:disabled {
+    background: #555;
+    cursor: not-allowed;
+}
+
+.sp-buzzer-status {
+    min-height: 1.3em;
+    color: #d6dbe6;
+    font-weight: bold;
+}
+
+/* Buzzer-Anzeige fuer Zuschauer */
+.sp-buzzer-banner {
+    display: none;
+    margin: 0 auto 12px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: #2c2c3a;
+    text-align: center;
+    font-weight: bold;
+}
+
+.sp-buzzer-banner.sp-visible {
+    display: block;
+}
+
+.sp-buzzer-banner.sp-won {
+    background: #7a2a22;
+}
+
+/* Admin: Standard-Steuerung unter jedem Spiel */
+.sp-admin-controls {
+    margin-top: 15px;
+}
+
+.sp-admin-controls h3 {
+    margin-top: 0;
+}
+
+.sp-admin-section {
+    margin: 10px 0;
+}
+
+.sp-admin-score-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+}
+
+.sp-admin-score-row b {
+    min-width: 180px;
+}
+
+.sp-admin-buzzer-status {
+    margin: 4px 0;
+    font-weight: bold;
+}
+
+.sp-btn-danger {
+    background: #c0392b;
+    color: #fff;
+}
+
+body.fullscreen-mode .sp-scorebar,
+body.fullscreen-mode .sp-buzzer-banner {
+    display: none;
+}
+
+/* Team-Notizen (Spieler): zwei Spalten, mittig */
+.sp-notes {
+    display: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    max-width: 750px;
+    margin: 18px auto 0;
+}
+
+.sp-note-field label {
+    display: block;
+    margin-bottom: 5px;
+    color: #a4b0be;
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.sp-note-input {
+    width: 100%;
+    min-height: 64px;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #555b70;
+    border-radius: 6px;
+    background: #15151d;
+    color: #fff;
+    font: inherit;
+    font-size: 0.92rem;
+    resize: vertical;
+}
+
+@media (max-width: 600px) {
+    .sp-notes { grid-template-columns: 1fr; }
+}
+
+/* Im Vollbild (Karte) bekommen die Notizen einen eigenen, mittig ausgerichteten Streifen am unteren Rand.
+   Das Spiel schrumpft um genau diese Hoehe (--app-height), nichts wird ueberdeckt. */
+:root {
+    --sp-notes-height: 128px;
+}
+
+body.fullscreen-mode.sp-notes-open {
+    --app-height: calc(100vh - var(--sp-notes-height));
+}
+
+body.fullscreen-mode .sp-notes {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
+    height: var(--sp-notes-height);
+    box-sizing: border-box;
+    max-width: none;
+    margin: 0;
+    padding: 6px 12px;
+    display: none;
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: 240px;
+    justify-content: safe center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: #141c2b;
+    border-top: 2px solid #3d4763;
+}
+
+body.fullscreen-mode .sp-note-input {
+    min-height: 64px;
+    height: 64px;
+    resize: none;
+}

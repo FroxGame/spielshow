@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Spielshow Client</title>
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="/shared/shared.css">
+    <script src="/shared/shared.js"></script>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background: #121212; color: white; margin: 0; }
         
@@ -91,11 +93,11 @@
 
         #content-area { margin-top: 250px; }
         .card { background: #1e1e1e; padding: 20px; border-radius: 12px; margin: 15px auto; max-width: 500px; }
-        .card.listenwissen-container, .card.kategorien-container, .card.malen-container, .card.flaggen-container { width: 100%; max-width: 1400px; box-sizing: border-box; padding: 18px; }
-        .card.promis-container { width: 100%; max-width: 750px; box-sizing: border-box; padding: 18px; }
+        .card.layout-wide { width: 100%; max-width: 1400px; box-sizing: border-box; padding: 18px; }
+        .card.layout-medium { width: 100%; max-width: 750px; box-sizing: border-box; padding: 18px; }
         body.fullscreen-mode { padding: 0; overflow: hidden; }
         body.fullscreen-mode #content-area { margin-top: 0; }
-        body.fullscreen-mode .card.karte-fullscreen { width: 100vw; height: 100vh; max-width: 100vw; margin: 0; padding: 0; border-radius: 0; box-shadow: none; background: #0e1626; position: absolute; top: 0; left: 0; z-index: 10; }
+        body.fullscreen-mode .card.layout-fullscreen { width: 100vw; height: var(--app-height, 100vh); max-width: 100vw; margin: 0; padding: 0; border-radius: 0; box-shadow: none; background: #0e1626; position: absolute; top: 0; left: 0; z-index: 10; }
         button { padding: 15px 25px; font-size: 18px; cursor: pointer; border-radius: 8px; border: none; }
 
         #game-intro {
@@ -175,8 +177,14 @@
             <p>Warte auf den Start der nächsten Runde...</p>
         </div>
 
+        <div id="game-scorebar" class="sp-scorebar" style="display: none;"></div>
+
         <!-- Behälter für modular geladene Spiele wie Listenwissen -->
         <div id="dynamic-module-container" class="card" style="display: none;"></div>
+
+        <div id="game-notes" class="sp-notes"></div>
+
+        <div id="game-buzzer-bar" class="sp-buzzer-bar"></div>
     </div>
 
     <script>
@@ -221,30 +229,13 @@
             loadedScreen = screenName;
 
             const container = document.getElementById('dynamic-module-container');
-            const modules = {
-                'LISTENWISSEN': 'games/listenwissen-player.html',
-                'DISCORD_GAME': 'games/discord-player.html',
-                'PROMI_RATEN': 'games/promis-player.html',
-                'DRUDEL': 'games/drudel-player.html',
-                'DIKTAT': 'games/diktat-player.html',
-                'KATEGORIEN': 'games/kategorien-player.html',
-                'PARTNERWISSEN': 'games/partnerwissen-player.html',
-                'BINGO': 'games/bingo-player.html',
-                'MALEN': 'games/malen-player.html',
-                'KARTE': 'games/karte-player.html'
-                ,'MERKEN': 'games/merken-player.html'
-                ,'REALITAET': 'games/realitaet-player.html'
-                ,'FLAGGEN': 'games/flaggen-player.html'
-                ,'BUCHSTABENSALAT': 'games/buchstabensalat-player.html'
-                ,'TEEKESELCHEN': 'games/teekesselchen-player.html'
-            };
+            await Spielshow.ready;
 
-            document.body.classList.toggle('fullscreen-mode', screenName === 'KARTE');
-            container.classList.toggle('karte-fullscreen', screenName === 'KARTE');
-            container.classList.toggle('malen-container', screenName === 'MALEN');
-            container.classList.toggle('promis-container', screenName === 'PROMI_RATEN');
-            container.classList.toggle('flaggen-container', screenName === 'FLAGGEN');
-            const file = modules[screenName];
+            const layout = (Spielshow.getGame(screenName) || {}).layout || 'default';
+            document.body.classList.toggle('fullscreen-mode', layout === 'fullscreen');
+            container.classList.remove('layout-medium', 'layout-wide', 'layout-fullscreen');
+            if (layout !== 'default') container.classList.add(`layout-${layout}`);
+            const file = Spielshow.getModuleFile(screenName, 'player');
             if (!file) {
                 container.style.display = 'none';
                 return;
@@ -295,14 +286,22 @@
             }
         }
 
+        const gameChrome = Spielshow.createPlayerChrome({
+            socket,
+            scorebar: document.getElementById('game-scorebar'),
+            buzzerBar: document.getElementById('game-buzzer-bar'),
+            notesContainer: document.getElementById('game-notes')
+        });
+
         socket.on('stateUpdate', (state) => {
             latestPlayerState = state;
+            Spielshow.ready.then(() => gameChrome.update(state));
             const me = state.players[socket.id];
             const badge = document.getElementById('my-badge');
             
             if (me) {
                 const myTeamColor = state.teams[me.team] ? state.teams[me.team].color : '#fff';
-                badge.innerText = `👤 ${me.name} | 🚩 ${me.team}`;
+                badge.innerText = `👤 ${me.name} | 🚩 ${me.team || 'wartet auf Teamzuweisung'}`;
                 badge.style.borderColor = myTeamColor;
                 badge.style.color = myTeamColor;
             }
@@ -341,13 +340,6 @@
             const contentArea = document.getElementById('content-area');
             contentArea.style.marginTop = state.currentScreen === 'WAITING' ? '250px' : '80px';
 
-            const moduleContainer = document.getElementById('dynamic-module-container');
-            moduleContainer.classList.toggle('listenwissen-container', state.currentScreen === 'LISTENWISSEN');
-            moduleContainer.classList.toggle('kategorien-container', state.currentScreen === 'KATEGORIEN');
-            moduleContainer.classList.toggle('malen-container', state.currentScreen === 'MALEN');
-            moduleContainer.classList.toggle('promis-container', state.currentScreen === 'PROMI_RATEN');
-            moduleContainer.classList.toggle('flaggen-container', state.currentScreen === 'FLAGGEN');
-
             // Standard-Screens umschalten
             document.getElementById('screen-WAITING').style.display = state.currentScreen === 'WAITING' ? 'block' : 'none';
 
@@ -362,6 +354,7 @@
 
         socket.on('teamNotesUpdate', (notes) => {
             latestTeamNotes = notes;
+            gameChrome.updateNotes(notes);
             if (window.onTeamNotesUpdate) {
                 window.onTeamNotesUpdate(notes);
             }

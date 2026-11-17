@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Zuschaueransicht</title>
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="/shared/shared.css">
+    <script src="/shared/shared.js"></script>
     <style>
         :root {
             color-scheme: dark;
@@ -65,7 +67,7 @@
         }
         body.fullscreen-mode #spectator-content {
             width: 100vw;
-            height: 100vh;
+            height: var(--app-height, 100vh);
             max-width: 100vw;
             margin: 0;
             padding: 0;
@@ -275,6 +277,55 @@
             opacity: 1;
         }
 
+        /* Im Vollbild (Karte) liegen die Notizen als eigener Streifen unten, die Karte schrumpft entsprechend */
+        body.fullscreen-mode #spectator-notes {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+            display: flex;
+            gap: 12px;
+            justify-content: safe center;
+            height: var(--sp-notes-height);
+            max-width: none;
+            margin: 0;
+            padding: 6px 12px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            background: #141c2b;
+            border-top: 2px solid #3d4763;
+        }
+
+        body.fullscreen-mode .spectator-notes-team {
+            flex: 0 0 auto;
+            padding: 4px 10px;
+        }
+
+        body.fullscreen-mode .spectator-notes-team h2 {
+            margin: 0 0 2px;
+            font-size: 0.85rem;
+        }
+
+        body.fullscreen-mode .spectator-notes-players {
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 8px;
+        }
+
+        body.fullscreen-mode .spectator-note {
+            flex: 0 0 200px;
+            padding: 0;
+            border-top: none;
+        }
+
+        body.fullscreen-mode .spectator-note-input {
+            min-height: 56px;
+            height: 56px;
+            margin-top: 2px;
+            resize: none;
+        }
+
         .waiting {
             display: grid;
             min-height: 220px;
@@ -396,11 +447,17 @@
     </header>
 
     <section id="teams-overview"></section>
+    <div id="game-scorebar" class="sp-scorebar sp-large" style="display: none; max-width: 1400px;"></div>
+    <div id="game-buzzer-banner" class="sp-buzzer-banner" style="max-width: 1400px;"></div>
     <main id="spectator-content"></main>
     <section id="spectator-notes"></section>
 
     <script>
         const socket = io();
+        const gameChrome = Spielshow.createSpectatorChrome({
+            scorebar: document.getElementById('game-scorebar'),
+            buzzerBanner: document.getElementById('game-buzzer-banner')
+        });
         let loadedScreen = null;
         let latestSpectatorState = null;
         let latestSpectatorNotes = [];
@@ -495,50 +552,63 @@
             }
         }
 
+        let renderedNotesSignature = '';
+
+        function createSpectatorNotesTeam(teamData) {
+            const team = document.createElement('section');
+            team.className = 'spectator-notes-team';
+
+            const heading = document.createElement('h2');
+            heading.textContent = `${teamData.team} - Notizen`;
+            team.appendChild(heading);
+
+            if (teamData.players.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'spectator-note';
+                empty.textContent = 'Keine Spieler verbunden';
+                team.appendChild(empty);
+                return team;
+            }
+
+            const playersContainer = document.createElement('div');
+            playersContainer.className = 'spectator-notes-players';
+            teamData.players.forEach(player => {
+                const note = document.createElement('div');
+                note.className = 'spectator-note';
+
+                const author = document.createElement('strong');
+                author.textContent = `${player.name}:`;
+                note.appendChild(author);
+
+                const input = document.createElement('textarea');
+                input.className = 'spectator-note-input';
+                input.dataset.playerId = player.playerId;
+                input.placeholder = 'Noch keine Notiz';
+                input.readOnly = true;
+                note.appendChild(input);
+                playersContainer.appendChild(note);
+            });
+            team.appendChild(playersContainer);
+            return team;
+        }
+
+        /* Baut die Felder nur neu, wenn sich Teams oder Spieler aendern.
+           Reiner Text-Update laesst die Felder stehen, damit eine manuell vergroesserte Hoehe bleibt. */
         function renderSpectatorNotes(notes) {
             const container = document.getElementById('spectator-notes');
-            container.innerHTML = '';
+            const signature = notes
+                .map(teamData => `${teamData.team}:${teamData.players.map(player => `${player.playerId}=${player.name}`).join(',')}`)
+                .join('|');
 
-            notes.forEach(teamData => {
-                const team = document.createElement('section');
-                team.className = 'spectator-notes-team';
+            if (signature !== renderedNotesSignature) {
+                container.replaceChildren(...notes.map(createSpectatorNotesTeam));
+                renderedNotesSignature = signature;
+            }
 
-                const heading = document.createElement('h2');
-                heading.innerText = `${teamData.team} - Notizen`;
-                team.appendChild(heading);
-
-                if (teamData.players.length === 0) {
-                    const empty = document.createElement('div');
-                    empty.className = 'spectator-note';
-                    empty.innerText = 'Keine Spieler verbunden';
-                    team.appendChild(empty);
-                }
-
-                const playersContainer = document.createElement('div');
-                playersContainer.className = 'spectator-notes-players';
-
-                teamData.players.forEach(player => {
-                    const note = document.createElement('div');
-                    note.className = 'spectator-note';
-
-                    const author = document.createElement('strong');
-                    author.innerText = `${player.name}:`;
-                    note.appendChild(author);
-
-                    const input = document.createElement('textarea');
-                    input.className = 'spectator-note-input';
-                    input.value = player.text || '';
-                    input.placeholder = 'Noch keine Notiz';
-                    input.disabled = true;
-                    note.appendChild(input);
-                    playersContainer.appendChild(note);
-                });
-
-                if (teamData.players.length > 0) {
-                    team.appendChild(playersContainer);
-                }
-                container.appendChild(team);
-            });
+            notes.forEach(teamData => teamData.players.forEach(player => {
+                const input = container.querySelector(`[data-player-id="${player.playerId}"]`);
+                if (input && input.value !== (player.text || '')) input.value = player.text || '';
+            }));
         }
 
         async function loadModule(screenName) {
@@ -546,25 +616,9 @@
             loadedScreen = screenName;
 
             const container = document.getElementById('spectator-content');
-            const modules = {
-                LISTENWISSEN: 'games/listenwissen-spectator.html',
-                DISCORD_GAME: 'games/discord-spectator.html',
-                PROMI_RATEN: 'games/promis-spectator.html',
-                DRUDEL: 'games/drudel-spectator.html',
-                DIKTAT: 'games/diktat-spectator.html',
-                KATEGORIEN: 'games/kategorien-spectator.html',
-                PARTNERWISSEN: 'games/partnerwissen-spectator.html',
-                BINGO: 'games/bingo-spectator.html',
-                MALEN: 'games/malen-spectator.html',
-                KARTE: 'games/karte-spectator.html'
-                ,MERKEN: 'games/merken-spectator.html'
-                ,REALITAET: 'games/realitaet-spectator.html'
-                ,FLAGGEN: 'games/flaggen-spectator.html'
-                ,BUCHSTABENSALAT: 'games/buchstabensalat-spectator.html'
-                ,TEEKESELCHEN: 'games/teekesselchen-spectator.html'
-            };
-            document.body.classList.toggle('fullscreen-mode', screenName === 'KARTE');
-            const file = modules[screenName];
+            await Spielshow.ready;
+            document.body.classList.toggle('fullscreen-mode', ((Spielshow.getGame(screenName) || {}).layout) === 'fullscreen');
+            const file = Spielshow.getModuleFile(screenName, 'spectator');
 
             if (!file) {
                 container.innerHTML = '<div class="waiting"><div><h2>Spielpause</h2><p>Warte auf die nächste Runde...</p><div id="spectator-waiting-score"></div></div></div>';
@@ -580,7 +634,7 @@
                     const score = document.getElementById('spectator-alltime-score');
                     if (score) document.body.appendChild(score);
                 container.innerHTML = await response.text();
-                container.querySelectorAll('script').forEach(script => eval(script.innerText));
+                container.querySelectorAll('script').forEach(script => new Function(script.innerText).call(window));
 
                 if (window.onSpectatorStateUpdate && latestSpectatorState) {
                     window.onSpectatorStateUpdate(latestSpectatorState);
@@ -609,6 +663,12 @@
         socket.on('stateUpdate', state => {
             if (!spectatorAuthenticated) return;
             latestSpectatorState = state;
+            document.getElementById('spectator-notes').style.display = state.notesEnabled ? '' : 'none';
+            if (document.body.classList.contains('sp-notes-open') !== Boolean(state.notesEnabled)) {
+                document.body.classList.toggle('sp-notes-open', Boolean(state.notesEnabled));
+                window.dispatchEvent(new Event('resize'));
+            }
+            Spielshow.ready.then(() => gameChrome.update(state));
             renderTeams(state);
             document.getElementById('current-screen').innerText = state.currentScreen;
             document.getElementById('status').innerText = 'Live verbunden';

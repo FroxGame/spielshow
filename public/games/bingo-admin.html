@@ -39,7 +39,6 @@
     }
     .bingo-timer-display.running { border-color: #2ed573; color: #2ed573; }
     .bingo-timer-display.stopped { border-color: #ff6b6b; color: #ff6b6b; }
-    .bingo-admin-scores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
     .bingo-score-row {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 5px 14px; border-radius: 6px; background: #1c202c;
@@ -89,7 +88,6 @@
         <span id="bingoPhaseLabel" class="bingo-phase-badge idle">Bereit</span>
         <span id="bingoReferatPlayerLabel" style="font-size: 0.9rem; color: #a4b0be;"></span>
     </div>
-    <div id="bingoScores" class="bingo-admin-scores"></div>
     <div id="bingoSetupSection" class="bingo-admin-section">
         <div class="bingo-admin-row">
             <div>
@@ -140,7 +138,6 @@
         <div class="bingo-admin-row" style="margin: 10px 0; gap: 10px;">
             <button id="bingoStartPlayingBtn" onclick="startBingoPlaying()" style="display:none; background: #3742fa; color: #fff; font-weight: bold;">&#9654; Referat starten</button>
             <button id="bingoRevealTopicBtn" onclick="revealBingoTopic()" style="display:none; background: #f39c12; color: #000; font-weight: bold;">&#127919; Thema aufdecken</button>
-            <button onclick="resetBingo()" style="background: #c0392b; color: #fff;">Spiel zurücksetzen</button>
         </div>
         <div id="bingoWordsOverview" class="bingo-words-overview"></div>
     </div>
@@ -195,8 +192,6 @@
         const val = parseInt(document.getElementById('bingoNewDurationInput').value) || 120;
         if (typeof socket !== 'undefined') socket.emit('adminSetBingoTimerDuration', val);
     };
-    window.addBingoPoint = function(team, amount) { if (typeof socket !== 'undefined') socket.emit('adminAddBingoPoint', { team, amount }); };
-    window.resetBingo = function() { if (confirm('Referat Bingo zurücksetzen?') && typeof socket !== 'undefined') socket.emit('adminResetBingo'); };
 
     function formatTime(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
 
@@ -230,24 +225,6 @@
             }
         }
 
-        const scoresEl = document.getElementById('bingoScores');
-        if (scoresEl) {
-            scoresEl.innerHTML = '';
-            const scores = bingo.scores || {};
-            Object.keys(teams).forEach(teamName => {
-                const color = (teams[teamName] || {}).color || '#fff';
-                const row = document.createElement('div');
-                row.className = 'bingo-score-row';
-                row.style.borderLeft = '5px solid ' + color;
-                row.innerHTML = '<span style="font-weight:bold;color:' + color + '">' + teamName + ': ' + (scores[teamName] || 0) + ' Pkt.</span>';
-                const minus = document.createElement('button'); minus.className = 'bingo-score-btn'; minus.innerText = '-1';
-                minus.onclick = () => addBingoPoint(teamName, -1);
-                const plus = document.createElement('button'); plus.className = 'bingo-score-btn'; plus.innerText = '+1';
-                plus.onclick = () => addBingoPoint(teamName, 1);
-                row.appendChild(minus); row.appendChild(plus);
-                scoresEl.appendChild(row);
-            });
-        }
 
         const setup = document.getElementById('bingoSetupSection');
         const active = document.getElementById('bingoActiveSection');

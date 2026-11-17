@@ -4,7 +4,6 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
 /**
  * Konstanten für das Spiel
@@ -83,7 +82,7 @@ function readJsonArray(filePath, filterFn = null) {
  * @returns {boolean} Erfolg
  */
 function addScore(scores, team, amount, max = MAX_POINTS_PER_GAME) {
-    if (!scores || !scores[team]) return false;
+    if (!scores || scores[team] === undefined) return false;
 
     const points = Number(amount);
     if (!Number.isInteger(points)) {

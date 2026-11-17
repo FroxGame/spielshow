@@ -6,7 +6,6 @@
 
     .karte-admin-label { font-size: 0.85rem; color: #a4b0be; margin-bottom: 4px; display: block; }
 
-    .karte-admin-scores { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
 
     .karte-score-row {
 
@@ -78,7 +77,6 @@
 
     <h2>Wo ist das auf der Karte?</h2>
 
-    <div id="karteScores" class="karte-admin-scores"></div>
 
 
 
@@ -164,7 +162,6 @@
 
             <button onclick="nextKartePlaceSequential()" style="background: #3742fa; color: #fff; font-weight: bold;">➡️ Nächster Ort (der Reihe nach)</button>
 
-            <button onclick="resetKarteGame()" style="background: #c0392b; color: #fff;">Spiel zurücksetzen</button>
 
         </div>
 
@@ -371,27 +368,9 @@
 
 
 
-    window.addKartePoint = function(team, amount) {
-
-        if (typeof socket !== 'undefined') {
-
-            socket.emit('adminAddKartePoint', { team, amount });
-
-        }
-
-    };
 
 
 
-    window.resetKarteGame = function() {
-
-        if (confirm('Kartenspiel wirklich zurücksetzen?') && typeof socket !== 'undefined') {
-
-            socket.emit('adminResetKarteGame');
-
-        }
-
-    };
 
 
 
@@ -410,59 +389,8 @@
 
 
 
-        // Scores (x / 7)
-
-        const scoresEl = document.getElementById('karteScores');
-
-        if (scoresEl) {
-
-            scoresEl.innerHTML = '';
-
-            const scores = kg.scores || {};
-
-            Object.keys(teams).forEach(t => {
-
-                const color = (teams[t] || {}).color || '#fff';
-
-                const row = document.createElement('div');
-
-                row.className = 'karte-score-row';
-
-                row.style.borderLeft = '5px solid ' + color;
-
-                row.innerHTML = '<span style="font-weight:bold;color:' + color + '">' + t + ': ' + (scores[t] || 0) + ' / 7</span>';
 
 
-
-                const minus = document.createElement('button');
-
-                minus.className = 'karte-score-btn';
-
-                minus.innerText = '-1';
-
-                minus.onclick = () => addKartePoint(t, -1);
-
-
-
-                const plus = document.createElement('button');
-
-                plus.className = 'karte-score-btn';
-
-                plus.innerText = '+1';
-
-                plus.onclick = () => addKartePoint(t, 1);
-
-
-
-                row.appendChild(minus);
-
-                row.appendChild(plus);
-
-                scoresEl.appendChild(row);
-
-            });
-
-        }
 
 
 

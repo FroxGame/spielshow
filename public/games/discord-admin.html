@@ -9,9 +9,7 @@
     <select id="discordTarget" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
 
     <button onclick="startDiscordGame()">Runde starten</button>
-    <button onclick="resetDiscordGame()">Runde zurücksetzen</button>
 
-    <div id="discordAdminScores" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;"></div>
     <div id="discordAdminDetails" style="margin-top:15px;"></div>
 </div>
 
@@ -52,9 +50,6 @@
         });
     };
 
-    window.resetDiscordGame = function() {
-        socket.emit('adminResetDiscordGame');
-    };
 
     window.onDiscordAdminUpdate = function(game) {
         const phase = document.getElementById('discordAdminPhase');
@@ -63,23 +58,6 @@
 
         discordAdminGameState = game;
 
-        const scores = document.getElementById('discordAdminScores');
-        scores.innerHTML = '';
-        Object.entries(game.scores || {}).forEach(([team, points]) => {
-            const score = document.createElement('div');
-            score.innerHTML = `<b>${team}: ${points}</b>`;
-
-            const minus = document.createElement('button');
-            minus.innerText = '-1';
-            minus.onclick = () => adjustDiscordPoint(team, -1);
-
-            const plus = document.createElement('button');
-            plus.innerText = '+1';
-            plus.onclick = () => adjustDiscordPoint(team, 1);
-            score.appendChild(minus);
-            score.appendChild(plus);
-            scores.appendChild(score);
-        });
 
         phase.innerText = `Phase: ${game.phase}`;
         details.innerHTML = `<p><b>Hinweisgeber:</b> ${game.giverName}<br>
@@ -124,7 +102,4 @@
         }
     };
 
-    window.adjustDiscordPoint = function(team, amount) {
-        socket.emit('adminAddDiscordPoint', { team, amount });
-    };
 </script>

@@ -17,24 +17,6 @@
         padding-bottom: 8px;
         border-bottom: 1px solid #2a2f40;
     }
-    .bingo-spec-scores {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin: 0;
-    }
-    .bingo-spec-score-box {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 12px;
-        border-radius: 6px;
-        background: #171922;
-        font-size: 0.95rem;
-        font-weight: bold;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-    }
     .bingo-spec-timer {
         font-size: 1.6rem;
         font-weight: bold;
@@ -156,7 +138,6 @@
     <div class="bingo-spec-header">
         <h3 style="margin: 0; font-size: 1.25rem;">Referat Bingo</h3>
         <div id="bingoSpecTimer" class="bingo-spec-timer" style="display:none;">02:00</div>
-        <div id="bingoSpecScores" class="bingo-spec-scores"></div>
     </div>
     <div id="bingoSpecMeta" class="bingo-spec-meta" style="display:none;">
         <div id="bingoSpecTopic" class="bingo-spec-topic hidden"></div>
@@ -174,20 +155,6 @@
         const players = state.players || {};
         const phase = bingo.phase || 'IDLE';
 
-        // Scores
-        const scoresEl = document.getElementById('bingoSpecScores');
-        if (scoresEl) { 
-            scoresEl.innerHTML = ''; 
-            const scores = bingo.scores || {}; 
-            Object.keys(teams).forEach(t => { 
-                const color = (teams[t]||{}).color || '#fff'; 
-                const box = document.createElement('div'); 
-                box.className = 'bingo-spec-score-box'; 
-                box.style.borderLeft = '4px solid ' + color; 
-                box.innerHTML = '<span style="color:'+color+'">' + t + ':</span> <span>' + (scores[t]||0) + ' Pkt.</span>'; 
-                scoresEl.appendChild(box); 
-            }); 
-        }
 
         // Timer
         const timerEl = document.getElementById('bingoSpecTimer');

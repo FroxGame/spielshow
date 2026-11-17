@@ -8,23 +8,6 @@
         margin: 0 auto;
         box-sizing: border-box;
     }
-    .flaggen-player-scores {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-bottom: 12px;
-    }
-    .flaggen-score-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 5px 14px;
-        border-radius: 6px;
-        background: #1c202c;
-        font-size: 1rem;
-        font-weight: bold;
-    }
     .flaggen-country-banner {
         font-size: 1.45rem;
         font-weight: bold;
@@ -327,7 +310,6 @@
 </style>
 
 <div class="flaggen-player-container">
-    <div id="flaggenPlayerScores" class="flaggen-player-scores"></div>
     <div id="flaggenCountryBanner" class="flaggen-country-banner">Flaggen bauen</div>
     <div id="flaggenRoleBanner" class="flaggen-role-banner flaggen-role-spectator">Warte auf Rundenstart...</div>
 
@@ -623,20 +605,6 @@
         const t2 = teamNames[1] || 'Team 2';
         const phase = game.phase || 'IDLE';
 
-        // Scores
-        const scoresEl = document.getElementById('flaggenPlayerScores');
-        if (scoresEl) {
-            scoresEl.innerHTML = '';
-            const scores = game.scores || {};
-            teamNames.forEach(team => {
-                const col = (teams[team] || {}).color || '#fff';
-                const badge = document.createElement('div');
-                badge.className = 'flaggen-score-badge';
-                badge.style.borderLeft = '4px solid ' + col;
-                badge.innerHTML = `<span style="color:${col}">${team}:</span> <span>${scores[team] || 0} Pkt.</span>`;
-                scoresEl.appendChild(badge);
-            });
-        }
 
         if (!me || phase === 'IDLE') {
             document.getElementById('flaggenCountryBanner').textContent = 'Flaggen bauen';

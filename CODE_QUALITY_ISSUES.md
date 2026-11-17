@@ -219,6 +219,15 @@ scores.innerHTML = teams.map(team => `...`).join('');
 | Veraltete Syntax | 🟢 Offene | Niedrig | Langfristig | - |
 | Fehlende Tests | 🟢 Offene | Niedrig | Langfristig | - |
 
+## 🆕 Stand nach der Strukturumstellung
+
+- #4 Globale Variablen: `server.js` (vorher über 4000 Zeilen) ist jetzt nur noch Verdrahtung. Zustand und Helfer liegen in `server/context.js`, Spiele in `server/games/`, Gemeinsames in `server/core/`. ✅
+- #5 Code-Duplikation: Punkte, Reset, Buzzer und Notizen sind je einmal im Kern bzw. in `public/shared`. Promis und Drudel teilen `server/games/image-guess.js`. ✅
+- #17 Fehlende Tests: Rauchtest gegen den echten Server (`npm test`) und HTML-Prüfung (`npm run check:html`). ✅ (Grundlage, nicht vollständig)
+- #20 Linting: ESLint (`npm run lint`) prüft u. a. undefinierte Variablen. ✅ (Formatierung/Prettier fehlt noch)
+- Fehler gefunden und behoben: Punkte ließen sich bei 0 nicht erhöhen (`!scores[team]`), fehlende Konstanten-Importe, Buzzer in Teekesselchen für Spieler wirkungslos, Lösungen von Buchstabensalat und Teekesselchen waren öffentlich abrufbar.
+- Offen: #9 Benennung (teils Deutsch/Englisch), #10 Typen (JSDoc), #11 `var` in Altseiten, #14 CSS in HTML, Lösungs-JSONs der älteren Spiele sind noch öffentlich.
+
 ## 🛠️ Refactoring-Checkliste
 
 Bei Änderungen immer prüfen:

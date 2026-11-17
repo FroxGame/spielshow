@@ -11,13 +11,6 @@
         font-weight: bold;
         color: #a4b0be;
     }
-    .category-admin-scores {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 12px;
-    }
     .category-score-team {
         display: inline-flex;
         align-items: center;
@@ -277,12 +270,13 @@
             <option value="">-- Runde auswählen --</option>
         </select>
         <button onclick="startCategoryRound()">Runde starten</button>
-        <button onclick="resetCategoryGame()">Spiel zurücksetzen</button>
         <button id="categoryRevealAllBtn" onclick="revealAllCategoryTerms()" style="display: none; background: #3742fa; color: white;">Alle aufdecken</button>
+        <label style="color:#a4b0be;">Sekunden pro Zug <input id="categoryTurnSeconds" type="number" min="5" max="120" value="15" style="width:70px;" onchange="setCategoryTurnDuration(this.value)"></label>
+        <button id="categoryTurnStartBtn" onclick="startCategoryTurn()" style="display: none;">Zug starten</button>
+        <button id="categoryTurnStopBtn" onclick="stopCategoryTurn()" style="display: none;">Zug beenden</button>
         <span id="categoryAdminStatus" class="category-admin-status">Keine Runde aktiv.</span>
     </div>
 
-    <div id="categoryAdminScores" class="category-admin-scores"></div>
 
     <div id="categoryAdminTeamBar" class="category-admin-team-selector" style="display: none;">
         <span style="font-weight: bold; color: #a4b0be; font-size: 0.9rem;">Zuordnen für Team:</span>
@@ -334,12 +328,10 @@
         }
     };
 
-    window.resetCategoryGame = function() {
-        selectedTermToAssign = null;
-        if (typeof socket !== 'undefined') {
-            socket.emit('adminResetCategoryGame');
-        }
-    };
+
+    window.setCategoryTurnDuration = value => socket.emit('adminSetCategoryTurnDuration', value);
+    window.startCategoryTurn = () => socket.emit('adminStartCategoryTurn');
+    window.stopCategoryTurn = () => socket.emit('adminStopCategoryTurn');
 
     window.revealTerm = function(term) {
         if (typeof socket !== 'undefined') {
@@ -353,11 +345,6 @@
         }
     };
 
-    window.addCategoryPoint = function(team, amount) {
-        if (typeof socket !== 'undefined') {
-            socket.emit('adminAddCategoryPoint', { team, amount });
-        }
-    };
 
     window.setCategoryTermTeam = function(term, team) {
         if (typeof socket !== 'undefined') {
@@ -502,7 +489,6 @@
         const roundSelect = document.getElementById('categoryRoundSelect');
         const status = document.getElementById('categoryAdminStatus');
         const revealAllBtn = document.getElementById('categoryRevealAllBtn');
-        const scoresContainer = document.getElementById('categoryAdminScores');
         const teamBar = document.getElementById('categoryAdminTeamBar');
         const teamButtonsContainer = document.getElementById('categoryActiveTeamButtons');
         const dropzonesContainer = document.getElementById('categoryAdminDropzones');
@@ -514,31 +500,20 @@
             fillCategoryRounds(state.categoryRoundNames);
         }
 
-        status.innerText = game.roundName ? `Runde: ${game.roundName} (${game.phase || 'Aktiv'})` : 'Keine Runde aktiv.';
-
-        // Render Scores (Points) for both teams
-        if (scoresContainer) {
-            scoresContainer.innerHTML = '';
-            const scores = game.scores || {};
-            const teams = state.teams || {};
-            const teamNames = Object.keys(teams);
-
-            teamNames.forEach(teamName => {
-                const teamData = teams[teamName] || {};
-                const color = teamData.color || '#fff';
-                const pts = scores[teamName] || 0;
-
-                const row = document.createElement('div');
-                row.className = 'category-score-team';
-                row.style.borderLeft = `5px solid ${color}`;
-                row.innerHTML = `
-                    <span style="font-weight: bold; color: ${color}; font-size: 0.95rem;">${teamName}: ${pts} Pkt.</span>
-                    <button class="category-score-btn" onclick="addCategoryPoint('${teamName}', -1)">-1</button>
-                    <button class="category-score-btn" onclick="addCategoryPoint('${teamName}', 1)">+1</button>
-                `;
-                scoresContainer.appendChild(row);
-            });
+        const turn = game.turn || {};
+        const turnText = turn.team ? ` | ${turn.team} ist dran: ${turn.expired ? 'Zeit abgelaufen' : turn.remaining + 's'}` : '';
+        status.innerText = game.roundName ? `Runde: ${game.roundName} (${game.phase || 'Aktiv'})${turnText}` : 'Keine Runde aktiv.';
+        const inRound = game.phase === 'PLAYING';
+        const startBtn = document.getElementById('categoryTurnStartBtn');
+        const stopBtn = document.getElementById('categoryTurnStopBtn');
+        if (startBtn && stopBtn) {
+            startBtn.style.display = inRound ? '' : 'none';
+            startBtn.textContent = turn.team ? 'Nächstes Team' : 'Zug starten';
+            stopBtn.style.display = inRound && turn.team ? '' : 'none';
+            const secondsInput = document.getElementById('categoryTurnSeconds');
+            if (secondsInput && document.activeElement !== secondsInput && turn.duration) secondsInput.value = turn.duration;
         }
+
 
         if (!game.roundName || game.phase !== 'PLAYING') {
             dropzonesContainer.innerHTML = '';

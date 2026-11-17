@@ -1,6 +1,4 @@
 <style>
-    .bingo-player-scores { display:flex; justify-content:center; flex-wrap:wrap; gap:14px; margin:0 auto 14px; }
-    .bingo-player-score-box { display:inline-flex; align-items:center; gap:8px; padding:5px 14px; border-radius:6px; background:#1c202c; font-size:1.05rem; font-weight:bold; box-shadow:0 2px 6px rgba(0,0,0,0.3); }
     .bingo-timer { font-size:2rem; font-weight:bold; font-variant-numeric:tabular-nums; letter-spacing:2px; padding:8px 18px; border-radius:8px; background:#1c202c; border:2px solid #3d4763; display:inline-block; text-align:center; margin-bottom:12px; }
     .bingo-timer.running { border-color:#2ed573; color:#2ed573; }
     .bingo-timer.stopped { border-color:#ff6b6b; color:#ff6b6b; }
@@ -22,7 +20,6 @@
 
 <div style="width:100%; box-sizing:border-box; display:flex; flex-direction:column; align-items:center;">
     <h2 style="margin:0 0 10px; font-size:1.3rem; text-align:center;">Referat Bingo</h2>
-    <div id="bingoPlayerScores" class="bingo-player-scores"></div>
     <div id="bingoTimerEl" class="bingo-timer" style="display:none;">02:00</div>
     <div id="bingoPlayerContent" style="width:100%; max-width:500px;"></div>
 </div>
@@ -36,13 +33,17 @@
         if (typeof socket !== 'undefined') socket.emit('playerUpdateBingoWords', { role, words: _bingoWordsLocal });
     }
 
-    function _renderBingoInputGrid(role, savedWords) {
+    function _renderBingoInputGrid(role, savedWords, topic) {
         const container = document.getElementById('bingoPlayerContent');
         if (!container) return;
         if (_bingoLastRole !== role) {
             _bingoWordsLocal = (savedWords || Array(9).fill('')).slice();
             _bingoLastRole = role;
             container.innerHTML = '';
+            const topicBanner = document.createElement('div');
+            topicBanner.id = 'bingoPrepTopic';
+            topicBanner.className = 'bingo-topic-reveal';
+            container.appendChild(topicBanner);
             const info = document.createElement('p');
             info.style.cssText = 'color:#a4b0be; margin:0 0 6px; font-size:0.9rem;';
             info.innerText = role === 'partner' ? 'Schreibe 9 Begriffe auf, die du im Referat erwartest:' : 'Schreibe gemeinsam mit deinem Team 9 Begriffe auf:';
@@ -73,7 +74,10 @@
             progress.innerText = filled + ' / 9 ausgefüllt';
             if (filled === 9) progress.classList.add('bingo-words-complete');
             container.appendChild(progress);
-        } else {
+        }
+        const topicEl = document.getElementById('bingoPrepTopic');
+        if (topicEl) topicEl.textContent = topic ? `Thema des Referats: ${topic}` : '';
+        if (_bingoLastRole === role) {
             const grid = document.getElementById('bingoInputGrid');
             if (grid && savedWords) { 
                 const inputs = grid.querySelectorAll('.bingo-input-cell'); 
@@ -100,19 +104,6 @@
         const teams = state.teams || {};
         const phase = bingo.phase || 'IDLE';
 
-        const scoresEl = document.getElementById('bingoPlayerScores');
-        if (scoresEl) {
-            scoresEl.innerHTML = '';
-            const scores = bingo.scores || {};
-            Object.keys(teams).forEach(t => { 
-                const color = (teams[t]||{}).color||'#fff'; 
-                const box = document.createElement('div'); 
-                box.className='bingo-player-score-box'; 
-                box.style.borderLeft='5px solid '+color; 
-                box.innerHTML='<span style="color:'+color+'">'+t+':</span> <span>'+(scores[t]||0)+' Pkt.</span>'; 
-                scoresEl.appendChild(box); 
-            });
-        }
 
         const timerEl = document.getElementById('bingoTimerEl');
         if (timerEl) {
@@ -142,9 +133,9 @@
                     content.innerHTML = '<div class="bingo-waiting"><h3>Du hältst das Referat!</h3><p>Der Admin wird dir gleich dein Thema verraten.</p><p style="color:#a4b0be;font-size:0.85rem;margin-top:10px;">Dein Team und das gegnerische Team bereiten sich vor...</p></div>'; 
                 }
             } else if (isPartner) {
-                _renderBingoInputGrid('partner', bingo.partnerWords);
+                _renderBingoInputGrid('partner', bingo.partnerWords, bingo.topic);
             } else if (isOpposing) {
-                _renderBingoInputGrid('opposing', bingo.opposingWords);
+                _renderBingoInputGrid('opposing', bingo.opposingWords, bingo.topic);
             }
             return;
         }

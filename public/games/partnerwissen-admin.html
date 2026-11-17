@@ -3,7 +3,6 @@
     .partner-admin-team { padding:12px; border:1px solid #566078; border-radius:7px; }
     .partner-admin-question { padding:10px; margin-top:8px; border:1px solid #566078; border-radius:6px; }
     .partner-admin-question button { margin:4px 4px 0 0; }
-    .partner-admin-score { display:flex; align-items:center; gap:8px; margin:8px 0; }
     @media (max-width:700px) { .partner-admin-teams { grid-template-columns:1fr; } }
 </style>
 
@@ -14,8 +13,6 @@
     <select id="partnerCatalog" style="width:100%; padding:7px; margin:4px 0 10px;"></select>
     <div id="partnerAdminRoles" class="partner-admin-teams"></div>
     <button onclick="startPartnerRound()">Runde starten</button>
-    <button onclick="resetPartnerGame()">Spiel zurücksetzen</button>
-    <div id="partnerAdminScores"></div>
     <div id="partnerAdminQuestions" class="partner-admin-teams"></div>
 </div>
 
@@ -75,39 +72,17 @@
         });
     };
 
-    window.resetPartnerGame = function() {
-        socket.emit('adminResetPartnerGame');
-    };
 
-    window.changePartnerPoint = function(team, amount) {
-        socket.emit('adminAddPartnerPoint', { team, amount });
-    };
 
     window.onPartnerAdminUpdate = function(game) {
         partnerAdminGame = game;
         const status = document.getElementById('partnerAdminStatus');
-        const scores = document.getElementById('partnerAdminScores');
         const questions = document.getElementById('partnerAdminQuestions');
-        if (!status || !scores || !questions) return;
+        if (!status || !questions) return;
 
         status.innerText = game.round
             ? `Runde ${game.round} / 4 | ${game.phase} | ${game.catalogName || ''}`
             : 'Keine Runde aktiv.';
-        scores.innerHTML = '<h3>Punkte</h3>';
-        Object.entries(game.scores || {}).forEach(([team, points]) => {
-            const row = document.createElement('div');
-            row.className = 'partner-admin-score';
-            row.innerHTML = `<strong>${team}: ${points}</strong>`;
-            const minus = document.createElement('button');
-            minus.innerText = '-1';
-            minus.onclick = () => changePartnerPoint(team, -1);
-            const plus = document.createElement('button');
-            plus.innerText = '+1';
-            plus.onclick = () => changePartnerPoint(team, 1);
-            row.appendChild(minus);
-            row.appendChild(plus);
-            scores.appendChild(row);
-        });
 
         questions.innerHTML = '';
         Object.entries(game.teams || {}).forEach(([team, teamGame]) => {

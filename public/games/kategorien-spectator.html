@@ -1,22 +1,4 @@
 <style>
-    .category-spectator-scores {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 16px;
-        margin: 0 auto 14px;
-    }
-    .category-spectator-score-box {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 16px;
-        border-radius: 6px;
-        background: #171922;
-        font-size: 1.15rem;
-        font-weight: bold;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
 
     .category-spectator-categories {
         display: grid;
@@ -120,7 +102,6 @@
 
 <div style="width: 100%; box-sizing: border-box;">
     <h2 style="margin: 0 0 10px 0; font-size: 1.45rem;">Begriffe Kategorien zuordnen</h2>
-    <div id="categorySpectatorScores" class="category-spectator-scores"></div>
     <p id="categorySpectatorStatus" style="margin: 0 0 10px 0; color: #a4b0be; font-size: 1rem;">Warte auf eine Runde...</p>
     <div id="categorySpectatorCategories" class="category-spectator-categories"></div>
     <div id="categorySpectatorUnassigned" class="category-spectator-unassigned" style="display: none;">
@@ -133,31 +114,15 @@
     window.onSpectatorStateUpdate = function(state) {
         const game = state.categoryGame || {};
         const status = document.getElementById('categorySpectatorStatus');
-        const scoresBoard = document.getElementById('categorySpectatorScores');
         const categories = document.getElementById('categorySpectatorCategories');
         const unassigned = document.getElementById('categorySpectatorUnassigned');
         const unassignedItems = document.getElementById('categorySpectatorUnassignedItems');
         if (!status || !categories || !unassigned || !unassignedItems) return;
 
-        status.innerText = game.roundName ? `Runde: ${game.roundName}` : 'Warte auf eine Runde...';
+        const turn = game.turn || {};
+        const turnText = turn.team ? ` | ${turn.team} ist dran: ${turn.expired ? 'Zeit abgelaufen' : turn.remaining + 's'}` : '';
+        status.innerText = game.roundName ? `Runde: ${game.roundName}${turnText}` : 'Warte auf eine Runde...';
 
-        // Render Scores (Points)
-        if (scoresBoard) {
-            scoresBoard.innerHTML = '';
-            const scores = game.scores || {};
-            const teams = state.teams || {};
-            Object.keys(teams).forEach(teamName => {
-                const teamData = teams[teamName] || {};
-                const color = teamData.color || '#fff';
-                const pts = scores[teamName] || 0;
-
-                const box = document.createElement('div');
-                box.className = 'category-spectator-score-box';
-                box.style.borderLeft = `5px solid ${color}`;
-                box.innerHTML = `<span style="color: ${color};">${teamName}:</span> <span>${pts} Pkt.</span>`;
-                scoresBoard.appendChild(box);
-            });
-        }
 
         if (!game.roundName || game.phase !== 'PLAYING') {
             categories.innerHTML = '';

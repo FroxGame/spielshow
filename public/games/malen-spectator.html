@@ -17,23 +17,6 @@
         padding-bottom: 10px;
         border-bottom: 1px solid #2a2f40;
     }
-    .malen-spec-scores {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-    }
-    .malen-spec-score-box {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        padding: 5px 14px;
-        border-radius: 6px;
-        background: #171922;
-        font-size: 1.05rem;
-        font-weight: bold;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
     .malen-spec-word {
         font-size: 1.25rem;
         font-weight: bold;
@@ -98,7 +81,6 @@
     <div class="malen-spec-header">
         <h3 style="margin: 0; font-size: 1.35rem;">Blindes Malen</h3>
         <div id="malenSpecWord" class="malen-spec-word" style="display: none;">-</div>
-        <div id="malenSpecScores" class="malen-spec-scores"></div>
     </div>
     <div id="malenSpecContent"></div>
 </div>
@@ -167,20 +149,6 @@
         const players = state.players || {};
         const phase = malen.phase || 'IDLE';
 
-        // Scores
-        const scoresEl = document.getElementById('malenSpecScores');
-        if (scoresEl) {
-            scoresEl.innerHTML = '';
-            const scores = malen.scores || {};
-            Object.keys(teams).forEach(t => {
-                const color = (teams[t] || {}).color || '#fff';
-                const box = document.createElement('div');
-                box.className = 'malen-spec-score-box';
-                box.style.borderLeft = '4px solid ' + color;
-                box.innerHTML = '<span style="color:' + color + '">' + t + ':</span> <span>' + (scores[t] || 0) + ' Pkt.</span>';
-                scoresEl.appendChild(box);
-            });
-        }
 
         const wordEl = document.getElementById('malenSpecWord');
         if (wordEl) {

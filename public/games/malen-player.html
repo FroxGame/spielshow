@@ -8,24 +8,6 @@
         margin: 0 auto;
         box-sizing: border-box;
     }
-    .malen-player-scores {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-bottom: 12px;
-        max-width: 900px;
-    }
-    .malen-player-score-box {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 14px;
-        border-radius: 6px;
-        background: #1c202c;
-        font-size: 1rem;
-        font-weight: bold;
-    }
     .malen-word-banner {
         font-size: 1.5rem;
         font-weight: bold;
@@ -71,7 +53,7 @@
     }
     .malen-canvas-blind-notice {
         color: #718093;
-        padding: 20px;
+        padding: 10px 20px;
         line-height: 1.5;
         font-size: 1.1rem;
         font-weight: bold;
@@ -114,7 +96,6 @@
 
 <div class="malen-player-container">
     <h2 style="margin: 0 0 10px; text-align: center;">Blindes Malen</h2>
-    <div id="malenPlayerScores" class="malen-player-scores"></div>
     <div id="malenPlayerContent" style="width: 100%; display: flex; flex-direction: column; align-items: center;"></div>
 </div>
 
@@ -289,20 +270,6 @@
         const teams = state.teams || {};
         const phase = malen.phase || 'IDLE';
 
-        // Update scores
-        const scoresEl = document.getElementById('malenPlayerScores');
-        if (scoresEl) {
-            scoresEl.innerHTML = '';
-            const scores = malen.scores || {};
-            Object.keys(teams).forEach(t => {
-                const color = (teams[t] || {}).color || '#fff';
-                const box = document.createElement('div');
-                box.className = 'malen-player-score-box';
-                box.style.borderLeft = '4px solid ' + color;
-                box.innerHTML = '<span style="color:' + color + '">' + t + ':</span> <span>' + (scores[t] || 0) + ' Pkt.</span>';
-                scoresEl.appendChild(box);
-            });
-        }
 
         const container = document.getElementById('malenPlayerContent');
         if (!container) return;
@@ -343,8 +310,12 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = 'malen-canvas-wrapper malen-canvas-blind';
                 wrapper.id = 'painterPad';
-                wrapper.innerHTML = '<div class="malen-canvas-blind-notice">🎨 Hier blind zeichnen (Maus oder Finger)<br><span style="font-size: 0.85rem; font-weight: normal; opacity: 0.7;">(Du siehst deine Striche nicht)</span></div>';
                 container.appendChild(wrapper);
+
+                const notice = document.createElement('div');
+                notice.className = 'malen-canvas-blind-notice';
+                notice.innerHTML = '🎨 Hier blind zeichnen (Maus oder Finger)<br><span style="font-size: 0.85rem; font-weight: normal; opacity: 0.7;">(Du siehst deine Striche nicht)</span>';
+                container.appendChild(notice);
 
                 const controls = document.createElement('div');
                 controls.className = 'malen-player-controls';
@@ -405,6 +376,17 @@
                     if (canvas) _clearCanvas(canvas);
                 }
             }
+        }
+
+        const banner = document.getElementById('malenRevealBanner');
+        if (!isPainter && malen.wordRevealed) {
+            const target = banner || document.createElement('div');
+            target.id = 'malenRevealBanner';
+            target.className = 'malen-word-banner';
+            target.textContent = `Der Begriff war: ${malen.word}`;
+            if (!banner) container.appendChild(target);
+        } else if (banner) {
+            banner.remove();
         }
     };
 </script>

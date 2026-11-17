@@ -1,284 +1,430 @@
-# AGENTS.md - Spielshow Projekt
+# AGENTS.md - Spielshow
 
-## Projektübersicht
-Dies ist eine interaktive Spielshow-Webanwendung für private Veranstaltungen mit Freunden. Die Anwendung besteht aus einem Node.js/Express-Server mit Socket.IO für Echtzeit-Kommunikation und mehreren HTML-Spielen.
+Dies ist die einzige Anleitung, die du als KI-Agent brauchst. Sie reicht, um ein neues Spiel vollständig und im Standard der anderen Spiele umzusetzen, ohne weitere Dokumente zu lesen. Der Nutzer-Leitfaden (welche Infos der Nutzer liefern soll) steht in `README.md` unter "Neues Spiel anfordern". Fehlen Infos daraus, frage nach, bevor du baust (siehe Abschnitt 2).
 
-## Architektur
+## 1. Projekt in 30 Sekunden
 
-### Backend
-- **Server**: `server.js` (Node.js mit Express und Socket.IO)
-- **Daten**: JSON-Dateien für Spielinhalte (`*.json`)
-- **Modulare Spiele**: Separate HTML-Dateien in `public/games/`
+Lokale Spielshow für Freunde. Node.js (Express + Socket.IO), kein Build-Schritt. Drei Browser-Ansichten:
 
-### Frontend
-- **Hauptseite**: `public/index.html` (Spieler & Zuschauer)
-- **Admin**: `public/admin.html`
-- **Spielmodule**: `public/games/[spiel]-admin.html`, `[spiel]-player.html`, `[spiel]-spectator.html`
+- **Admin** (`/admin.html`): der Host steuert alles.
+- **Spieler** (`/`): Spieler in Teams (zwei Teams, umbenennbar). Neue Spieler sind in **keinem Team**, der Admin weist zu.
+- **Zuschauer** (`/spectator.html`): Host-Bildschirm für alle, braucht Passwort.
 
-## Spielmodi
+Es läuft immer genau ein Spiel (`gameState.currentScreen`). Jedes Spiel hat Punkte pro Team. Die Gesamtwertung zählt gewonnene Spiele (Ziel: 5 Siege).
 
-| Spiel | ID | Beschreibung |
-|-------|-----|--------------|
-| Listenwissen | LISTENWISSEN | Wörter erraten |
-| Wo ist das auf der Karte? | KARTE | Orte auf Karte zeigen |
-| Begriffe Kategorien zuordnen | KATEGORIEN | Drag & Drop Kategorien |
-| Diktat | DIKTAT | Sätze tippen |
-| Blindes Malen | MALEN | Begriffe malen |
-| Ich weiß, was mein Partner weiß | PARTNERWISSEN | Partnerfragen |
-| Referat Bingo | BINGO | Bingo mit Referatsthemen |
-| Das kam bei Discord nicht an | DISCORD_GAME | Hinweise raten |
-| Promis raten | PROMI_RATEN | Promi-Bilder erraten |
-| Drudel | DRUDEL | Verwaschene Bilder |
-| Merken | MERKEN | 30 Karten merken |
-| Ist es real oder nicht? | REALITAET | Bilder bewerten |
-| Flaggen bauen | FLAGGEN | Flaggen zusammenbauen |
-| Buchstabensalat | BUCHSTABENSALAT | Buchstaben anordnen |
-
-## Wichtige Konzepte
-
-### State Management
-- **Zentraler gameState** in `server.js` verwaltet alle Spielzustände
-- **Module-spezifische States**: `discordGame`, `promiGame`, `drudelGame`, `diktatGame`, `partnerGame`, `categoryGame`, `flaggenGame`, `buchstabensalatGame`, `merkenGame`, `realitaetGame`
-- **Team-Scores**: Jedes Spiel hat eigene Scores pro Team
-
-### Socket.IO Events
-
-#### Client → Server
-- `registerAsPlayer`: Spieler verbindet sich
-- `adminLogin`: Admin-Authentifizierung
-- `spectatorLogin`: Zuschauer-Authentifizierung
-- `adminStartGame`: Spiel starten
-- `admin*`: Admin-spezifische Events (z.B. `adminNextPromiImage`)
-- `player*`: Spieler-spezifische Events (z.B. `pressPromiBuzzer`)
-
-#### Server → Client
-- `stateUpdate`: Gesamter State
-- `*AdminUpdate`: Admin-spezifische Updates
-- `*PlayerUpdate`: Spieler-spezifische Updates
-- `*SpectatorUpdate`: Zuschauer-Updates
-
-### Authentifizierung
-- **Admin-Passwort**: `ADMIN_PASSWORD = "1234"` (in `server.js`)
-- **Spectator-Passwort**: `SPECTATOR_PASSWORD = "1234"` (in `server.js`)
-- **Wichtig**: Passwörter sollten aus der Umgebung gelesen werden!
-
-## Dateistruktur
-
-```
-spielshow/
-├── server.js                 # Hauptserver
-├── *.json                    # Spielinhalte
-│   ├── bingo.json
-│   ├── discord.json
-│   ├── diktat.json
-│   ├── flaggen.json
-│   ├── karte.json
-│   ├── kategorien.json
-│   ├── malen.json
-│   ├── partnerwissen.json
-│   └── buchstabensalat.json
-├── listenwissen.js           # Modul für Listenwissen
-├── package.json
-├── public/
-│   ├── index.html            # Spieler/Spectator
-│   ├── admin.html            # Admin
-│   ├── karte-config.js       # Kartenkonfiguration
-│   ├── europe_land_clean.js  # Europakarte
-│   └── games/
-│       ├── [spiel]-admin.html
-│       ├── [spiel]-player.html
-│       ├── [spiel]-spectator.html
-│       ├── drudel/           # Drudel-Bilder
-│       ├── promis/           # Promi-Bilder
-│       └── realitaet/        # Realität-Bilder
-```
-
-## Best Practices für Erweiterungen
-
-### Neue Spiele hinzufügen
-
-1. **JSON-Daten erstellen**: `public/games/[spiel]/[spiel].json`
-2. **Manifest erstellen**: `[spiel].json` mit Bild-Liste
-3. **Server-Logik**:
-   - Game State im `gameState` Objekt hinzufügen
-   - Socket.IO Events für Admin und Spieler hinzufügen
-   - Emit-Funktionen für State-Updates erstellen
-4. **HTML-Dateien**:
-   - `[spiel]-admin.html`: Admin-Steuerung
-   - `[spiel]-player.html`: Spieler-Ansicht
-   - `[spiel]-spectator.html`: Zuschauer-Ansicht
-5. **Hauptseite aktualisieren**:
-   - In `index.html`: Module-Map erweitern
-   - In `server.js`: `gameIntroDetails` erweitern
-   - In `admin.html`: Start-Buttons hinzufügen
-
-### Code-Qualität
-
-- **DRY (Don't Repeat Yourself)**: Gemeinsame Funktionen extrahieren
-- **KISS (Keep It Simple)**: Einfache Lösungen bevor komplexe
-- **YAGNI (You Aren't Gonna Need It)**: Nicht für hypothetische Anforderungen entwickeln
-- **Modularität**: Spiele sollten unabhängig voneinander sein
-
-### Sicherheit
-
-- **Passwörter**: Aus Umgebungsvariablen lesen (`process.env.ADMIN_PASSWORD`)
-- **Input-Validierung**: Alle Benutzereingaben validieren
-- **Sandboxing**: `eval()` vermeiden (aktuell in `index.html` verwendet)
-
-### Performance
-
-- **State-Updates**: Nur notwendige Daten emitieren
-- **Timer**: Intervalle bei Spielende sauber löschen
-- **Speicher**: Alte Daten bereinigen (z.B. `diktatTexts`)
-
-## Entwicklungsumgebung
-
-### Installation
 ```bash
 npm install
+npm start          # Port 3000 (PORT überschreibbar), lädt .env automatisch (Node >= 22.9)
+npm run check      # Lint + HTML-Prüfung + Rauchtest mit echtem Server. Pflicht nach jeder Änderung
 ```
 
-### Starten
-```bash
-node server.js
+Passwörter: `ADMIN_PASSWORD`, `SPECTATOR_PASSWORD` (Standard `1234`). Der Rauchtest nutzt Port 3999. Bleibt ein Test-Server hängen, ist der Port belegt und der Test bricht mit `EADDRINUSE` ab: Prozess beenden und neu starten.
+
+## 2. Vorgehen für ein neues Spiel
+
+1. **Anforderungen klären.** Du brauchst vom Nutzer mindestens: Ablauf (aus Sicht von Admin, Spieler, Zuschauer), Höchstpunktzahl (Zahl oder keine), Buzzer ja/nein, Timer ja/nein, spezielle Admin-Buttons, Inhalte und Format, Geheimnisse (was darf wer nicht sehen). Der vollständige Fragenkatalog steht in `README.md` ("Neues Spiel anfordern"). Frage gezielt nach, was fehlt. Rate nicht bei Punkte-Limit, Buzzer und Timer.
+2. **Standard abbilden** (Abschnitt 4): Was der Kern liefert, baust du nicht nach.
+3. **Server-Modul** schreiben (Abschnitt 5) und in `server/registry.js` eintragen.
+4. **Drei Client-Seiten** schreiben (Abschnitt 6).
+5. **Inhalte** anlegen (Abschnitt 7).
+6. **Test** ergänzen und `npm run check` ausführen (Abschnitt 8).
+7. **Doku** aktualisieren (Abschnitt 9) und die Abnahme-Checkliste durchgehen (Abschnitt 10).
+
+Ist das neue Spiel ein "Bild erraten mit Buzzer" (wie Promis, Drudel): nur eine kleine Datei mit `createImageGuessGame` anlegen (siehe Abschnitt 5.6). Dafür sind keine neuen Client-Seiten nötig.
+
+## 3. Architektur
+
+```
+server.js                    Start: Express, Socket.IO, verdrahtet Kern + Spiele
+server/
+  context.js                 Kontext (ctx): gameState, Helfer
+  registry.js                Liste aller Spiele, Pflichtfeld-Prüfung, liefert /games.json
+  utils.js                   Konstanten, addScore, Validierung, JSON lesen
+  core/
+    auth.js                  Admin-/Zuschauer-Login
+    players.js               Anmeldung, Namen, Teamzuweisung
+    teams.js                 Teams umbenennen (ruft renameTeam jedes Spiels), Gesamtpunkte
+    screens.js               Spielwechsel, Spiel starten (Intro-Animation)
+    notes.js                 Team-Textfelder (Notizen), globaler Schalter
+    game-controls.js         Generische Events: Punkte, Reset, Buzzer
+    safe-socket.js           fängt Fehler in Handlern ab, loggt den Event-Namen
+  games/<spiel>.js           ein Modul pro Spiel. image-guess.js ist die Basis für Promis/Drudel
+public/
+  index.html                 Spieler-Shell
+  admin.html                 Admin-Shell
+  spectator.html             Zuschauer-Shell
+  shared/shared.js|css       gemeinsame Bausteine, globales Objekt `Spielshow`
+  games/<clientModule>-admin|player|spectator.html
+tests/smoke.js               Rauchtest (jedes Spiel automatisch)
+tests/check-html.js          Syntax der Seiten-Skripte, verwaiste Element-IDs, alte Events
+*.json im Projektroot        Spielinhalte
 ```
 
-### Zugriffsadressen
-- Admin: `http://localhost:3000/admin.html`
-- Spieler: `http://localhost:3000/`
-- Zuschauer: `http://localhost:3000/spectator.html`
+Datenfluss: Clients senden Events → Modul ändert `gameState` → `emitState()` sendet `stateUpdate` (der **gesamte** State) an alle → jede Seite rendert in `onModuleStateUpdate` bzw. `onSpectatorStateUpdate`.
 
-## Häufige Aufgaben
+Die Spieleliste hat eine einzige Quelle: `server/registry.js`. Die Shells laden sie über `GET /games.json` (Felder `id, number, title, stateKey, clientModule, maxScore, buzzer, layout`). Es gibt keine zweite Liste in den Shells und keine Spielnamen in `admin.html`, `index.html` oder `spectator.html`.
 
-### Teamnamen ändern
-- Admin Panel → Teamverwaltung → Namen bearbeiten
-- Server-seitig: `adminUpdateTeamName` Event
+### Bestehende Spiele (Vorlagen)
 
-### Spieler zuweisen
-- Admin Panel → Spielerliste → Team zuweisen
-- Server-seitig: `adminUpdatePlayerTeam` Event
+| Nr | ID | clientModule | Besonderheit | Gute Vorlage für |
+|----|----|--------------|--------------|------------------|
+| 1 | LISTENWISSEN | listenwissen | aufdeckbare Wortliste | einfaches Spiel |
+| 2 | KARTE | karte | Vollbild, max. 7 | Vollbild-Layout |
+| 3 | KATEGORIEN | kategorien | Zug-Timer pro Team, ohne Punktelimit | Timer, Lösungen nur im Server |
+| 4 | DIKTAT | diktat | Spielereingaben, eigene Update-Kanäle, ohne Limit | Eingaben sammeln |
+| 5 | MALEN | malen | Rollen (Maler), Zeichnen, ohne Limit | Rollen, Echtzeit-Daten |
+| 6 | PARTNERWISSEN | partnerwissen | Rollen pro Team, private Ansichten | private Spieleransichten |
+| 7 | BINGO | bingo | Referent + Raster, Timer, ohne Limit | Rollen + Timer |
+| 8 | DISCORD_GAME | discord | private Rollenansichten, ohne Limit | Geheimnisse pro Rolle |
+| 9 | PROMI_RATEN | image-guess | Buzzer | Bild erraten (Konfiguration) |
+| 10 | DRUDEL | image-guess | Buzzer | Bild erraten (Konfiguration) |
+| 11 | MERKEN | merken | Timer, max. 7 | Timer + eigenes Limit |
+| 12 | REALITAET | realitaet | Timer, ohne Limit | Timer |
+| 13 | FLAGGEN | flaggen | Bauen per Drag, Timer | komplexe Spielereingaben |
+| 14 | BUCHSTABENSALAT | buchstabensalat | Buzzer, Schritt-Timer, Lösung im Server | **Buzzer + Timer (beste Vorlage)** |
+| 15 | TEEKESELCHEN | teekesselchen | Buzzer, Schreibphase, private Kategorie je Team | **private Daten pro Team, Phasen** |
 
-### Spielstand anpassen
-- Admin Panel: +/- Buttons pro Spiel
-- Server-seitig: `adminAdd*Point` Events
+(Die ID von Teekesselchen heißt `TEEKESELCHEN` mit einem S. Sie ist so im Code und in Tests verankert.)
 
-### Spielinhalte bearbeiten
-- JSON-Dateien in Projektwurzel bearbeiten
-- Bilder in `public/games/[spiel]/images/` hinzufügen
+## 4. Der Standard: Was der Kern automatisch liefert
 
-## Troubleshooting
+Baue das **nicht** in ein Spiel. Es ist für jedes Spiel schon da.
 
-### Spieler verbinden sich nicht
-- Socket.IO Connection prüfen
-- Browser-Konsole auf Fehler untersuchen
-- `gameState.players` im Server prüfen
+| Funktion | Wo sichtbar | Wie es funktioniert |
+|----------|-------------|---------------------|
+| Start-Button mit Spielname | Admin | aus `/games.json`, Text "<Nr>. <title> starten" |
+| Intro-Animation (Spielnummer + Name) | alle | `adminStartGame` sendet `gameIntro` |
+| Punkteleiste je Team ("n / max" oder nur "n") | Spieler, Zuschauer | liest `gameState[stateKey].scores` und `maxScore` |
+| Punkte +1 / -1 je Team | Admin | Event `adminAddGamePoint { team, amount }`, begrenzt auf 0..`maxScore` |
+| **Reset-Button "Spiel zurücksetzen"** (mit Rückfrage) | Admin | Event `adminResetGame` → `reset()` des Moduls. **Setzt alles inklusive Punkte auf den Startzustand.** Jedes Spiel hat ihn |
+| Buzzer-Button, Ton, Status | Spieler: fest am unteren Bildschirmrand ab Spielbeginn (wandert nie), auch per **Leertaste** auslösbar, außer in Eingabefeldern | wenn `buzzer: true` |
+| Buzzer sperren / freigeben | Admin | `adminLockBuzzer`, `adminResetBuzzer` |
+| Buzzer-Anzeige + Ton | Zuschauer | wenn `buzzer: true` |
+| Textfelder (Notizen) für Teams | Spieler unten, Zuschauer | **global**, vom Admin im Dashboard ein-/ausschaltbar (`adminSetNotesEnabled`, `gameState.notesEnabled`, Standard aus). Ein Spiel tut dafür nichts |
+| Teamzuweisung, Umbenennen, Gesamtwertung | Admin | Kern |
+| Admin-Schutz, Fehlerabfang in Handlern | Server | `isAdmin`, `safe-socket.js` |
 
-### Spiel startet nicht
-- `gameIntroDetails` in `server.js` prüfen
-- Module-Map in `index.html` prüfen
-- Admin-Login erfolgreich?
+Punkte-Konvention: `scores` ist `{ [teamName]: Zahl }`. Immer `{ team, amount }` als Parameter. Prüfe nie `!scores[team]` (bei 0 Punkten wahr), sondern `=== undefined`.
 
-### Timer läuft weiter
-- `clearInterval()` bei Reset aufrufen
-- Timer-IDs speichern (`flaggenTimerInterval`, etc.)
+Buzzer-Felder im Spiel-State: `buzzerLocked`, `buzzerWinner` (Text "Name (Team)"), `buzzerTeam`, `buzzerOpen` (vom Server vor jedem Senden berechnet aus `buzzerLocked` und `canBuzz()`). Buzzern kann nur ein Spieler **mit Team**.
 
-## Wichtige Hinweise
+## 5. Server-Modul `server/games/<spiel>.js`
 
-⚠️ **Kritisch**:
-- `eval()` in `index.html` wird für dynamische Scripts verwendet → Sicherheitsrisiko!
-- Passwörter sind im Klartext in `server.js` → Umgebungsvariablen verwenden!
-- Keine Input-Validierung bei vielen Events → XSS-Risiko!
+### 5.1 Pflichtfelder
 
-✅ **Empfohlen**:
-- Code nach CLEANCODE.md refaktorisieren
-- Unit Tests hinzufügen
-- Environment Variables für Konfiguration
-- Error Logging implementieren
+Die Registry bricht beim Start ab, wenn eines fehlt: `id`, `title`, `stateKey`, `clientModule`, `createState`, `reset`, `register`, `renameTeam`.
 
-## Wichtige Lessons Learned (aus Buchstabensalat-Entwicklung)
+### 5.2 Vorlage (vollständig)
 
-### Socket-Event Parameter Konsistenz
-- **Problem**: Server erwartete `{ change }`, Client sendete `{ team, amount }`
-- **Lösung**: Immer `{ team, amount }` verwenden (wie bei `adminAddCategoryPoint`)
-- **Beispiel**:
-```javascript
-// Client
-socket.emit('adminAddBuchstabensalatPoint', { team: team, amount: amount });
+```js
+'use strict';
 
-// Server
-socket.on('adminAddBuchstabensalatPoint', ({ team, amount }) => {
-    if (game.scores[team] !== undefined) {
-        game.scores[team] = Math.max(0, Math.min(5, game.scores[team] + amount));
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..', '..');     // Projektroot (für JSON-Dateien)
+
+module.exports = function createMeinSpielGame(ctx) {
+    const { gameState, createScores, byTeam, renameKey, emitState, isAdmin, utils } = ctx;
+
+    const roundsPath = path.join(ROOT, 'mein-spiel.json');
+    let secretAnswer = null;      // Geheimnisse bleiben privat im Modul, NICHT im State
+    let timer = null;             // Timer-Handle, wird in reset() gelöscht
+
+    const state = () => gameState.meinSpielGame;
+
+    function stopTimer() {
+        if (timer) clearInterval(timer);
+        timer = null;
     }
-});
-```
 
-### Event-Handler Namen pro View-Typ
-- **Admin-Seite**: Verwendet `onModuleStateUpdate` (geladen über `admin.html`)
-- **Player-Seite**: Verwendet `onModuleStateUpdate` (geladen über `index.html`)
-- **Spectator-Seite**: Verwendet `onSpectatorStateUpdate` (geladen über `spectator.html`)
+    // EINZIGE Quelle für den Startzustand. Alles, was zurückgesetzt werden soll, gehört hierher.
+    function createState() {
+        return {
+            meinSpielGame: {
+                phase: 'IDLE',
+                // buzzerLocked: false, buzzerWinner: null, buzzerTeam: null,   // nur bei buzzer: true
+                scores: createScores()
+            }
+        };
+    }
 
-**Wichtig**: Falscher Handler-Namen führt dazu, dass Updates nicht empfangen werden!
+    // Reset = vollständiger Startzustand inklusive Punkten.
+    function reset() {
+        stopTimer();
+        secretAnswer = null;
+        Object.assign(gameState, createState());
+    }
 
-### Punktelogik - Konsistentes Rendering
-- **Falsch**: Punkte nur einmal anzeigen (`if (container.innerHTML === '')`)
-- **Richtig**: Punkte bei jedem Update neu rendern (`container.innerHTML = ''`)
-- **Beispiel**:
-```javascript
-// Richtig - wie bei "Begriffe Kategorien zuordnen"
-if (scoresContainer && scores && typeof scores === 'object') {
-    scoresContainer.innerHTML = ''; // Immer neu rendern!
-    Object.entries(scores).forEach(function(entry) {
-        var team = entry[0];
-        var points = entry[1] !== undefined && entry[1] !== null ? entry[1] : 0;
-        // ... render code ...
-    });
-}
-```
-
-### Default Values für Scores
-- **Problem**: `scores['Team 1'] || 0` funktioniert nicht wenn `scores['Team 1'] === null`
-- **Lösung**: Explizite Prüfung auf `undefined` und `null`:
-```javascript
-var points = entry[1] !== undefined && entry[1] !== null ? entry[1] : 0;
-```
-
-### Dynamische Script-Execution in admin.html
-- **Problem**: `eval()` in `admin.html` führt zu Scope-Problemen
-- **Lösung**: Funktionen als `window.functionName = function()` definieren
-- **Beispiel**:
-```javascript
-// FALSCH
-function adminAddBuchstabensalatPoint(team, amount) { ... }
-
-// RICHTIG
-window.adminAddBuchstabensalatPoint = function(team, amount) { ... };
-```
-
-### Dropdown Loading in Dynamisch Geladenen Modules
-- **Problem**: `DOMContentLoaded` Event wird nicht ausgelöst bei dynamisch geladenen Scripts
-- **Lösung**: Sofortige Execution mit IIFE:
-```javascript
-// FALSCH
-window.addEventListener('DOMContentLoaded', function() { ... });
-
-// RICHTIG
-(function() {
-    fetch('/buchstabensalat.json')
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            // ... load options ...
+    // Nur spielspezifische Events. Punkte/Reset/Buzzer NICHT hier.
+    function register(socket) {
+        socket.on('adminStartMeinSpielRound', ({ roundId } = {}) => {
+            if (!isAdmin(socket)) return;                       // Pflicht bei jedem admin*-Event
+            if (typeof roundId !== 'string') return;            // Eingaben validieren
+            const round = utils.readJsonArray(roundsPath).find(entry => entry.id === roundId);
+            if (!round) return;
+            secretAnswer = round.answer;                        // Lösung nur privat merken
+            Object.assign(state(), { phase: 'PLAYING' });
+            emitState();                                        // nach JEDER State-Änderung
         });
-})();
+    }
+
+    // Alles umziehen, was Teamnamen als Schlüssel ODER als Wert enthält.
+    function renameTeam(oldName, newName) {
+        renameKey(state().scores, oldName, newName);
+        // renameKey(state().andereMapNachTeam, oldName, newName);
+        // if (state().buzzerTeam === oldName) state().buzzerTeam = newName;
+    }
+
+    return {
+        id: 'MEIN_SPIEL',                 // GROSSBUCHSTABEN, eindeutig, = currentScreen
+        title: 'Mein Spiel',              // erscheint auf Start-Button und im Intro
+        stateKey: 'meinSpielGame',        // Schlüssel in gameState
+        clientModule: 'mein-spiel',       // Dateipräfix in public/games/
+        // maxScore: null,                // optional, siehe 5.3
+        // layout: 'wide',                // optional, siehe 5.3
+        // buzzer: true, canBuzz: () => state().phase === 'PLAYING',   // optional
+        createState,
+        reset,
+        register,
+        renameTeam
+    };
+};
 ```
 
-## Versionierung
-- Version: 1.1.0
-- Letzte Änderung: 2026-11-09
-- **Neu**: Buchstabensalat Spiel vollständig implementiert
-- **Neu**: Punktelogik konsistent über alle Spiele hinweg
-- **Neu**: Socket-Event Parameter Standardisierung
-- Node.js: >= 14.x
+### 5.3 Optionale Felder und Hooks
 
-## Lizenz
-ISC (siehe package.json)
+| Feld | Bedeutung |
+|------|-----------|
+| `maxScore` | Höchstpunktzahl. Standard 5. Eine Zahl für ein anderes Limit (z. B. 7). **`null` = unbegrenzt, Anzeige nur "n"** (so bei Kategorien, Diktat, Malen, Bingo, Discord, Realität, Partnerwissen). Frage den Nutzer, nimm nie still den Standard an |
+| `layout` | `'default'` (schmal, 500 px), `'medium'` (750 px), `'wide'` (1400 px), `'fullscreen'` (Vollbild, wie Karte). Gilt für die Spieler-Shell. Die Zuschauer-Shell kennt nur Vollbild |
+| `buzzer: true` | aktiviert Buzzer. Dazu State-Felder `buzzerLocked: false, buzzerWinner: null, buzzerTeam: null` in `createState()` und in `reset()` mitführen |
+| `canBuzz()` | `true`, wenn gerade gebuzzert werden darf (z. B. `phase === 'PLAYING'`). Steuert auch `buzzerOpen` |
+| `onBuzz(player)` | nach einem gültigen Buzz (z. B. Timer pausieren) |
+| `onBuzzerReset()` | wenn der Admin den Buzzer freigibt |
+| `onScoreChanged(team)` | nach `adminAddGamePoint`, vor dem Senden. Für Gewinnregeln (z. B. bei Limit Buzzer sperren) |
+| `emitUpdates()` | wird nach Punkte/Reset zusätzlich aufgerufen, wenn das Spiel Sonderkanäle (`io.to(...)`) nutzt |
+| `onScreenEnter()` | wenn dieses Spiel aktiv wird (nach `stateUpdate`) |
+| `onPlayerRegistered()` | wenn sich ein Spieler anmeldet, während dieses Spiel läuft (private Ansichten nachsenden) |
+| `onAdminLogin(socket)`, `onSpectatorLogin(socket)` | Admin/Zuschauer nach dem Login mit Spieldaten versorgen |
+| `registerRoutes(app)` | eigene HTTP-Route. **Nie** Lösungen darüber ausliefern |
+
+### 5.4 Kontext `ctx`
+
+| Feld | Zweck |
+|------|-------|
+| `io`, `gameState` | Socket.IO und zentraler State |
+| `adminSockets`, `spectatorSockets` | `Set`s der Socket-IDs |
+| `isAdmin(socket)` | Admin-Prüfung |
+| `emitState()` | `stateUpdate` an alle senden (berechnet vorher `buzzerOpen`) |
+| `createScores()` | `{ [team]: 0 }` für alle aktuellen Teams |
+| `byTeam(team => wert)` | Objekt je Team, z. B. `byTeam(() => [])` |
+| `teamNames()` | aktuelle Teamnamen |
+| `renameKey(map, alt, neu)` | verschiebt einen Teamnamen-Schlüssel |
+| `getPlayerName(id)` | Spielername |
+| `playerNotes` | Notizen je Spieler (nur Kern nutzt das) |
+| `utils` | siehe unten |
+
+`utils`: `MAX_POINTS_PER_GAME` (5), `readJsonFile(pfad)`, `readJsonArray(pfad, filterFn?)`, `isValidTeamName`, `isValidIndex(i, min, max)`, `sanitizeString(text, maxLänge)`, `addScore(scores, team, amount, max)`, `getRandomElements`, `deepClone`.
+
+### 5.5 Regeln
+
+- Jeder `admin*`-Event beginnt mit `if (!isAdmin(socket)) return;`. Der Rauchtest prüft, dass Spieler keine Admin-Events auslösen können.
+- Alle Eingaben validieren (Typ, Länge, bekannter Teamname, Index im Bereich).
+- **Geheimnisse** (Lösung, Begriff, Rundendaten mit Antworten) bleiben in privaten Variablen im Modul. Jeder Client bekommt `stateUpdate` mit dem ganzen State, im State steht also nur, was alle sehen dürfen. Die Lösung kommt erst beim "Auflösen" in den State.
+  - Nur für Admins (z. B. Rundenliste mit Lösungen): Event `getXRounds` mit `if (!isAdmin(socket)) return;` und Antwort `receiveXRounds` (Vorlage: `buchstabensalat.js`).
+  - Nur für einzelne Spieler (z. B. eigene Kategorie): `io.to(player.id).emit('xPlayerUpdate', view)`, dazu Hook `onPlayerRegistered` und ein Abruf-Event `getXView` für Seiten, die nach dem Start laden (Vorlage: `teekesselchen.js`).
+- Timer: `setInterval` im Modul, jede Sekunde `emitState()`, Handle in `reset()` und beim Beenden löschen. Der Client zeigt nur an.
+- Teamnamen nie hartkodieren (`'Team 1'`). Nutze `createScores()`, `byTeam()`, `teamNames()`.
+- Neue Zustandsfelder immer in `createState()`, damit Reset sie zurücksetzt.
+- Event-Namen: `admin<Aktion><Spiel>` für den Admin (`adminStartMeinSpielRound`), `get<Daten>` zum Abrufen, `<Aktion><Spiel>` oder `player<Aktion>` für Spieler. Keine eigenen Punkte-, Reset-, Buzzer-Events.
+- Ein Start-Event des Spiels startet eine **Runde**. `adminStartGame` (Spielwechsel) setzt das Spiel nicht zurück.
+- Kein `eval`, keine Secrets im Code.
+
+### 5.6 Sonderfall "Bild erraten mit Buzzer"
+
+`server/games/image-guess.js` liefert die gesamte Logik (nächstes Bild, Name aufdecken, Gewinner bei Limit, Admin sieht die Lösung vorab). Ein neues Spiel dieser Art ist nur:
+
+```js
+'use strict';
+
+const { createImageGuessGame } = require('./image-guess');
+
+module.exports = function createMeinBilderSpiel(ctx) {
+    return createImageGuessGame(ctx, {
+        id: 'MEIN_BILDERSPIEL', title: 'Mein Bilderspiel', stateKey: 'meinBilderGame',
+        folder: 'mein-bilderspiel',        // public/games/<folder>/<folder>.json + images/
+        gameLabel: 'Bild'
+    });
+};
+```
+
+`<folder>.json` ist ein Array mit Namen (Bilder werden nach Dateinamen sortiert zugeordnet) oder mit Objekten `{ "name": "...", "image": "datei.jpg" }`. Bilder liegen in `public/games/<folder>/images/`. Clientseiten sind `image-guess-*` (geteilt). Registry-Eintrag genügt.
+
+### 5.7 Registry
+
+`server/registry.js`: `require('./games/<spiel>')` in `GAME_FACTORIES` an der gewünschten Stelle. Die Position ist die Spielnummer im Intro und auf dem Start-Button. Mehr ist serverseitig nicht nötig.
+
+## 6. Client-Seiten `public/games/<clientModule>-{admin,player,spectator}.html`
+
+Die Shells (`admin.html`, `index.html`, `spectator.html`) laden die Seite per `fetch`, setzen sie in einen Container und führen die `<script>`-Blöcke per `new Function(...)` im **globalen Scope** aus. Die Shell zeigt bereits Punkte, Buzzer, Textfelder, Reset und Punkte-Buttons. Die Seiten enthalten davon **nichts**.
+
+Globale Variablen in Seiten: `socket` (Socket.IO), `Spielshow` (Hilfsobjekt, siehe unten).
+
+### 6.1 Regeln
+
+- Handler: Admin- und Spielerseite `window.onModuleStateUpdate = function(state) {...}`, Zuschauerseite `window.onSpectatorStateUpdate = function(state) {...}`. Der Handler wird bei jedem `stateUpdate` und einmal nach dem Laden mit dem letzten State aufgerufen. Er muss wiederholt ausführbar sein und fehlende Elemente abfangen (`if (!el) return;`).
+- Funktionen für `onclick` als `window.name = function() {...}` definieren (sonst nicht erreichbar).
+- Daten sofort anfordern (kein `DOMContentLoaded`). Vor jedem `socket.on('x', ...)` ein `socket.off('x')`, sonst läuft der Handler nach erneutem Laden doppelt.
+- Eigene Variablen/Funktionen mit spielspezifischem Präfix benennen (alle Seiten teilen den globalen Scope).
+- Spielinfos nicht hartkodieren: `const game = Spielshow.getGame(state.currentScreen)` liefert `title`, `stateKey`, `maxScore`, `buzzer`, `layout`. Den Spielstate liest man mit `state[game.stateKey]`.
+- Nutzereingaben mit `textContent` setzen, nicht mit `innerHTML`.
+- Eingabefelder, die andere nur lesen, sind `readOnly` (nicht `disabled`), damit sie vergrößerbar sind.
+- Admin-Seite: `<div class="card">`, Zuschauer-Seite: `<section class="card">`, Spielerseite: kein äußeres `.card` (der Container ist schon eins).
+- Gemeinsame Hilfen: `Spielshow.formatScore(punkte, maxScore)`, `Spielshow.playBuzzerSound()`. Die Punkteleiste, den Buzzer und die Notizen rendert die Shell, nicht die Seite.
+- Layout ändert man über `layout` im Servermodul, nicht in den Shells.
+
+### 6.2 Vorlagen
+
+Admin (`mein-spiel-admin.html`): spielspezifische Steuerung. Kein Reset-, Punkte- oder Buzzer-Button.
+
+```html
+<div class="card">
+    <h2>Mein Spiel</h2>
+    <select id="msRoundSelect"></select>
+    <button onclick="msStartRound()">Runde starten</button>
+    <button onclick="msReveal()">Auflösen</button>
+    <p id="msAdminStatus">Noch keine Runde aktiv.</p>
+</div>
+
+<script>
+    socket.off('receiveMsRounds');
+    socket.on('receiveMsRounds', rounds => {
+        const select = document.getElementById('msRoundSelect');
+        if (!select) return;
+        select.replaceChildren(...rounds.map(round => {
+            const option = document.createElement('option');
+            option.value = round.id;
+            option.textContent = round.answer;
+            return option;
+        }));
+    });
+    socket.emit('getMsRounds');
+
+    window.msStartRound = () => socket.emit('adminStartMeinSpielRound', { roundId: document.getElementById('msRoundSelect').value });
+    window.msReveal = () => socket.emit('adminRevealMeinSpiel');
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.meinSpielGame || {};
+        const status = document.getElementById('msAdminStatus');
+        if (!status) return;
+        status.textContent = game.phase === 'IDLE' ? 'Noch keine Runde aktiv.' : `Phase: ${game.phase}`;
+    };
+</script>
+```
+
+Spieler (`mein-spiel-player.html`): zeigt, was Spieler sehen und tun.
+
+```html
+<div class="ms-game">
+    <h2>Mein Spiel</h2>
+    <p id="msPlayerStatus">Warte auf die nächste Runde...</p>
+</div>
+
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const game = state.meinSpielGame || {};
+        const status = document.getElementById('msPlayerStatus');
+        if (!status) return;
+        status.textContent = game.phase === 'PLAYING' ? 'Los geht es!' : 'Warte auf die nächste Runde...';
+    };
+</script>
+```
+
+Zuschauer (`mein-spiel-spectator.html`): große, gut lesbare Darstellung für den Host-Bildschirm.
+
+```html
+<section class="card">
+    <h2>Mein Spiel</h2>
+    <p id="msSpecStatus"></p>
+</section>
+
+<script>
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.meinSpielGame || {};
+        const status = document.getElementById('msSpecStatus');
+        if (!status) return;
+        status.textContent = game.phase === 'PLAYING' ? 'Läuft...' : 'Warte auf die nächste Runde...';
+    };
+</script>
+```
+
+Private Daten und Sonderkanäle (z. B. eigene Kategorie je Team): in der Spielerseite `socket.off('msPlayerUpdate'); socket.on('msPlayerUpdate', view => {...}); socket.emit('getMsView');` (Vorlage: `teekesselchen-player.html`).
+
+## 7. Inhalte
+
+- JSON im Projektroot (`<spiel>.json`) oder in `public/games/<spiel>/`. Bilder in `public/games/<spiel>/images/`. Beschreibe das Format in einem kurzen Kommentar im Servermodul.
+- Dateien in `public/` sind für alle abrufbar. Inhalte mit Lösungen gehören ins Projektroot und werden **nur** per Admin-Event (`getXRounds`) ausgeliefert. Die älteren Spiele (Kategorien, Bingo, Malen, Karte, Flaggen) liefern ihre JSON noch öffentlich über `registerRoutes` aus. Bei neuen Spielen nicht nachahmen.
+- Hat der Nutzer keine Inhalte geliefert, lege wenige klar gekennzeichnete Beispielinhalte an und sage das im Ergebnis.
+
+## 8. Tests
+
+`npm run check` führt aus:
+
+1. `eslint` (undefinierte Variablen, ungenutzte Variablen),
+2. `tests/check-html.js` (Skript-Syntax aller Seiten, im JS genutzte Element-IDs ohne Gegenstück im HTML, alte Event-Namen),
+3. `tests/smoke.js` (echter Server auf Port 3999, mehrere Socket-Clients).
+
+Der Rauchtest prüft für **jedes** Spiel aus `/games.json` automatisch: startbar, Punkt von 0 aus, Punkte nie negativ, Punktelimit (nur wenn `maxScore` nicht `null`), Reset nullt Punkte, Umbenennen zieht Teamdaten um, Spieler können keine Admin-Events auslösen. Ein neues Spiel ist damit schon grundlegend abgedeckt.
+
+Ergänze für spielspezifische Abläufe einen Abschnitt in `tests/smoke.js` **vor** dem Kommentar `// Team umbenennen`, nach dem Muster der vorhandenen (z. B. Buchstabensalat oder Teekesselchen): `admin.emit('adminStartGame', 'MEIN_SPIEL')`, Runde starten, Zustand prüfen, Buzzer testen, Geheimnis nicht im State (`JSON.stringify(admin.state.meinSpielGame)` darf die Lösung nicht enthalten), Auflösen, Reset. Der Test-Spieler `player` ist in `Team 1`, `admin` ist Admin. Hilfsfunktionen: `check(name, bedingung)`, `sleep(ms)`, `once(socket, event)`.
+
+Ein grüner Check ersetzt keinen Blick in den Browser. Sage dem Nutzer, was du **nicht** im Browser geprüft hast.
+
+## 9. Doku nach jedem neuen Spiel
+
+- `README.md`: Spiel unter "Implementierte Spiele" eintragen.
+- `AGENTS.md`: Spiel in die Tabelle "Bestehende Spiele" aufnehmen. Neue Erkenntnisse unter "Lessons Learned" festhalten.
+
+## 10. Abnahme-Checkliste (vor "fertig")
+
+- [ ] Alle Pflichtfelder im Modul, Eintrag in `registry.js` an der gewünschten Position
+- [ ] `maxScore` und `layout` bewusst gesetzt (mit dem Nutzer geklärt)
+- [ ] Jeder `admin*`-Event prüft `isAdmin(socket)`, Eingaben sind validiert
+- [ ] Reset setzt wirklich alles zurück (State, Timer, private Variablen, Punkte)
+- [ ] Teamnamen nicht hartkodiert, `renameTeam` zieht alle Teamnamen in Schlüsseln und Werten um
+- [ ] Lösungen/Geheimnisse stehen nicht im State und nicht in öffentlichen Routen
+- [ ] Seiten enthalten keine eigenen Punkte-, Reset-, Buzzer- oder Notiz-Elemente
+- [ ] Jede Seite funktioniert bei wiederholtem Aufruf von `onModuleStateUpdate` und nach Spielwechsel
+- [ ] `npm run check` ist grün
+- [ ] Doku (Abschnitt 9) aktualisiert
+- [ ] Ergebnis nennt, was nicht im Browser geprüft wurde
+
+## 11. Bestehendes Spiel ändern
+
+1. Servermodul und die drei Seiten lesen.
+2. Änderungen am Standardverhalten (Punkte, Reset, Buzzer, Textfelder, Teams) gehören nach `server/core/` bzw. `public/shared/`, nie in ein einzelnes Spiel.
+3. Neue Zustandsfelder in `createState()`, Teamnamen in `renameTeam()`.
+4. `npm run check`.
+
+## 12. Fehlersuche und Lessons Learned
+
+- Punkte lassen sich nicht erhöhen: Prüfung `!scores[team]` statt `=== undefined`.
+- Handler wirft ReferenceError: Konstante nicht importiert. Der Server läuft weiter und loggt `Fehler im Event "<name>"`. Der Lint meldet es vorher.
+- Update kommt nicht an: falscher Handler-Name für die Seite, `emitState()` vergessen oder nur auf einem Sonderkanal gesendet.
+- Button tut nichts: Event-Name oder Parameterform stimmt nicht mit `socket.on` im Server überein (Punkte immer `{ team, amount }`).
+- Doppelte Aktionen: `socket.on` ohne vorheriges `socket.off` in einer Seite.
+- Reset lässt etwas stehen: Feld fehlt in `createState()`, Timer nicht gestoppt oder private Variable nicht geleert.
+- Eingabefeld springt auf alte Größe: Elemente bei jedem Update komplett neu aufbauen. Nur neu aufbauen, wenn sich die Struktur ändert, sonst nur Werte aktualisieren.
+- Vollbild-Layout und Textfelder: Im Vollbild liegt der Textfeld-Streifen am unteren Rand und die Seite schrumpft über `--app-height`. Vollbild-Seiten dürfen deshalb nicht fest `100vh` verwenden, sondern `var(--app-height, 100vh)`.
+- `EADDRINUSE` im Test: ein alter Test-Server belegt Port 3999.
+- Mojibake (kaputte Umlaute) beim Lesen mit älteren PowerShell-Befehlen ist nur Anzeige. Dateien sind UTF-8.
+
+## 13. Bekannte offene Punkte
+
+- Spiele mit eigenen Timern (Bingo, Merken, Realität, Flaggen, Kategorien) haben noch keine gemeinsame Timer-Hilfe.
+- JSON-Dateien von Kategorien, Bingo, Malen, Karte und Flaggen sind noch öffentlich abrufbar und enthalten Lösungen.
+- Teekesselchen-ID mit einem S (`TEEKESELCHEN`).
+
+## 14. Code-Qualität
+
+Siehe `CLEANCODE.md` und `CODE_QUALITY_ISSUES.md`. Kurz: kleine Funktionen, keine Duplikate (Gemeinsames in `server/core`, `server/games/image-guess.js`, `public/shared`), sprechende Namen, `const`/`let` statt `var`, kein toter Code, keine Secrets im Repository (`.env` ist in `.gitignore`).

@@ -2,7 +2,6 @@
     .flaggen-admin-wrap { max-width: 1200px; margin: 0 auto; box-sizing: border-box; }
     .flaggen-admin-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 14px; }
     .flaggen-admin-label { font-size: 0.85rem; color: #a4b0be; margin-bottom: 4px; display: block; }
-    .flaggen-admin-scores { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
     .flaggen-score-box {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 6px 14px; border-radius: 6px; background: #1c202c;
@@ -91,7 +90,6 @@
 
 <div class="flaggen-admin-wrap card">
     <h2>🚩 Flaggen bauen (Admin)</h2>
-    <div id="flaggenAdminScores" class="flaggen-admin-scores"></div>
 
     <div class="flaggen-admin-row">
         <div>
@@ -129,7 +127,6 @@
         <button id="flaggenBtnStart" class="flaggen-btn" style="background: #2ed573; color: #000;" onclick="startFlaggenRound()">▶ Runde starten</button>
         <button id="flaggenBtnLock" class="flaggen-btn" style="background: #e67e22; color: #fff;" onclick="toggleFlaggenLock()">⏹ Bauen beenden / sperren</button>
         <button id="flaggenBtnReveal" class="flaggen-btn" style="background: #3742fa; color: #fff;" onclick="revealFlaggen()">👁️ Flaggen aufdecken</button>
-        <button id="flaggenBtnReset" class="flaggen-btn" style="background: #747d8c; color: #fff;" onclick="resetFlaggen()">🔄 Zurücksetzen</button>
     </div>
 
     <div id="flaggenAdminStatus" style="margin-top: 12px; font-weight: bold; font-size: 1.05rem; color: #ffd166;"></div>
@@ -327,10 +324,6 @@
     }
     window.revealFlaggen = revealFlaggen;
 
-    function resetFlaggen() {
-        socket.emit('adminResetFlaggen');
-    }
-    window.resetFlaggen = resetFlaggen;
 
     function renderPlacedPieces(container, placements, elements) {
         if (!container) return;
@@ -369,25 +362,6 @@
         const t2 = teamNames[1] || 'Team 2';
         const players = state.players || {};
 
-        // Update scores
-        const scoresEl = document.getElementById('flaggenAdminScores');
-        if (scoresEl) {
-            scoresEl.innerHTML = '';
-            const scores = game.scores || {};
-            teamNames.forEach(team => {
-                const col = (teams[team] || {}).color || '#fff';
-                const box = document.createElement('div');
-                box.className = 'flaggen-score-box';
-                box.style.borderLeft = '4px solid ' + col;
-                box.innerHTML = `
-                    <span style="color:${col}; font-weight:bold;">${team}:</span>
-                    <span style="font-weight:bold; font-size:1.1rem;">${scores[team] || 0} Pkt.</span>
-                    <button class="flaggen-score-btn" onclick="socket.emit('adminAddFlaggenPoint', { team: '${team.replace(/'/g, "\\'")}', amount: 1 })">+1</button>
-                    <button class="flaggen-score-btn" onclick="socket.emit('adminAddFlaggenPoint', { team: '${team.replace(/'/g, "\\'")}', amount: -1 })">-1</button>
-                `;
-                scoresEl.appendChild(box);
-            });
-        }
 
         // Status
         const statusEl = document.getElementById('flaggenAdminStatus');

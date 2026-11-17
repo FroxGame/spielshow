@@ -1,0 +1,45 @@
+<style>
+    #igSpectatorImage {
+        display: block;
+        width: 100%;
+        max-height: 52vh;
+        object-fit: contain;
+        margin: 10px auto;
+        border-radius: 10px;
+        background: #202431;
+    }
+
+    .ig-spectator-reveal {
+        padding: 12px;
+        border-radius: 6px;
+        background: #202a2b;
+        font-size: 1.15rem;
+        font-weight: bold;
+    }
+
+    .ig-spectator-reveal:empty {
+        display: none;
+    }
+</style>
+
+<section class="card">
+    <h2 id="igSpectatorTitle"></h2>
+    <p id="igSpectatorStatus">Warte auf ein Bild...</p>
+    <img id="igSpectatorImage" alt="Bild zum Raten">
+    <div id="igSpectatorReveal" class="ig-spectator-reveal"></div>
+</section>
+
+<script>
+    window.onSpectatorStateUpdate = function(state) {
+        const game = Spielshow.getGame(state.currentScreen);
+        const data = game && state[game.stateKey];
+        const image = document.getElementById('igSpectatorImage');
+        if (!data || !image) return;
+
+        document.getElementById('igSpectatorTitle').textContent = game.title;
+        image.src = data.currentImage ? `/${data.currentImage}` : '';
+        image.style.display = data.currentImage ? 'block' : 'none';
+        document.getElementById('igSpectatorStatus').textContent = data.currentImage ? '' : 'Warte auf ein Bild...';
+        document.getElementById('igSpectatorReveal').textContent = data.winnerTeam ? `${data.winnerTeam} gewinnt!` : (data.revealedName || '');
+    };
+</script>

@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>Admin Dashboard</title>
     <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="/shared/shared.css">
+    <script src="/shared/shared.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; background: #2c3e50; color: white; }
         .card { background: #34495e; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
@@ -51,30 +53,28 @@
 
         <div class="card">
             <h3>3. Spielmodus wählen</h3>
+            <label style="display:block; margin-bottom:8px;"><input type="checkbox" id="notesToggle" onchange="setNotesEnabled(this.checked)"> Textfelder für alle Spieler anzeigen</label>
             <button onclick="setScreen('WAITING')">Startseite / Pause (Großes Scoreboard)</button>
-            <button onclick="startGame('LISTENWISSEN')">Listenwissen starten</button>
-            <button onclick="startGame('DISCORD_GAME')">Kam bei Discord nicht an starten</button>
-            <button onclick="startGame('PROMI_RATEN')">Promis raten starten</button>
-            <button onclick="startGame('DRUDEL')">Drudel starten</button>
-            <button onclick="startGame('DIKTAT')">Diktat starten</button>
-            <button onclick="startGame('KATEGORIEN')">Begriffe zuordnen starten</button>
-            <button onclick="startGame('PARTNERWISSEN')">Ich weiß, was mein Partner weiß starten</button>
-            <button onclick="startGame('BINGO')">Referat Bingo starten</button>
-            <button onclick="startGame('MALEN')">Blindes Malen starten</button>
-            <button onclick="startGame('KARTE')">Wo ist das auf der Karte? starten</button>
-            <button onclick="startGame('MERKEN')">Merken starten</button>
-            <button onclick="startGame('REALITAET')">Ist es real oder nicht? starten</button>
-            <button onclick="startGame('FLAGGEN')">Flaggen bauen starten</button>
-            <button onclick="startGame('BUCHSTABENSALAT')">Buchstabensalat starten</button>
-            <button onclick="startGame('TEEKESELCHEN')">Teekesselchen starten</button>
+            <span id="game-buttons"></span>
         </div>
 
         <!-- Modulbereich für komplexere Spiele (z.B. Listenwissen) -->
         <div id="admin-module-container"></div>
+        <div id="admin-game-controls" class="card sp-admin-controls" style="display: none;"></div>
     </div>
 
     <script>
         const socket = io();
+        const gameChrome = Spielshow.createAdminChrome({ socket, container: document.getElementById('admin-game-controls') });
+        Spielshow.ready.then(games => {
+            const holder = document.getElementById('game-buttons');
+            games.forEach(game => {
+                const button = document.createElement('button');
+                button.textContent = `${game.number}. ${game.title} starten`;
+                button.addEventListener('click', () => startGame(game.id));
+                holder.appendChild(button);
+            });
+        });
         let loadedAdminScreen = null;
         let latestAdminState = null;
         let latestDiscordAdminState = { phase: 'IDLE' };
@@ -119,6 +119,10 @@
             }
         });
 
+        function setNotesEnabled(enabled) {
+            socket.emit('adminSetNotesEnabled', enabled);
+        }
+
         function setScreen(screenName) {
             socket.emit('adminChangeScreen', screenName);
         }
@@ -153,25 +157,9 @@
             loadedAdminScreen = screenName;
 
             const container = document.getElementById('admin-module-container');
-            const adminModules = {
-                'LISTENWISSEN': 'games/listenwissen-admin.html',
-                'DISCORD_GAME': 'games/discord-admin.html',
-                'PROMI_RATEN': 'games/promis-admin.html',
-                'DRUDEL': 'games/drudel-admin.html',
-                'DIKTAT': 'games/diktat-admin.html',
-                'KATEGORIEN': 'games/kategorien-admin.html',
-                'PARTNERWISSEN': 'games/partnerwissen-admin.html',
-                'BINGO': 'games/bingo-admin.html',
-                'MALEN': 'games/malen-admin.html',
-                'KARTE': 'games/karte-admin.html'
-                ,'MERKEN': 'games/merken-admin.html'
-                ,'REALITAET': 'games/realitaet-admin.html'
-                ,'FLAGGEN': 'games/flaggen-admin.html'
-                ,'BUCHSTABENSALAT': 'games/buchstabensalat-admin.html'
-                ,'TEEKESELCHEN': 'games/teekesselchen-admin.html'
-            };
+            await Spielshow.ready;
 
-            const file = adminModules[screenName];
+            const file = Spielshow.getModuleFile(screenName, 'admin');
             if (!file) {
                 container.innerHTML = '';
                 return;
@@ -218,6 +206,8 @@
 
         socket.on('stateUpdate', (state) => {
             latestAdminState = state;
+            document.getElementById('notesToggle').checked = Boolean(state.notesEnabled);
+            Spielshow.ready.then(() => gameChrome.update(state));
             const teamDiv = document.getElementById('teamScores');
             if (teamDiv) {
                 teamDiv.innerHTML = '';
@@ -250,6 +240,7 @@
                         <span>ID: ${p.id.substring(0, 5)}...</span>
                         <input type="text" id="player-name-${p.id}" value="${p.name}">
                         <select id="player-team-${p.id}">
+                            <option value="" ${p.team ? '' : 'selected'}>– kein Team –</option>
                             ${Object.keys(state.teams).map(t => `<option value="${t}" ${p.team === t ? 'selected' : ''}>${t}</option>`).join('')}
                         </select>
                         <button onclick="savePlayerDetails('${p.id}')">Speichern</button>

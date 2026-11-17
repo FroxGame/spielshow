@@ -1,6 +1,4 @@
 <style>
-    .partner-player-score { display:flex; justify-content:center; gap:10px; margin-bottom:12px; flex-wrap:wrap; }
-    .partner-player-score span { padding:6px 10px; border-radius:6px; background:#2c2c3a; font-weight:bold; }
     .partner-question-grid { display:grid; gap:10px; }
     .partner-question-card { padding:12px; border:1px solid #566078; border-radius:8px; background:#262b3a; }
     .partner-question-card strong { display:block; margin-bottom:8px; }
@@ -9,7 +7,6 @@
     .partner-total { margin-top:10px; color:#a4b0be; }
 </style>
 
-<div id="partnerPlayerScore" class="partner-player-score"></div>
 <div class="card">
     <h2>Ich weiß, was mein Partner weiß</h2>
     <p id="partnerPlayerStatus">Warte auf eine Runde...</p>
@@ -20,11 +17,8 @@
     window.onPartnerPlayerUpdate = function(view) {
         const status = document.getElementById('partnerPlayerStatus');
         const content = document.getElementById('partnerPlayerContent');
-        const score = document.getElementById('partnerPlayerScore');
-        if (!status || !content || !score) return;
+        if (!status || !content) return;
 
-        score.innerHTML = Object.entries(view.scores || {})
-            .map(([team, points]) => `<span>${team}: ${points}</span>`).join('');
         content.innerHTML = '';
 
         if (view.role === 'RATER') {
@@ -35,6 +29,12 @@
                 const card = document.createElement('div');
                 card.className = 'partner-question-card';
                 card.innerHTML = `<strong>${index + 1}. ${question.question}</strong>`;
+                const result = (view.results || [])[index];
+                if (result) {
+                    const answer = document.createElement('div');
+                    answer.textContent = `Antwort: ${result.answer} (${result.correct ? 'richtig' : 'falsch'})`;
+                    card.appendChild(answer);
+                }
                 const input = document.createElement('input');
                 input.type = 'number';
                 input.min = '0';
@@ -76,6 +76,12 @@
                 const card = document.createElement('div');
                 card.className = 'partner-question-card';
                 card.innerHTML = `<strong>Frage ${question.index + 1}</strong>${question.question}`;
+                const result = (view.results || [])[question.index];
+                if (result) {
+                    const answer = document.createElement('div');
+                    answer.textContent = `Antwort: ${result.answer} (${result.correct ? 'richtig' : 'falsch'})`;
+                    card.appendChild(answer);
+                }
                 grid.appendChild(card);
             });
             content.appendChild(grid);

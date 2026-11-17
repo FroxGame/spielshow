@@ -10,20 +10,7 @@
         margin: 16px 0;
     }
 
-    .discord-spectator-scores {
-        display: flex;
-        justify-content: center;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin: 0 auto 12px;
-    }
 
-    .discord-spectator-score {
-        padding: 7px 11px;
-        border-radius: 6px;
-        background: #2c2f3c;
-        font-weight: bold;
-    }
 
     .discord-role-card,
     .discord-clue-card {
@@ -82,7 +69,6 @@
     }
 </style>
 
-<div id="discordSpectatorScore" class="discord-spectator-scores"></div>
 
 <section class="card discord-spectator-game">
     <h2>Das kam bei Discord nicht an</h2>
@@ -124,12 +110,10 @@
     window.onDiscordSpectatorUpdate = function(game) {
         const phase = document.getElementById('discordSpectatorPhase');
         const details = document.getElementById('discordSpectatorDetails');
-        const scores = document.getElementById('discordSpectatorScore');
         if (!phase || !details) return;
 
         phase.innerText = `Phase: ${game.phase}`;
         details.innerHTML = '';
-        scores.innerHTML = '';
 
         const roles = document.createElement('div');
         roles.className = 'discord-spectator-roles';
@@ -145,12 +129,6 @@
         });
         details.appendChild(roles);
 
-        Object.entries(game.scores || {}).forEach(([team, points]) => {
-            const score = document.createElement('div');
-            score.className = 'discord-spectator-score';
-            score.innerText = `${team}: ${points}`;
-            scores.appendChild(score);
-        });
 
         if (game.originalClues && game.originalClues.length) {
             details.appendChild(createDiscordSpectatorCards('Original-Hinweise', game.originalClues));

@@ -23,11 +23,10 @@
         const status = document.getElementById('merkenPlayerStatus');
         const grid = document.getElementById('merkenPlayerGrid');
         if (!status || !grid) return;
-        const scores = Object.entries(game.scores || {}).map(([team, score]) => `${team}: ${score} / 7`).join(' · ');
         const phase = game.phase === 'MEMORIZING'
             ? `Merken: ${game.remaining || 0} Sekunden`
             : game.phase === 'PLAYING' ? 'Abfrage läuft' : game.phase === 'FINISHED' ? 'Spiel beendet' : 'Warte auf den Start';
-        status.innerHTML = `<span class="merken-player-badge">${phase}</span><span class="merken-player-badge">${scores}</span>`;
+        status.innerHTML = `<span class="merken-player-badge">${phase}</span>`;
         const showFaces = game.phase === 'MEMORIZING';
         grid.innerHTML = '';
         (game.cards || []).forEach(card => {

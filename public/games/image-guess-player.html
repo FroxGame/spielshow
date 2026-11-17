@@ -1,0 +1,50 @@
+<style>
+    .ig-game {
+        text-align: center;
+    }
+
+    #igImage {
+        display: block;
+        width: 100%;
+        max-height: 48vh;
+        object-fit: contain;
+        margin: 10px auto;
+        border-radius: 10px;
+        background: #202431;
+    }
+
+    .ig-reveal {
+        margin: 8px 0;
+        padding: 10px;
+        border-radius: 6px;
+        background: #202a2b;
+        font-weight: bold;
+    }
+
+    .ig-reveal:empty {
+        display: none;
+    }
+</style>
+
+<div class="ig-game">
+    <h2 id="igTitle"></h2>
+    <p id="igStatus">Warte auf ein Bild...</p>
+    <img id="igImage" alt="Bild zum Raten">
+    <div id="igReveal" class="ig-reveal"></div>
+</div>
+
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const game = Spielshow.getGame(state.currentScreen);
+        const data = game && state[game.stateKey];
+        const image = document.getElementById('igImage');
+        if (!data || !image) return;
+
+        document.getElementById('igTitle').textContent = game.title;
+        image.src = data.currentImage ? `/${data.currentImage}` : '';
+        image.style.display = data.currentImage ? 'block' : 'none';
+        document.getElementById('igStatus').textContent = data.currentImage ? 'Wer erkennt es zuerst?' : 'Warte auf ein Bild...';
+        const reveal = document.getElementById('igReveal');
+        reveal.textContent = data.winnerTeam ? `${data.winnerTeam} gewinnt!` : (data.revealedName || '');
+    };
+</script>
