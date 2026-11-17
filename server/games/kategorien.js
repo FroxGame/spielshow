@@ -22,47 +22,6 @@ module.exports = function createKategorienGame(ctx) {
         }
     }
 
-    const DEFAULT_TURN_SECONDS = 15;
-    const MIN_TURN_SECONDS = 5;
-    const MAX_TURN_SECONDS = 120;
-    let turnTimer = null;
-
-    function createTurn() {
-        return { team: null, duration: DEFAULT_TURN_SECONDS, remaining: 0, running: false, expired: false };
-    }
-
-    function stopTurnTimer() {
-        if (turnTimer) clearInterval(turnTimer);
-        turnTimer = null;
-    }
-
-    function startTurn(team, duration) {
-        stopTurnTimer();
-        const seconds = Math.min(MAX_TURN_SECONDS, Math.max(MIN_TURN_SECONDS, parseInt(duration, 10) || DEFAULT_TURN_SECONDS));
-        gameState.categoryGame.turn = { team, duration: seconds, remaining: seconds, running: true, expired: false };
-        turnTimer = setInterval(tickTurn, 1000);
-    }
-
-    function tickTurn() {
-        const turn = gameState.categoryGame.turn;
-        turn.remaining -= 1;
-        if (turn.remaining <= 0) {
-            turn.remaining = 0;
-            turn.running = false;
-            turn.expired = true;
-            stopTurnTimer();
-        }
-        emitCategoryState();
-    }
-
-    /** Naechstes Team ist dran. Ohne laufenden Zug beginnt das erste Team. */
-    function startNextTurn() {
-        const teams = Object.keys(gameState.teams);
-        const turn = gameState.categoryGame.turn;
-        const currentIndex = teams.indexOf(turn.team);
-        startTurn(teams[(currentIndex + 1) % teams.length], turn.duration);
-    }
-
     function emitCategoryState() {
         io.emit('stateUpdate', gameState);
     }
@@ -78,7 +37,6 @@ module.exports = function createKategorienGame(ctx) {
                 assignedTeams: {},
                 revealed: {},
                 results: {},
-                turn: createTurn(),
                 scores: createScores()
             },
             categoryRoundNames: []
@@ -95,7 +53,6 @@ module.exports = function createKategorienGame(ctx) {
     }
 
     function reset() {
-        stopTurnTimer();
         Object.keys(categoryCorrectAnswers).forEach(term => delete categoryCorrectAnswers[term]);
         Object.assign(gameState, createState());
         gameState.categoryRoundNames = Object.keys(getCategoryRounds());
@@ -126,10 +83,8 @@ module.exports = function createKategorienGame(ctx) {
                 assignedTeams: {},
                 revealed: {},
                 results: {},
-                turn: createTurn(),
                 scores: gameState.categoryGame.scores
             };
-            stopTurnTimer();
             emitCategoryState();
         });
 
@@ -152,32 +107,9 @@ module.exports = function createKategorienGame(ctx) {
                 // Not revealed yet - do not compute result immediately
                 delete gameState.categoryGame.revealed[term];
                 delete gameState.categoryGame.results[term];
-                if (gameState.categoryGame.turn.running) startNextTurn();
             } else {
                 return;
             }
-            emitCategoryState();
-        });
-
-        socket.on('adminSetCategoryTurnDuration', duration => {
-            if (!adminSockets.has(socket.id) || gameState.categoryGame.phase !== 'PLAYING') return;
-            const seconds = parseInt(duration, 10);
-            if (!Number.isInteger(seconds)) return;
-            gameState.categoryGame.turn.duration = Math.min(MAX_TURN_SECONDS, Math.max(MIN_TURN_SECONDS, seconds));
-            emitCategoryState();
-        });
-
-        socket.on('adminStartCategoryTurn', team => {
-            if (!adminSockets.has(socket.id) || gameState.categoryGame.phase !== 'PLAYING') return;
-            if (team && gameState.teams[team]) startTurn(team, gameState.categoryGame.turn.duration);
-            else startNextTurn();
-            emitCategoryState();
-        });
-
-        socket.on('adminStopCategoryTurn', () => {
-            if (!adminSockets.has(socket.id) || gameState.categoryGame.phase !== 'PLAYING') return;
-            stopTurnTimer();
-            gameState.categoryGame.turn = { ...createTurn(), duration: gameState.categoryGame.turn.duration };
             emitCategoryState();
         });
 
@@ -223,7 +155,6 @@ module.exports = function createKategorienGame(ctx) {
 
     function renameTeam(oldName, newName) {
         renameKey(gameState.categoryGame.scores, oldName, newName);
-        if (gameState.categoryGame.turn.team === oldName) gameState.categoryGame.turn.team = newName;
         Object.entries(gameState.categoryGame.assignedTeams).forEach(([term, team]) => {
             if (team === oldName) gameState.categoryGame.assignedTeams[term] = newName;
         });

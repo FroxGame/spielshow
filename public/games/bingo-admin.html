@@ -24,21 +24,6 @@
         border-color: #2ed573;
         color: #a4f5c5;
     }
-    .bingo-timer-display {
-        font-size: 2.5rem;
-        font-weight: bold;
-        font-variant-numeric: tabular-nums;
-        letter-spacing: 2px;
-        padding: 10px 20px;
-        border-radius: 10px;
-        background: #1c202c;
-        border: 2px solid #3d4763;
-        display: inline-block;
-        min-width: 120px;
-        text-align: center;
-    }
-    .bingo-timer-display.running { border-color: #2ed573; color: #2ed573; }
-    .bingo-timer-display.stopped { border-color: #ff6b6b; color: #ff6b6b; }
     .bingo-score-row {
         display: inline-flex; align-items: center; gap: 8px;
         padding: 5px 14px; border-radius: 6px; background: #1c202c;
@@ -109,32 +94,11 @@
                     <option value="">-- Spieler auswählen --</option>
                 </select>
             </div>
-            <div>
-                <label class="bingo-admin-label">Timer (Sekunden, Standard: 120):</label>
-                <input type="number" id="bingoTimerInput" value="120" min="30" max="600" step="10"
-                    style="padding: 7px 10px; width: 100px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-size: 0.95rem; font-family: inherit;">
-            </div>
         </div>
         <button onclick="startBingo()" style="background: #2ed573; color: #000; font-weight: bold;">Runde starten</button>
     </div>
     <div id="bingoActiveSection" style="display: none;">
         <div id="bingoTopicDisplay" class="bingo-topic-display"></div>
-        <div class="bingo-admin-row" style="gap: 16px; margin: 14px 0;">
-            <div id="bingoTimerDisplay" class="bingo-timer-display">02:00</div>
-            <div style="display:flex; flex-direction:column; gap: 8px;">
-                <div class="bingo-admin-row">
-                    <button onclick="startBingoTimer()">&#9654; Start</button>
-                    <button onclick="stopBingoTimer()">&#9646;&#9646; Pause</button>
-                    <button onclick="resetBingoTimer()">&#8634; Reset</button>
-                </div>
-                <div class="bingo-admin-row">
-                    <span class="bingo-admin-label" style="margin:0;">Neue Dauer (Sek.):</span>
-                    <input type="number" id="bingoNewDurationInput" value="120" min="30" max="600" step="10"
-                        style="padding: 5px 8px; width: 80px; background: #1c202c; border: 1px solid #4a5676; border-radius: 6px; color: #fff; font-family: inherit;">
-                    <button onclick="setBingoTimerDuration()" style="padding: 5px 12px; font-size: 0.85rem;">Setzen</button>
-                </div>
-            </div>
-        </div>
         <div class="bingo-admin-row" style="margin: 10px 0; gap: 10px;">
             <button id="bingoStartPlayingBtn" onclick="startBingoPlaying()" style="display:none; background: #3742fa; color: #fff; font-weight: bold;">&#9654; Referat starten</button>
             <button id="bingoRevealTopicBtn" onclick="revealBingoTopic()" style="display:none; background: #f39c12; color: #000; font-weight: bold;">&#127919; Thema aufdecken</button>
@@ -174,22 +138,13 @@
     window.startBingo = function() {
         const topic = document.getElementById('bingoTopicInput').value.trim();
         const referatPlayerId = document.getElementById('bingoPlayerSelect').value;
-        const timerDuration = parseInt(document.getElementById('bingoTimerInput').value) || 120;
         if (!topic) { alert('Bitte ein Thema eingeben!'); return; };
         if (!referatPlayerId) { alert('Bitte einen Spieler auswählen!'); return; };
-        if (typeof socket !== 'undefined') socket.emit('adminStartBingo', { topic, referatPlayerId, timerDuration });
+        if (typeof socket !== 'undefined') socket.emit('adminStartBingo', { topic, referatPlayerId });
     };
     window.startBingoPlaying = function() { if (typeof socket !== 'undefined') socket.emit('adminBingoStartPlaying'); };
     window.revealBingoTopic = function() { if (typeof socket !== 'undefined') socket.emit('adminRevealBingoTopic'); };
-    window.startBingoTimer = function() { if (typeof socket !== 'undefined') socket.emit('adminStartBingoTimer'); };
-    window.stopBingoTimer = function() { if (typeof socket !== 'undefined') socket.emit('adminStopBingoTimer'); };
-    window.resetBingoTimer = function() { if (typeof socket !== 'undefined') socket.emit('adminResetBingoTimer'); };
-    window.setBingoTimerDuration = function() {
-        const val = parseInt(document.getElementById('bingoNewDurationInput').value) || 120;
-        if (typeof socket !== 'undefined') socket.emit('adminSetBingoTimerDuration', val);
-    };
 
-    function formatTime(s) { return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); }
 
     window.onModuleStateUpdate = function(state) {
         const bingo = state.referatBingo || {};
@@ -242,15 +197,6 @@
             revealBtn.style.display = (phase === 'PLAYING') ? 'inline-block' : 'none';
             revealBtn.innerText = bingo.topicRevealed ? 'Thema verdecken' : 'Thema aufdecken';
         }
-
-        const timer = bingo.timer || { duration: 120, remaining: 120, running: false };
-        const timerDisplay = document.getElementById('bingoTimerDisplay');
-        if (timerDisplay) {
-            timerDisplay.innerText = formatTime(timer.remaining);
-            timerDisplay.className = 'bingo-timer-display' + (timer.running ? ' running' : (timer.remaining === 0 ? ' stopped' : ''));
-        }
-        const newDurInput = document.getElementById('bingoNewDurationInput');
-        if (newDurInput && document.activeElement !== newDurInput) newDurInput.value = timer.duration;
 
         const overview = document.getElementById('bingoWordsOverview');
         if (!overview) return;

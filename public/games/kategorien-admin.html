@@ -271,9 +271,6 @@
         </select>
         <button onclick="startCategoryRound()">Runde starten</button>
         <button id="categoryRevealAllBtn" onclick="revealAllCategoryTerms()" style="display: none; background: #3742fa; color: white;">Alle aufdecken</button>
-        <label style="color:#a4b0be;">Sekunden pro Zug <input id="categoryTurnSeconds" type="number" min="5" max="120" value="15" style="width:70px;" onchange="setCategoryTurnDuration(this.value)"></label>
-        <button id="categoryTurnStartBtn" onclick="startCategoryTurn()" style="display: none;">Zug starten</button>
-        <button id="categoryTurnStopBtn" onclick="stopCategoryTurn()" style="display: none;">Zug beenden</button>
         <span id="categoryAdminStatus" class="category-admin-status">Keine Runde aktiv.</span>
     </div>
 
@@ -328,10 +325,6 @@
         }
     };
 
-
-    window.setCategoryTurnDuration = value => socket.emit('adminSetCategoryTurnDuration', value);
-    window.startCategoryTurn = () => socket.emit('adminStartCategoryTurn');
-    window.stopCategoryTurn = () => socket.emit('adminStopCategoryTurn');
 
     window.revealTerm = function(term) {
         if (typeof socket !== 'undefined') {
@@ -500,19 +493,7 @@
             fillCategoryRounds(state.categoryRoundNames);
         }
 
-        const turn = game.turn || {};
-        const turnText = turn.team ? ` | ${turn.team} ist dran: ${turn.expired ? 'Zeit abgelaufen' : turn.remaining + 's'}` : '';
-        status.innerText = game.roundName ? `Runde: ${game.roundName} (${game.phase || 'Aktiv'})${turnText}` : 'Keine Runde aktiv.';
-        const inRound = game.phase === 'PLAYING';
-        const startBtn = document.getElementById('categoryTurnStartBtn');
-        const stopBtn = document.getElementById('categoryTurnStopBtn');
-        if (startBtn && stopBtn) {
-            startBtn.style.display = inRound ? '' : 'none';
-            startBtn.textContent = turn.team ? 'Nächstes Team' : 'Zug starten';
-            stopBtn.style.display = inRound && turn.team ? '' : 'none';
-            const secondsInput = document.getElementById('categoryTurnSeconds');
-            if (secondsInput && document.activeElement !== secondsInput && turn.duration) secondsInput.value = turn.duration;
-        }
+        status.innerText = game.roundName ? `Runde: ${game.roundName} (${game.phase || 'Aktiv'})` : 'Keine Runde aktiv.';
 
 
         if (!game.roundName || game.phase !== 'PLAYING') {

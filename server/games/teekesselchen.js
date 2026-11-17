@@ -3,9 +3,6 @@
 const path = require('path');
 
 const ROOT = path.join(__dirname, '..', '..');
-const MIN_SECONDS = 10;
-const MAX_SECONDS = 300;
-const DEFAULT_SECONDS = 60;
 const MAX_TEXT_LENGTH = 200;
 
 /**
@@ -20,18 +17,12 @@ module.exports = function createTeekesselchenGame(ctx) {
     const playerTexts = {};
     let currentRound = null;
     let teamCategories = {};
-    let countdownTimer = null;
 
     const state = () => gameState.teekesselchenGame;
 
     function readRounds() {
         const data = utils.readJsonFile(roundsPath);
         return Array.isArray(data.rounds) ? data.rounds : [];
-    }
-
-    function stopTimer() {
-        if (countdownTimer) clearInterval(countdownTimer);
-        countdownTimer = null;
     }
 
     function assignCategories(round) {
@@ -50,35 +41,22 @@ module.exports = function createTeekesselchenGame(ctx) {
     }
 
     function closeWriting() {
-        stopTimer();
         if (state().phase === 'WRITING') state().phase = 'GUESSING';
     }
 
-    function tick() {
-        state().timeRemaining -= 1;
-        if (state().timeRemaining <= 0) {
-            state().timeRemaining = 0;
-            closeWriting();
-        }
-        emitState();
-    }
-
-    function startRound(round, seconds) {
-        stopTimer();
+    function startRound(round) {
         currentRound = round;
         teamCategories = assignCategories(round);
         Object.keys(playerTexts).forEach(playerId => delete playerTexts[playerId]);
         Object.assign(state(), {
             phase: 'WRITING',
             roundId: round.id,
-            timeRemaining: seconds,
             answer: '',
             revealedTeams: {},
             buzzerLocked: false,
             buzzerWinner: null,
             buzzerTeam: null
         });
-        countdownTimer = setInterval(tick, 1000);
     }
 
     function describeTeam(team) {
@@ -94,7 +72,6 @@ module.exports = function createTeekesselchenGame(ctx) {
             teekesselchenGame: {
                 phase: 'IDLE',
                 roundId: null,
-                timeRemaining: 0,
                 answer: '',
                 revealedTeams: {},
                 buzzerLocked: false,
@@ -106,7 +83,6 @@ module.exports = function createTeekesselchenGame(ctx) {
     }
 
     function reset() {
-        stopTimer();
         currentRound = null;
         teamCategories = {};
         Object.keys(playerTexts).forEach(playerId => delete playerTexts[playerId]);
@@ -120,12 +96,11 @@ module.exports = function createTeekesselchenGame(ctx) {
             socket.emit('receiveTeekesselchenRounds', readRounds());
         });
 
-        socket.on('adminStartTeekesselchenRound', ({ roundId, duration } = {}) => {
+        socket.on('adminStartTeekesselchenRound', ({ roundId } = {}) => {
             if (!isAdmin(socket)) return;
             const round = readRounds().find(entry => entry.id === roundId);
             if (!round) return;
-            const seconds = Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, parseInt(duration, 10) || DEFAULT_SECONDS));
-            startRound(round, seconds);
+            startRound(round);
             emitState();
             emitPlayerViews();
         });
@@ -158,7 +133,6 @@ module.exports = function createTeekesselchenGame(ctx) {
 
         socket.on('adminRevealTeekesselchen', () => {
             if (!isAdmin(socket) || !currentRound) return;
-            stopTimer();
             state().phase = 'REVEALED';
             state().answer = currentRound.answer;
             Object.keys(gameState.teams).forEach(team => {

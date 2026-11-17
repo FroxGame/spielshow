@@ -20,11 +20,8 @@
         <label>Bild
             <select id="realitaetImage"></select>
         </label>
-        <label>Zeit (Sekunden)
-            <input id="realitaetDuration" type="number" min="10" max="3600" value="180">
-        </label>
         <button onclick="startRealitaet()" style="background:#2ed573;color:#000;font-weight:bold;">▶ Runde starten</button>
-        <button onclick="stopRealitaet()" style="background:#e67e22;color:#fff;">⏹ Zeit stoppen</button>
+        <button onclick="endRealitaet()" style="background:#e67e22;color:#fff;">⏹ Runde beenden</button>
     </div>
     <p id="realitaetAdminStatus">Noch keine Runde gestartet.</p>
     <img id="realitaetAdminPreview" alt="Ausgewähltes Bild">
@@ -57,11 +54,10 @@
         socket.emit('adminStartRealitaet', {
             targetTeam: document.getElementById('realitaetTeam').value,
             contentType: document.getElementById('realitaetType').value,
-            image: document.getElementById('realitaetImage').value,
-            duration: Number(document.getElementById('realitaetDuration').value) || 180
+            image: document.getElementById('realitaetImage').value
         });
     };
-    window.stopRealitaet = function() { socket.emit('adminStopRealitaet'); };
+    window.endRealitaet = function() { socket.emit('adminEndRealitaet'); };
 
     document.getElementById('realitaetImage').addEventListener('change', updateRealitaetPreview);
     document.getElementById('realitaetType').addEventListener('change', updateRealitaetPreview);
@@ -83,7 +79,7 @@
         });
         const status = document.getElementById('realitaetAdminStatus');
         status.textContent = game.phase === 'PLAYING'
-            ? `${game.targetTeam}: ${game.contentType === 'IMAGE' ? 'Bild' : 'Fragezeichen'} · ${game.remaining} Sekunden`
+            ? `${game.targetTeam}: ${game.contentType === 'IMAGE' ? 'Bild' : 'Fragezeichen'}`
             : game.phase === 'FINISHED' ? 'Runde beendet.' : 'Noch keine Runde gestartet.';
         document.getElementById('realitaetAdminPreview').style.display = game.contentType === 'IMAGE' ? 'block' : 'none';
 

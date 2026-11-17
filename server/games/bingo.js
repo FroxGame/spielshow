@@ -9,8 +9,6 @@ module.exports = function createBingoGame(ctx) {
 
     const referatTopicsPath = path.join(ROOT, 'bingo.json');
 
-    let bingoTimerInterval = null;
-
     function getReferatTopics() {
         return utils.readJsonArray(referatTopicsPath, t => typeof t === 'string' && t.trim());
     }
@@ -28,17 +26,12 @@ module.exports = function createBingoGame(ctx) {
                 partnerMarked: Array(9).fill(false),
                 opposingWords: Array(9).fill(''),
                 opposingMarked: Array(9).fill(false),
-                timer: { duration: 120, remaining: 120, running: false },
                 scores: createScores()
             }
         };
     }
 
     function reset() {
-        if (bingoTimerInterval) {
-            clearInterval(bingoTimerInterval);
-            bingoTimerInterval = null;
-        }
         Object.assign(gameState, createState());
     }
 
@@ -48,18 +41,13 @@ module.exports = function createBingoGame(ctx) {
             socket.emit('receiveReferatTopics', getReferatTopics());
         });
 
-        socket.on('adminStartBingo', ({ topic, referatPlayerId, timerDuration }) => {
+        socket.on('adminStartBingo', ({ topic, referatPlayerId }) => {
             if (!adminSockets.has(socket.id)) return;
             const player = gameState.players[referatPlayerId];
             if (!player) return;
             const referatTeam = player.team;
             const allTeams = Object.keys(gameState.teams);
             const opposingTeam = allTeams.find(t => t !== referatTeam) || (referatTeam === 'Team 1' ? 'Team 2' : 'Team 1');
-            if (bingoTimerInterval) {
-                clearInterval(bingoTimerInterval);
-                bingoTimerInterval = null;
-            }
-            const dur = parseInt(timerDuration) || 120;
             gameState.referatBingo = {
                 phase: 'PREPARING',
                 topic: String(topic || '').trim(),
@@ -71,11 +59,6 @@ module.exports = function createBingoGame(ctx) {
                 partnerMarked: Array(9).fill(false),
                 opposingWords: Array(9).fill(''),
                 opposingMarked: Array(9).fill(false),
-                timer: {
-                    duration: dur,
-                    remaining: dur,
-                    running: false
-                },
                 scores: gameState.referatBingo.scores || { 'Team 1': 0, 'Team 2': 0 }
             };
             io.emit('stateUpdate', gameState);
@@ -94,61 +77,6 @@ module.exports = function createBingoGame(ctx) {
             gameState.referatBingo.topicRevealed = !gameState.referatBingo.topicRevealed;
             io.emit('stateUpdate', gameState);
         });
-
-        socket.on('adminStartBingoTimer', () => {
-            if (!adminSockets.has(socket.id)) return;
-            if (!gameState.referatBingo || gameState.referatBingo.timer.running) return;
-            gameState.referatBingo.timer.running = true;
-            if (bingoTimerInterval) clearInterval(bingoTimerInterval);
-            bingoTimerInterval = setInterval(() => {
-                if (gameState.referatBingo.timer.remaining > 0) {
-                    gameState.referatBingo.timer.remaining--;
-                    io.emit('stateUpdate', gameState);
-                }
-                if (gameState.referatBingo.timer.remaining <= 0) {
-                    gameState.referatBingo.timer.running = false;
-                    clearInterval(bingoTimerInterval);
-                    bingoTimerInterval = null;
-                    io.emit('stateUpdate', gameState);
-                }
-            }, 1000);
-            io.emit('stateUpdate', gameState);
-        });
-
-        socket.on('adminStopBingoTimer', () => {
-            if (!adminSockets.has(socket.id)) return;
-            if (!gameState.referatBingo) return;
-            gameState.referatBingo.timer.running = false;
-            if (bingoTimerInterval) {
-                clearInterval(bingoTimerInterval);
-                bingoTimerInterval = null;
-            }
-            io.emit('stateUpdate', gameState);
-        });
-
-        socket.on('adminResetBingoTimer', () => {
-            if (!adminSockets.has(socket.id)) return;
-            if (!gameState.referatBingo) return;
-            gameState.referatBingo.timer.running = false;
-            if (bingoTimerInterval) {
-                clearInterval(bingoTimerInterval);
-                bingoTimerInterval = null;
-            }
-            gameState.referatBingo.timer.remaining = gameState.referatBingo.timer.duration;
-            io.emit('stateUpdate', gameState);
-        });
-
-        socket.on('adminSetBingoTimerDuration', (duration) => {
-            if (!adminSockets.has(socket.id)) return;
-            if (!gameState.referatBingo) return;
-            const dur = Math.max(10, parseInt(duration) || 120);
-            gameState.referatBingo.timer.duration = dur;
-            if (!gameState.referatBingo.timer.running) {
-                gameState.referatBingo.timer.remaining = dur;
-            }
-            io.emit('stateUpdate', gameState);
-        });
-
 
         socket.on('playerUpdateBingoWords', ({ role, words }) => {
             if (!gameState.referatBingo) return;

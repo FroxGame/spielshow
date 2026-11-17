@@ -7,7 +7,6 @@
         background: #202a2b;
         font-weight: bold;
     }
-    .tee-timer { font-size: 2rem; font-weight: bold; margin: 8px 0; }
     #teeText {
         width: 100%;
         min-height: 110px;
@@ -23,7 +22,6 @@
 <div class="tee-game">
     <h2>Teekesselchen</h2>
     <p id="teeStatus">Warte auf die nächste Runde...</p>
-    <div id="teeTimer" class="tee-timer"></div>
     <div id="teeCategory" class="tee-category" style="display:none;"></div>
     <textarea id="teeText" maxlength="200" placeholder="Beschreibe dein Wort, ohne es zu nennen..." style="display:none;"></textarea>
     <div id="teeRevealed"></div>
@@ -52,7 +50,6 @@
         const writing = game.phase === 'WRITING';
         text.style.display = game.phase === 'IDLE' || !teeOwnCategory ? 'none' : 'block';
         text.disabled = !writing;
-        document.getElementById('teeTimer').textContent = writing ? `${game.timeRemaining}s` : '';
         document.getElementById('teeStatus').textContent = {
             IDLE: 'Warte auf die nächste Runde...',
             WRITING: 'Beschreibe dein Wort!',

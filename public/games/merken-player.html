@@ -24,7 +24,7 @@
         const grid = document.getElementById('merkenPlayerGrid');
         if (!status || !grid) return;
         const phase = game.phase === 'MEMORIZING'
-            ? `Merken: ${game.remaining || 0} Sekunden`
+            ? 'Merkphase läuft'
             : game.phase === 'PLAYING' ? 'Abfrage läuft' : game.phase === 'FINISHED' ? 'Spiel beendet' : 'Warte auf den Start';
         status.innerHTML = `<span class="merken-player-badge">${phase}</span>`;
         const showFaces = game.phase === 'MEMORIZING';

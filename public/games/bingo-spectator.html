@@ -17,20 +17,6 @@
         padding-bottom: 8px;
         border-bottom: 1px solid #2a2f40;
     }
-    .bingo-spec-timer {
-        font-size: 1.6rem;
-        font-weight: bold;
-        font-variant-numeric: tabular-nums;
-        letter-spacing: 2px;
-        padding: 4px 14px;
-        border-radius: 8px;
-        background: #171922;
-        border: 2px solid #3d4763;
-        display: inline-block;
-        text-align: center;
-    }
-    .bingo-spec-timer.running { border-color: #2ed573; color: #2ed573; }
-    .bingo-spec-timer.stopped { border-color: #ff6b6b; color: #ff6b6b; }
     
     .bingo-spec-meta {
         display: flex;
@@ -137,7 +123,6 @@
 <div class="bingo-spec-container">
     <div class="bingo-spec-header">
         <h3 style="margin: 0; font-size: 1.25rem;">Referat Bingo</h3>
-        <div id="bingoSpecTimer" class="bingo-spec-timer" style="display:none;">02:00</div>
     </div>
     <div id="bingoSpecMeta" class="bingo-spec-meta" style="display:none;">
         <div id="bingoSpecTopic" class="bingo-spec-topic hidden"></div>
@@ -147,7 +132,6 @@
 </div>
 
 <script>
-    function _specFormatTime(s) { return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
 
     window.onSpectatorStateUpdate = function(state) {
         const bingo = state.referatBingo || {};
@@ -155,18 +139,6 @@
         const players = state.players || {};
         const phase = bingo.phase || 'IDLE';
 
-
-        // Timer
-        const timerEl = document.getElementById('bingoSpecTimer');
-        if (timerEl) { 
-            const show = phase === 'PLAYING'; 
-            timerEl.style.display = show ? 'inline-block' : 'none'; 
-            if (show) {
-                const timer = bingo.timer || { remaining: 120, running: false }; 
-                timerEl.innerText = _specFormatTime(timer.remaining); 
-                timerEl.className = 'bingo-spec-timer' + (timer.running ? ' running' : (timer.remaining === 0 ? ' stopped' : ''));
-            } 
-        }
 
         // Meta (Topic & Speaker)
         const metaEl = document.getElementById('bingoSpecMeta');

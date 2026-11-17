@@ -9,8 +9,6 @@ module.exports = function createFlaggenGame(ctx) {
 
     const flaggenRoundsPath = path.join(ROOT, 'flaggen.json');
 
-    let flaggenTimerInterval = null;
-
     function getFlaggenRounds() {
         return utils.readJsonFile(flaggenRoundsPath);
     }
@@ -22,9 +20,6 @@ module.exports = function createFlaggenGame(ctx) {
                 country: null,
                 targetFlag: null,
                 elements: [],
-                duration: 180,
-                remaining: 0,
-                timerRunning: false,
                 buildingLocked: false,
                 revealed: false,
                 builders: {},
@@ -35,10 +30,6 @@ module.exports = function createFlaggenGame(ctx) {
     }
 
     function reset() {
-        if (flaggenTimerInterval) {
-            clearInterval(flaggenTimerInterval);
-            flaggenTimerInterval = null;
-        }
         Object.assign(gameState, createState());
     }
 
@@ -48,17 +39,9 @@ module.exports = function createFlaggenGame(ctx) {
             socket.emit('receiveFlaggenData', getFlaggenRounds());
         });
 
-        socket.on('adminStartFlaggenRound', ({ country, duration, elements, targetFlag, builders }) => {
+        socket.on('adminStartFlaggenRound', ({ country, elements, targetFlag, builders }) => {
             if (!adminSockets.has(socket.id)) return;
-            console.log('adminStartFlaggenRound received:', country, duration);
-            if (flaggenTimerInterval) {
-                clearInterval(flaggenTimerInterval);
-                flaggenTimerInterval = null;
-            }
             const teamNames = Object.keys(gameState.teams);
-            const safeDuration = parseInt(duration, 10);
-            const hasTimer = !isNaN(safeDuration) && safeDuration > 0;
-            const dur = hasTimer ? safeDuration : 0;
             let roundElements = elements;
             let roundTargetFlag = targetFlag;
             if (!roundElements || !roundElements.length) {
@@ -81,9 +64,6 @@ module.exports = function createFlaggenGame(ctx) {
                 country: country || 'Singapur',
                 targetFlag: roundTargetFlag || null,
                 elements: roundElements || [],
-                duration: dur,
-                remaining: dur,
-                timerRunning: hasTimer,
                 buildingLocked: false,
                 revealed: false,
                 builders: builders || (gameState.flaggenGame ? gameState.flaggenGame.builders : {}) || {},
@@ -96,20 +76,6 @@ module.exports = function createFlaggenGame(ctx) {
                     currentScores[team] || 0
                 ]))
             };
-            if (hasTimer) {
-                flaggenTimerInterval = setInterval(() => {
-                    if (gameState.flaggenGame.phase !== 'PLAYING') return;
-                    gameState.flaggenGame.remaining -= 1;
-                    if (gameState.flaggenGame.remaining <= 0) {
-                        gameState.flaggenGame.remaining = 0;
-                        gameState.flaggenGame.buildingLocked = true;
-                        gameState.flaggenGame.timerRunning = false;
-                        clearInterval(flaggenTimerInterval);
-                        flaggenTimerInterval = null;
-                    }
-                    io.emit('stateUpdate', gameState);
-                }, 1000);
-            }
             io.emit('stateUpdate', gameState);
         });
 
@@ -132,11 +98,6 @@ module.exports = function createFlaggenGame(ctx) {
             if (!gameState.flaggenGame) return;
             gameState.flaggenGame.revealed = true;
             gameState.flaggenGame.buildingLocked = true;
-            if (flaggenTimerInterval) {
-                clearInterval(flaggenTimerInterval);
-                flaggenTimerInterval = null;
-            }
-            gameState.flaggenGame.timerRunning = false;
             io.emit('stateUpdate', gameState);
         });
 

@@ -10,8 +10,6 @@ module.exports = function createRealitaetGame(ctx) {
 
     const realitaetImageDirectory = path.join(ROOT, 'public', 'games', 'realitaet');
 
-    let realitaetTimerInterval = null;
-
     function getRealitaetImages() {
         try {
             return fs.readdirSync(realitaetImageDirectory)
@@ -34,18 +32,12 @@ module.exports = function createRealitaetGame(ctx) {
                 targetTeam: null,
                 contentType: null,
                 image: '',
-                duration: 180,
-                remaining: 0,
                 scores: createScores()
             }
         };
     }
 
     function reset() {
-        if (realitaetTimerInterval) {
-            clearInterval(realitaetTimerInterval);
-            realitaetTimerInterval = null;
-        }
         Object.assign(gameState, createState());
     }
 
@@ -55,46 +47,24 @@ module.exports = function createRealitaetGame(ctx) {
             socket.emit('receiveRealitaetImages', getRealitaetImages());
         });
 
-        socket.on('adminStartRealitaet', ({ targetTeam, contentType, image, duration }) => {
+        socket.on('adminStartRealitaet', ({ targetTeam, contentType, image }) => {
             if (!adminSockets.has(socket.id)) return;
             const teams = Object.keys(gameState.teams);
             if (!teams.includes(targetTeam) || !['IMAGE', 'QUESTION'].includes(contentType)) return;
             if (contentType === 'IMAGE' && !getRealitaetImages().some(entry => entry.path === image)) return;
-            if (realitaetTimerInterval) {
-                clearInterval(realitaetTimerInterval);
-                realitaetTimerInterval = null;
-            }
-            const seconds = Math.max(10, Math.min(3600, parseInt(duration, 10) || 180));
             gameState.realitaetGame = {
                 phase: 'PLAYING',
                 targetTeam,
                 contentType,
                 image: contentType === 'IMAGE' ? image : '',
-                duration: seconds,
-                remaining: seconds,
                 scores: gameState.realitaetGame.scores || Object.fromEntries(teams.map(team => [team, 0]))
             };
-            realitaetTimerInterval = setInterval(() => {
-                const game = gameState.realitaetGame;
-                if (!game || game.phase !== 'PLAYING') return;
-                game.remaining = Math.max(0, game.remaining - 1);
-                if (game.remaining === 0) {
-                    game.phase = 'FINISHED';
-                    clearInterval(realitaetTimerInterval);
-                    realitaetTimerInterval = null;
-                }
-                io.emit('stateUpdate', gameState);
-            }, 1000);
             io.emit('stateUpdate', gameState);
         });
 
-        socket.on('adminStopRealitaet', () => {
-            if (!adminSockets.has(socket.id) || !gameState.realitaetGame) return;
+        socket.on('adminEndRealitaet', () => {
+            if (!adminSockets.has(socket.id) || gameState.realitaetGame.phase !== 'PLAYING') return;
             gameState.realitaetGame.phase = 'FINISHED';
-            if (realitaetTimerInterval) {
-                clearInterval(realitaetTimerInterval);
-                realitaetTimerInterval = null;
-            }
             io.emit('stateUpdate', gameState);
         });
 

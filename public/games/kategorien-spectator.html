@@ -119,9 +119,7 @@
         const unassignedItems = document.getElementById('categorySpectatorUnassignedItems');
         if (!status || !categories || !unassigned || !unassignedItems) return;
 
-        const turn = game.turn || {};
-        const turnText = turn.team ? ` | ${turn.team} ist dran: ${turn.expired ? 'Zeit abgelaufen' : turn.remaining + 's'}` : '';
-        status.innerText = game.roundName ? `Runde: ${game.roundName}${turnText}` : 'Warte auf eine Runde...';
+        status.innerText = game.roundName ? `Runde: ${game.roundName}` : 'Warte auf eine Runde...';
 
 
         if (!game.roundName || game.phase !== 'PLAYING') {

@@ -225,9 +225,12 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
 
     // Merken: Ende bei 7 Punkten
     admin.emit('adminStartGame', 'MERKEN');
-    admin.emit('adminStartMerken', 10);
+    admin.emit('adminStartMerken');
+    await sleep(1300);
+    check('Merken: Merkphase läuft ohne eigenen Timer weiter', admin.state.merkenGame.phase === 'MEMORIZING' && !('remaining' in admin.state.merkenGame));
+    admin.emit('adminEndMerkenMemorizing');
     await sleep(150);
-    check('Merken: startet', admin.state.merkenGame.phase !== 'IDLE');
+    check('Merken: Admin beendet die Merkphase', admin.state.merkenGame.phase === 'PLAYING');
     for (let i = 0; i < 7; i++) admin.emit('adminAddGamePoint', { team: 'Team 1', amount: 1 });
     await sleep(200);
     check('Merken: bei 7 Punkten FINISHED', admin.state.merkenGame.phase === 'FINISHED');
@@ -269,9 +272,10 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     admin.emit('adminStartGame', 'TEEKESSELCHEN');
     const tRounds = await new Promise(resolve => { admin.once('receiveTeekesselchenRounds', resolve); admin.emit('getTeekesselchenRounds'); });
     check('Teekesselchen: Runden per Admin-Event', tRounds.length > 0);
-    admin.emit('adminStartTeekesselchenRound', { roundId: tRounds[0].id, duration: 10 });
+    admin.emit('adminStartTeekesselchenRound', { roundId: tRounds[0].id });
     await sleep(300);
-    check('Teekesselchen: Phase WRITING mit Timer', admin.state.teekesselchenGame.phase === 'WRITING' && admin.state.teekesselchenGame.timeRemaining >= 9);
+    await sleep(1300);
+    check('Teekesselchen: Schreibphase läuft ohne eigenen Timer weiter', admin.state.teekesselchenGame.phase === 'WRITING' && !('timeRemaining' in admin.state.teekesselchenGame));
     check('Teekesselchen: eigene Kategorie privat, Lösung nicht im State', Boolean(privateView && privateView.category) && !JSON.stringify(admin.state.teekesselchenGame).includes(tRounds[0].answer));
     player.emit('pressBuzzer');
     await sleep(100);
@@ -293,26 +297,6 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     await sleep(100);
     check('Teekesselchen: Reset', admin.state.teekesselchenGame.phase === 'IDLE' && admin.state.teekesselchenGame.answer === '');
 
-    // Kategorien: Zug-Timer mit abwechselnden Teams
-    admin.emit('adminStartGame', 'KATEGORIEN');
-    const categoryRounds = await new Promise(resolve => { admin.once('receiveCategoryRounds', resolve); admin.emit('getCategoryRounds'); });
-    admin.emit('adminStartCategoryRound', categoryRounds[0]);
-    await sleep(150);
-    admin.emit('adminSetCategoryTurnDuration', 5);
-    admin.emit('adminStartCategoryTurn');
-    await sleep(150);
-    check('Kategorien: Zug startet beim ersten Team', admin.state.categoryGame.turn.running && admin.state.categoryGame.turn.team === 'Team 1');
-    admin.emit('adminStartCategoryTurn');
-    await sleep(150);
-    check('Kategorien: Zug wechselt zum nächsten Team', admin.state.categoryGame.turn.team === 'Team 2');
-    await sleep(1300);
-    check('Kategorien: Timer zählt herunter', admin.state.categoryGame.turn.remaining <= 4);
-    admin.emit('adminStopCategoryTurn');
-    await sleep(150);
-    check('Kategorien: Zug beenden', admin.state.categoryGame.turn.running === false && admin.state.categoryGame.turn.team === null);
-    admin.emit('adminResetGame');
-    await sleep(100);
-
     // Malen: Maler nur aus dem eigenen Team, Aufdecken
     admin.emit('adminStartGame', 'MALEN');
     admin.emit('adminStartMalenRound', { word: 'Haus', painters: { 'Team 1': player.id, 'Team 2': player.id } });
@@ -325,6 +309,32 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     admin.emit('adminSetMalenWord', 'Baum');
     await sleep(100);
     check('Malen: neuer Begriff deckt wieder zu', admin.state.malenGame.wordRevealed === false && admin.state.malenGame.word === 'Baum');
+    admin.emit('adminResetGame');
+    await sleep(100);
+
+    // Realität, Flaggen, Bingo: keine eigenen Timer, Abläufe per Admin-Button
+    admin.emit('adminStartGame', 'REALITAET');
+    admin.emit('adminStartRealitaet', { targetTeam: 'Team 1', contentType: 'QUESTION' });
+    await sleep(1300);
+    check('Realität: Runde läuft ohne eigenen Timer weiter', admin.state.realitaetGame.phase === 'PLAYING' && !('remaining' in admin.state.realitaetGame));
+    admin.emit('adminEndRealitaet');
+    await sleep(150);
+    check('Realität: Admin beendet die Runde', admin.state.realitaetGame.phase === 'FINISHED');
+    admin.emit('adminResetGame');
+
+    admin.emit('adminStartGame', 'FLAGGEN');
+    admin.emit('adminStartFlaggenRound', { country: 'Testland', elements: [], targetFlag: null });
+    await sleep(1300);
+    check('Flaggen: Bauen bleibt ohne Timer offen', admin.state.flaggenGame.phase === 'PLAYING' && admin.state.flaggenGame.buildingLocked === false && !('remaining' in admin.state.flaggenGame));
+    admin.emit('adminToggleFlaggenLock');
+    await sleep(150);
+    check('Flaggen: Admin sperrt das Bauen', admin.state.flaggenGame.buildingLocked === true);
+    admin.emit('adminResetGame');
+
+    admin.emit('adminStartGame', 'BINGO');
+    admin.emit('adminStartBingo', { topic: 'Testthema', referatPlayerId: player.id });
+    await sleep(150);
+    check('Bingo: Runde startet ohne eigenen Timer', admin.state.referatBingo.phase === 'PREPARING' && !('timer' in admin.state.referatBingo));
     admin.emit('adminResetGame');
     await sleep(100);
 

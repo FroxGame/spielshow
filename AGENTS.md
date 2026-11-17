@@ -71,18 +71,18 @@ Die Spieleliste hat eine einzige Quelle: `server/registry.js`. Die Shells laden 
 |----|----|--------------|--------------|------------------|
 | 1 | LISTENWISSEN | listenwissen | aufdeckbare Wortliste | einfaches Spiel |
 | 2 | KARTE | karte | Vollbild, max. 7 | Vollbild-Layout |
-| 3 | KATEGORIEN | kategorien | Zug-Timer pro Team, ohne Punktelimit | Timer, Lösungen nur im Server |
+| 3 | KATEGORIEN | kategorien | Begriffe per Admin zuordnen, ohne Punktelimit | Lösungen nur im Server |
 | 4 | DIKTAT | diktat | Spielereingaben, eigene Update-Kanäle, ohne Limit | Eingaben sammeln |
 | 5 | MALEN | malen | Rollen (Maler), Zeichnen, ohne Limit | Rollen, Echtzeit-Daten |
 | 6 | PARTNERWISSEN | partnerwissen | Rollen pro Team, private Ansichten | private Spieleransichten |
-| 7 | BINGO | bingo | Referent + Raster, Timer, ohne Limit | Rollen + Timer |
+| 7 | BINGO | bingo | Referent + Raster, ohne Limit | Rollen, Phasen per Admin-Button |
 | 8 | DISCORD_GAME | discord | private Rollenansichten, ohne Limit | Geheimnisse pro Rolle |
 | 9 | PROMI_RATEN | image-guess | Buzzer | Bild erraten (Konfiguration) |
 | 10 | DRUDEL | image-guess | Buzzer | Bild erraten (Konfiguration) |
-| 11 | MERKEN | merken | Timer, max. 7 | Timer + eigenes Limit |
-| 12 | REALITAET | realitaet | Timer, ohne Limit | Timer |
-| 13 | FLAGGEN | flaggen | Bauen per Drag, Timer | komplexe Spielereingaben |
-| 14 | BUCHSTABENSALAT | buchstabensalat | Buzzer, Schritt-Timer, Lösung im Server | **Buzzer + Timer (beste Vorlage)** |
+| 11 | MERKEN | merken | Merkphase endet per Admin-Button, max. 7 | eigenes Limit, Phasenwechsel |
+| 12 | REALITAET | realitaet | Runde endet per Admin-Button, ohne Limit | einfache Runden |
+| 13 | FLAGGEN | flaggen | Bauen per Drag, Bauen sperren per Admin-Button | komplexe Spielereingaben |
+| 14 | BUCHSTABENSALAT | buchstabensalat | Buzzer, Schritt-Takt, Lösung im Server | **Buzzer + Spiel-Takt (beste Vorlage)** |
 | 15 | TEEKESSELCHEN | teekesselchen | Buzzer, Schreibphase, private Kategorie je Team | **private Daten pro Team, Phasen** |
 
 ## 4. Der Standard: Was der Kern automatisch liefert
@@ -422,7 +422,7 @@ Ein grüner Check ersetzt keinen Blick in den Browser. Sage dem Nutzer, was du *
 
 ## 13. Bekannte offene Punkte
 
-- Spiele mit eigenen Spiel-Timern (Bingo, Merken, Realität, Flaggen, Kategorien, Buchstabensalat, Teekesselchen) laufen weiter getrennt vom globalen Host-Timer. Eine gemeinsame Hilfe dafür gibt es nicht.
+- Nur Buchstabensalat (Schritt-Takt der Buchstaben) hat noch einen eigenen Timer im Modul. Er ist Spielmechanik und läuft getrennt vom globalen Host-Timer. Alle anderen Spiele nutzen keine eigenen Timer mehr. Folgen wie Phasenwechsel löst der Admin per Button aus (Merken: `adminEndMerkenMemorizing`, Realität: `adminEndRealitaet`, Flaggen: `adminToggleFlaggenLock`, Teekesselchen: `adminCloseTeekesselchenInputs`).
 - **Optionales TODO:** Aktionen bei Timer-Ablauf. Idee: Der Admin wählt im Dashboard, was bei 0:00 passieren soll (nichts, Buzzer sperren, Eingaben schließen, Signalton, nächstes Team). Dafür bräuchte jedes Spiel einen kleinen Hook (z. B. onTimerEnd) und die Auswahl im Admin. Bisher bewusst nicht gebaut: Der Host löst Folgen von Hand aus.
 
 ## 14. Code-Qualität

@@ -18,11 +18,8 @@
 <div class="card merken-admin">
     <h2>Merken</h2>
     <div class="merken-admin-controls">
-        <label>Merkzeit in Sekunden
-            <input id="merkenDuration" type="number" min="5" max="3600" value="30">
-        </label>
         <button onclick="startMerken()" style="background:#2ed573;color:#000;font-weight:bold;">▶ Spiel / Merken starten</button>
-        <button onclick="stopMerkenTimer()" style="background:#e67e22;color:#fff;">⏭ Merken beenden</button>
+        <button onclick="endMerkenMemorizing()" style="background:#e67e22;color:#fff;">⏭ Merkphase beenden</button>
         <button onclick="revealAllMerkenCards()" style="background:#3742fa;color:#fff;">Alle aufdecken</button>
     </div>
     <div class="merken-admin-info">
@@ -33,11 +30,8 @@
 </div>
 
 <script>
-    window.startMerken = function() {
-        const duration = Number(document.getElementById('merkenDuration').value) || 30;
-        socket.emit('adminStartMerken', duration);
-    };
-    window.stopMerkenTimer = function() { socket.emit('adminStopMerkenTimer'); };
+    window.startMerken = function() { socket.emit('adminStartMerken'); };
+    window.endMerkenMemorizing = function() { socket.emit('adminEndMerkenMemorizing'); };
     window.revealAllMerkenCards = function() { socket.emit('adminRevealAllMerkenCards'); };
     window.selectMerkenCard = function(id) { socket.emit('adminSelectMerkenCard', id); };
     window.onModuleStateUpdate = function(state) {
@@ -45,7 +39,7 @@
         const phase = document.getElementById('merkenAdminPhase');
         if (!phase) return;
         phase.textContent = game.phase === 'MEMORIZING'
-            ? `Merken: ${game.remaining || 0} Sekunden`
+            ? 'Merkphase läuft'
             : (game.phase === 'PLAYING' ? 'Abfrage läuft' : (game.phase === 'FINISHED' ? 'Spiel beendet' : 'Noch nicht gestartet'));
 
         const grid = document.getElementById('merkenAdminGrid');

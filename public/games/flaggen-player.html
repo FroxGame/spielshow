@@ -627,8 +627,7 @@
 
         // Country Banner
         const countryBanner = document.getElementById('flaggenCountryBanner');
-        const timerText = game.duration > 0 ? ` [⏱️ ${game.remaining}s]` : '';
-        countryBanner.textContent = `Flagge bauen: ${game.country || '-'}${timerText}`;
+        countryBanner.textContent = `Flagge bauen: ${game.country || '-'}`;
 
         // Role Banner
         const roleBanner = document.getElementById('flaggenRoleBanner');

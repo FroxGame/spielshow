@@ -75,7 +75,7 @@ Ein KI-Agent baut ein neues Spiel am besten, wenn er von dir alle Spielregeln un
 | **Buzzer** | Ja/Nein. Wer darf buzzern, ab wann, was passiert danach (pausiert ein Timer, wertet der Admin)? | "Ja, ab Rundenstart, danach wertet der Admin" |
 | **Timer** | Der manuelle Host-Timer ist immer dabei (siehe oben). Nur angeben, wenn das Spiel einen **eigenen Timer mit Folgen** braucht. Dann: feste Dauer oder vom Admin einstellbar? Was passiert bei 0? | "Admin stellt Sekunden ein, bei 0 schließen die Eingaben" |
 | **Rollen** | Gibt es besondere Spieler (Maler, Referent, Rater)? Wer wird bestimmt und wie (Admin wählt im Dashboard)? | "Pro Team ein Rater, Admin wählt" |
-| **Teams** | Spielen beide Teams gleichzeitig oder abwechselnd? | "Abwechselnd, 15 Sekunden pro Zug" |
+| **Teams** | Spielen beide Teams gleichzeitig oder abwechselnd? | "Abwechselnd, der Admin gibt weiter" |
 | **Eingaben der Spieler** | Nichts, Text, Zahl, Auswahl, Klicken, Zeichnen? Wer sieht sie wann? Prüft der Admin oder das System automatisch? | "Zahl eintippen, erst nach Aufdecken für alle sichtbar" |
 | **Aufdecken** | Was wird wann aufgedeckt (Lösung, Antworten) und wer löst das aus? | "Admin-Button 'Lösung aufdecken'" |
 | **Spezielle Admin-Buttons** | Alle Buttons und Auswahlfelder, die das Spiel braucht, außer den automatischen oben | "Frage wählen, Frage starten, Antworten aufdecken, nächste Frage" |
@@ -219,7 +219,7 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 # Spiele für Spielshow 07.11.2026 (Rückmeldungen und Stand der Umsetzung)
 1. Listenwissen - Punktezähler waren bugged - 3,5-4/5 -> behoben (Punkte von 0 aus, bleiben beim Listenwechsel)
 2. Wo ist das auf der Karte? - Textfelder fehlen, Punktezähler waren bugged - 4/5 -> Punkte behoben, Textfelder gibt es jetzt in jedem Spiel, wenn der Admin sie im Dashboard einschaltet
-3. Begriffe Kategorien zuordnen - evtl Zeitlimit für die teams jeweils abwechselnd, so 15 sek - 3/5, mehr Begriffe die man kennt, weniger Begriffe -> Zug-Timer eingebaut (Admin: Sekunden pro Zug, "Zug starten"/"Nächstes Team"). Begriffe in `kategorien.json` noch anpassen
+3. Begriffe Kategorien zuordnen - evtl Zeitlimit für die teams jeweils abwechselnd, so 15 sek - 3/5, mehr Begriffe die man kennt, weniger Begriffe -> Der Host-Timer (im Admin-Dashboard einblendbar) deckt das Zeitlimit ab. Ein eigener Zug-Timer pro Team wurde wieder entfernt. Begriffe in `kategorien.json` noch anpassen
 4. Diktat - groß-kleinschreibung war nicht beachtet - 4/5, ohne Felix -> Groß-/Kleinschreibung zählt jetzt (Satzzeichen werden weiter ignoriert)
 5. Blindes Malen - Text unter der Box, am Ende immer Reveal, maler wechseln führt zu error - 5/5 -> Maler-Wechsel überarbeitet, "Begriff aufdecken" für Admin, der Hinweistext steht jetzt unter der Zeichenbox statt darin
 6. Partnerwissen - Antworten reveal noch einbauen - 4/5 -> richtige Antwort wird beim Bewerten für alle aufgedeckt

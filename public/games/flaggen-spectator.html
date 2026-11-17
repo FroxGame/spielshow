@@ -285,8 +285,7 @@
         if (countryEl) {
             if (phase === 'PLAYING') {
                 countryEl.style.display = 'block';
-                const timerText = game.duration > 0 ? ` [⏱️ ${game.remaining}s]` : '';
-                countryEl.textContent = `Aufgabe: ${game.country || '-'}${timerText}`;
+                countryEl.textContent = `Aufgabe: ${game.country || '-'}`;
             } else {
                 countryEl.style.display = 'none';
             }

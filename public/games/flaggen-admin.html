@@ -102,10 +102,6 @@
             <label class="flaggen-admin-label">Land (Aufgabe):</label>
             <input type="text" id="flaggenCountryInput" class="flaggen-input" placeholder="z.B. Singapur" style="min-width: 180px;">
         </div>
-        <div>
-            <label class="flaggen-admin-label">Bauzeit (Sek., 0 = unbegrenzt):</label>
-            <input type="number" id="flaggenDurationInput" class="flaggen-input" value="180" style="width: 120px;" min="0" max="999">
-        </div>
     </div>
 
     <div class="flaggen-admin-row">
@@ -266,7 +262,6 @@
         let country = (document.getElementById('flaggenCountryInput') && document.getElementById('flaggenCountryInput').value.trim()) || '';
         const presetSelect = document.getElementById('flaggenPresetSelect');
         const presetId = presetSelect ? presetSelect.value : '';
-        const duration = parseInt(document.getElementById('flaggenDurationInput').value, 10) || 0;
 
         let elements = [];
         let targetFlag = null;
@@ -301,11 +296,10 @@
         if (b1) builders[t1] = b1;
         if (b2) builders[t2] = b2;
 
-        console.log("Sende adminStartFlaggenRound:", { country: country || 'Singapur', duration, elementsCount: elements.length, builders });
+        console.log("Sende adminStartFlaggenRound:", { country: country || 'Singapur', elementsCount: elements.length, builders });
 
         socket.emit('adminStartFlaggenRound', {
             country: country || 'Singapur',
-            duration,
             elements,
             targetFlag,
             builders
@@ -368,8 +362,7 @@
             if (game.phase === 'PLAYING') {
                 const lockText = game.buildingLocked ? '🔒 BAUEN GESPERRT' : '🔨 BAUEN AKTIV';
                 const revealText = game.revealed ? ' | 👁️ AUFGEDECKT' : '';
-                const timeText = game.duration > 0 ? ` | ⏱️ ${game.remaining}s` : '';
-                statusEl.textContent = `Aufgabe: ${game.country || '-'} | ${lockText}${timeText}${revealText}`;
+                statusEl.textContent = `Aufgabe: ${game.country || '-'} | ${lockText}${revealText}`;
             } else {
                 statusEl.textContent = 'Bereit für neue Runde (IDLE)';
             }

@@ -1,7 +1,4 @@
 <style>
-    .bingo-timer { font-size:2rem; font-weight:bold; font-variant-numeric:tabular-nums; letter-spacing:2px; padding:8px 18px; border-radius:8px; background:#1c202c; border:2px solid #3d4763; display:inline-block; text-align:center; margin-bottom:12px; }
-    .bingo-timer.running { border-color:#2ed573; color:#2ed573; }
-    .bingo-timer.stopped { border-color:#ff6b6b; color:#ff6b6b; }
     .bingo-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:12px 0; width:100%; max-width:480px; }
     .bingo-cell { aspect-ratio:1; display:flex; align-items:center; justify-content:center; text-align:center; padding:10px 6px; border-radius:10px; font-size:0.95rem; font-weight:bold; border:2px solid #3d4763; background:#1c202c; transition:all 0.18s; user-select:none; word-break:break-word; line-height:1.2; cursor:default; }
     .bingo-cell.clickable { cursor:pointer; }
@@ -20,12 +17,10 @@
 
 <div style="width:100%; box-sizing:border-box; display:flex; flex-direction:column; align-items:center;">
     <h2 style="margin:0 0 10px; font-size:1.3rem; text-align:center;">Referat Bingo</h2>
-    <div id="bingoTimerEl" class="bingo-timer" style="display:none;">02:00</div>
     <div id="bingoPlayerContent" style="width:100%; max-width:500px;"></div>
 </div>
 
 <script>
-    function _bingoFormatTime(s) { return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }
     let _bingoWordsLocal = Array(9).fill('');
     let _bingoLastRole = null;
 
@@ -104,14 +99,6 @@
         const teams = state.teams || {};
         const phase = bingo.phase || 'IDLE';
 
-
-        const timerEl = document.getElementById('bingoTimerEl');
-        if (timerEl) {
-            const timer = bingo.timer || { remaining:120, running:false };
-            timerEl.style.display = (phase==='PLAYING') ? 'inline-block' : 'none';
-            timerEl.innerText = _bingoFormatTime(timer.remaining);
-            timerEl.className = 'bingo-timer' + (timer.running ? ' running' : (timer.remaining===0 ? ' stopped' : ''));
-        }
 
         const content = document.getElementById('bingoPlayerContent');
         if (!content) return;

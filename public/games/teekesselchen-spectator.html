@@ -1,6 +1,5 @@
 <style>
     .tee-spec { text-align: center; }
-    .tee-spec-timer { font-size: 3rem; font-weight: bold; }
     .tee-spec-team { margin: 12px auto; padding: 14px; max-width: 800px; border: 1px solid #566078; border-radius: 8px; text-align: left; }
     .tee-spec-answer { margin-top: 16px; font-size: 3rem; font-weight: bold; color: #2ed573; }
 </style>
@@ -8,7 +7,6 @@
 <section class="card tee-spec">
     <h2>Teekesselchen</h2>
     <p id="teeSpecStatus">Warte auf die nächste Runde...</p>
-    <div id="teeSpecTimer" class="tee-spec-timer"></div>
     <div id="teeSpecTeams"></div>
     <div id="teeSpecAnswer" class="tee-spec-answer"></div>
 </section>
@@ -25,7 +23,6 @@
             GUESSING: 'Welches Wort ist gemeint?',
             REVEALED: 'Auflösung'
         }[game.phase] || '';
-        document.getElementById('teeSpecTimer').textContent = game.phase === 'WRITING' ? `${game.timeRemaining}s` : '';
 
         teams.replaceChildren(...Object.entries(game.revealedTeams || {}).map(([team, info]) => {
             const box = document.createElement('div');

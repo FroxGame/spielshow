@@ -16,7 +16,7 @@
         const display = document.getElementById('realitaetSpectatorDisplay');
         if (!status || !display) return;
         status.textContent = game.phase === 'PLAYING'
-            ? `${game.targetTeam || 'Zielteam'} · ${game.remaining} Sekunden`
+            ? `${game.targetTeam || 'Zielteam'} ist dran`
             : game.phase === 'FINISHED' ? 'Runde beendet.' : 'Warte auf die Runde...';
         display.innerHTML = '';
         if (game.phase === 'PLAYING') {

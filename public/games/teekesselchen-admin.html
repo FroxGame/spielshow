@@ -2,8 +2,6 @@
     <h2>Teekesselchen</h2>
     <label>Runde:</label>
     <select id="teeRoundSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
-    <label>Schreibzeit in Sekunden:</label>
-    <input id="teeDuration" type="number" min="10" max="300" value="60" style="width:80px;">
     <div style="margin: 10px 0;">
         <button onclick="startTeekesselchen()">Runde starten</button>
         <button onclick="closeTeekesselchenInputs()">Textfelder schließen</button>
@@ -34,10 +32,7 @@
     window.startTeekesselchen = function() {
         const roundId = document.getElementById('teeRoundSelect').value;
         if (!roundId) return alert('Bitte eine Runde wählen!');
-        socket.emit('adminStartTeekesselchenRound', {
-            roundId,
-            duration: Number(document.getElementById('teeDuration').value) || 60
-        });
+        socket.emit('adminStartTeekesselchenRound', { roundId });
     };
     window.closeTeekesselchenInputs = () => socket.emit('adminCloseTeekesselchenInputs');
     window.revealTeekesselchen = () => socket.emit('adminRevealTeekesselchen');
@@ -51,7 +46,7 @@
         document.getElementById('teeAdminSolution').textContent = round ? round.answer : '-';
         status.textContent = game.phase === 'IDLE'
             ? 'Noch keine Runde aktiv.'
-            : `${game.phase}${game.phase === 'WRITING' ? ` | noch ${game.timeRemaining}s` : ''}`;
+            : game.phase;
 
         const buttons = document.getElementById('teeRevealButtons');
         buttons.replaceChildren(...Object.keys(state.teams).map(team => {
