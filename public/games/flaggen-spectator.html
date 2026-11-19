@@ -113,7 +113,7 @@
         align-items: center;
     }
     .flaggen-center-tile {
-        background: #202431;
+        background: #4b5367;
         border: 3px solid #ffffff;
         border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
@@ -270,7 +270,18 @@
         });
     }
 
+    let flaggenSpecView = { boards: {} };
+    let flaggenSpecState = null;
+
+    socket.off('flaggenView');
+    socket.on('flaggenView', view => {
+        flaggenSpecView = view;
+        if (flaggenSpecState) window.onSpectatorStateUpdate(flaggenSpecState);
+    });
+    socket.emit('getFlaggenView');
+
     window.onSpectatorStateUpdate = function(state) {
+        flaggenSpecState = state;
         const game = state.flaggenGame || {};
         const teams = state.teams || {};
         const teamNames = Object.keys(teams);
@@ -317,7 +328,7 @@
         const targetFlagEl = document.getElementById('flaggenSpecTargetFlag');
 
         const elements = game.elements || [];
-        const boards = game.boards || {};
+        const boards = flaggenSpecView.boards || {};
 
         const c1 = document.getElementById('flaggenSpecCanvas1');
         const c2 = document.getElementById('flaggenSpecCanvas2');

@@ -1,0 +1,91 @@
+<div class="diagramme-game">
+    <h2>Diagramme</h2>
+    <div id="diagrammePlayerTitle" style="font-weight:bold; margin-bottom:6px;"></div>
+    <div id="diagrammePlayerInfo" style="color:#a4b0be; margin-bottom:8px;">Warte auf das nächste Diagramm...</div>
+    <canvas id="diagrammePlayerCanvas" style="width:100%; border-radius:8px; cursor:crosshair;"></canvas>
+    <div id="diagrammePlayerControls" style="display:none; margin:10px 0;">
+        <button onclick="diagrammePlayerUndo()">Letzten Punkt entfernen</button>
+        <button onclick="diagrammePlayerClear()">Zeichnung löschen</button>
+    </div>
+    <div id="diagrammePlayerLegend"></div>
+</div>
+
+<script>
+    const diagrammePlayerChart = Spielshow.createDiagramChart(document.getElementById('diagrammePlayerCanvas'));
+    let diagrammePlayerView = { drawings: {}, solution: null };
+    let diagrammePlayerState = null;
+    let diagrammePlayerTeam = undefined;
+    let diagrammePlayerHover = null;
+
+    function diagrammePlayerIsPainter() {
+        const state = diagrammePlayerState;
+        const me = state && state.players ? state.players[socket.id] : null;
+        const game = state && state.diagrammeGame;
+        return Boolean(me && me.team && game && game.phase === 'PLAYING' && !game.drawingClosed && game.painters[me.team] === socket.id);
+    }
+
+    function diagrammePlayerRender() {
+        if (!diagrammePlayerState) return;
+        diagrammePlayerChart.render({
+            game: diagrammePlayerState.diagrammeGame,
+            drawings: diagrammePlayerView.drawings,
+            solution: diagrammePlayerView.solution,
+            colors: Spielshow.getTeamColors(diagrammePlayerState),
+            preview: diagrammePlayerIsPainter() && diagrammePlayerHover ? { team: diagrammePlayerTeam, ...diagrammePlayerHover } : null
+        });
+    }
+
+    function diagrammePlayerInfoText(state, game, me) {
+        if (game.phase === 'IDLE') return 'Warte auf das nächste Diagramm...';
+        if (!me || !me.team) return 'Du bist noch in keinem Team.';
+        if (game.solution) return 'Die Lösung (gelb) ist aufgedeckt.';
+        if (game.drawingsRevealed) return 'Die Zeichnungen sind aufgedeckt.';
+        if (game.drawingClosed) return 'Das Zeichnen ist beendet.';
+        if (diagrammePlayerIsPainter()) return 'Du zeichnest: Klicke in den grauen Bereich. Jeder Klick setzt einen Punkt und verbindet ihn mit dem vorherigen.';
+        const painter = state.players[game.painters[me.team]];
+        return painter ? `${painter.name} zeichnet für euer Team.` : 'Euer Team hat noch keinen Zeichner.';
+    }
+
+    socket.off('diagrammeView');
+    socket.on('diagrammeView', view => {
+        diagrammePlayerView = view;
+        diagrammePlayerRender();
+    });
+    socket.emit('getDiagrammeView');
+
+    document.getElementById('diagrammePlayerCanvas').addEventListener('click', event => {
+        if (!diagrammePlayerIsPainter()) return;
+        socket.emit('playerDiagrammeAddPoint', diagrammePlayerChart.eventToPoint(event));
+    });
+
+    const diagrammePlayerCanvas = document.getElementById('diagrammePlayerCanvas');
+    diagrammePlayerCanvas.addEventListener('mousemove', event => {
+        diagrammePlayerHover = diagrammePlayerChart.eventToPoint(event);
+        diagrammePlayerRender();
+    });
+    diagrammePlayerCanvas.addEventListener('mouseleave', () => {
+        diagrammePlayerHover = null;
+        diagrammePlayerRender();
+    });
+
+    window.diagrammePlayerUndo = () => socket.emit('playerDiagrammeUndo');
+    window.diagrammePlayerClear = () => socket.emit('playerDiagrammeClear');
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.diagrammeGame || {};
+        const info = document.getElementById('diagrammePlayerInfo');
+        if (!info) return;
+        diagrammePlayerState = state;
+        const me = state.players ? state.players[socket.id] : null;
+        const team = me ? me.team : null;
+        if (team !== diagrammePlayerTeam) {
+            diagrammePlayerTeam = team;
+            socket.emit('getDiagrammeView');
+        }
+        document.getElementById('diagrammePlayerTitle').textContent = game.phase === 'IDLE' ? '' : game.title;
+        info.textContent = diagrammePlayerInfoText(state, game, me);
+        document.getElementById('diagrammePlayerControls').style.display = diagrammePlayerIsPainter() ? 'block' : 'none';
+        Spielshow.renderDiagramLegend(document.getElementById('diagrammePlayerLegend'), state, game);
+        diagrammePlayerRender();
+    };
+</script>

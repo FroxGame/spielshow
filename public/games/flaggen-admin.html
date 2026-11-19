@@ -98,10 +98,7 @@
                 <option value="">-- Land wählen --</option>
             </select>
         </div>
-        <div>
-            <label class="flaggen-admin-label">Land (Aufgabe):</label>
-            <input type="text" id="flaggenCountryInput" class="flaggen-input" placeholder="z.B. Singapur" style="min-width: 180px;">
-        </div>
+
     </div>
 
     <div class="flaggen-admin-row">
@@ -152,6 +149,14 @@
 <script>
     let flaggenData = null;
     let flaggenLatestState = null;
+    let flaggenView = { boards: {} };
+
+    socket.off('flaggenView');
+    socket.on('flaggenView', view => {
+        flaggenView = view;
+        if (flaggenLatestState) window.onModuleStateUpdate(flaggenLatestState);
+    });
+    socket.emit('getFlaggenView');
 
     function loadFlaggenJson() {
         socket.off('receiveFlaggenData');
@@ -185,14 +190,14 @@
     function onSelectFlaggenPreset(presetId) {
         if (!flaggenData || !flaggenData.rounds) return;
         const round = flaggenData.rounds.find(r => r.id === presetId);
-        if (round) {
-            const countryInput = document.getElementById('flaggenCountryInput');
-            if (countryInput) countryInput.value = round.country;
-            const targetName = document.getElementById('flaggenTargetName');
-            if (targetName) targetName.textContent = round.country;
-            const targetEl = document.getElementById('flaggenTargetFlag');
-            if (targetEl) targetEl.innerHTML = round.targetFlag || '<div style="color:#777;padding:30px;">Keine Vorschau</div>';
-        }
+        if (round) showFlaggenTarget(round);
+    }
+
+    function showFlaggenTarget(round) {
+        const targetName = document.getElementById('flaggenTargetName');
+        if (targetName) targetName.textContent = round.country;
+        const targetEl = document.getElementById('flaggenTargetFlag');
+        if (targetEl) targetEl.innerHTML = round.targetFlag || '<div style="color:#777;padding:30px;">Keine Vorschau</div>';
     }
     window.onSelectFlaggenPreset = onSelectFlaggenPreset;
 
@@ -258,52 +263,17 @@
     window.onSaveBuilders = onSaveBuilders;
 
     function startFlaggenRound() {
-        console.log("startFlaggenRound ausgeführt!");
-        let country = (document.getElementById('flaggenCountryInput') && document.getElementById('flaggenCountryInput').value.trim()) || '';
         const presetSelect = document.getElementById('flaggenPresetSelect');
-        const presetId = presetSelect ? presetSelect.value : '';
+        const roundId = presetSelect ? presetSelect.value : '';
+        if (!roundId) return alert('Bitte ein Land wählen!');
 
-        let elements = [];
-        let targetFlag = null;
-
-        if (flaggenData && flaggenData.rounds && flaggenData.rounds.length > 0) {
-            let found = null;
-            if (presetId) {
-                found = flaggenData.rounds.find(r => r.id === presetId);
-            }
-            if (!found && country) {
-                found = flaggenData.rounds.find(r => r.country.toLowerCase() === country.toLowerCase());
-            }
-            if (!found) {
-                found = flaggenData.rounds[0];
-            }
-            if (found) {
-                if (!country) country = found.country;
-                elements = found.elements || [];
-                targetFlag = found.targetFlag || null;
-            }
-        }
-
-        const teams = (flaggenLatestState && flaggenLatestState.teams) || {};
-        const teamNames = Object.keys(teams);
-        const t1 = teamNames[0] || 'Team 1';
-        const t2 = teamNames[1] || 'Team 2';
-
-        const b1 = (document.getElementById('flaggenBuilderTeam1') && document.getElementById('flaggenBuilderTeam1').value) || null;
-        const b2 = (document.getElementById('flaggenBuilderTeam2') && document.getElementById('flaggenBuilderTeam2').value) || null;
-
+        const teamNames = Object.keys((flaggenLatestState && flaggenLatestState.teams) || {});
         const builders = {};
-        if (b1) builders[t1] = b1;
-        if (b2) builders[t2] = b2;
-
-        console.log("Sende adminStartFlaggenRound:", { country: country || 'Singapur', elementsCount: elements.length, builders });
-
-        socket.emit('adminStartFlaggenRound', {
-            country: country || 'Singapur',
-            elements,
-            targetFlag,
-            builders
+        teamNames.forEach((team, index) => {
+            const select = document.getElementById('flaggenBuilderTeam' + (index + 1));
+            if (select && select.value) builders[team] = select.value;
         });
+        socket.emit('adminStartFlaggenRound', { roundId, builders });
     }
     window.startFlaggenRound = startFlaggenRound;
 
@@ -395,13 +365,11 @@
         if (tag2) tag2.textContent = p2 ? `(Baumeister: ${p2.name})` : '(Alle bauen)';
 
         // Target flag
-        const targetName = document.getElementById('flaggenTargetName');
-        const targetFlag = document.getElementById('flaggenTargetFlag');
-        if (targetName) targetName.textContent = game.country || '-';
-        if (targetFlag && game.targetFlag) targetFlag.innerHTML = game.targetFlag;
+        const activeRound = flaggenData && flaggenData.rounds ? flaggenData.rounds.find(r => r.id === game.roundId) : null;
+        if (activeRound) showFlaggenTarget(activeRound);
 
         // Render live boards
-        const boards = game.boards || {};
+        const boards = flaggenView.boards || {};
         const elements = game.elements || [];
         renderPlacedPieces(document.getElementById('flaggenCanvasT1'), (boards[t1] || {}).placements || [], elements);
         renderPlacedPieces(document.getElementById('flaggenCanvasT2'), (boards[t2] || {}).placements || [], elements);

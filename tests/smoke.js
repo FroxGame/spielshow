@@ -290,6 +290,45 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     await sleep(100);
     check('Beugen: Reset', beugenGame().phase === 'IDLE' && beugenGame().answer === '' && beugenGame().verb === '');
 
+    // Diagramme: Zeichnen, Privatsphaere, Auswertung, Reset
+    admin.emit('adminStartGame', 'DIAGRAMME');
+    const diagrams = await new Promise(resolve => { admin.once('receiveDiagrammeList', resolve); admin.emit('getDiagrammeList'); });
+    check('Diagramme: Liste per Admin-Event', diagrams.length > 0);
+    const diagramsDenied = await Promise.race([
+        new Promise(resolve => { player.once('receiveDiagrammeList', () => resolve(false)); player.emit('getDiagrammeList'); }),
+        sleep(300).then(() => true)
+    ]);
+    check('Diagramme: Spieler bekommt keine Liste', diagramsDenied === true);
+    admin.emit('adminStartDiagrammeRound', { diagramId: diagrams[0].id });
+    await sleep(150);
+    const dg = () => admin.state.diagrammeGame;
+    check('Diagramme: nur erste Hälfte im State, Lösung verborgen', dg().visibleValues.length === dg().shownCount && dg().solution === null && !('values' in dg()));
+    check('Diagramme: Spieler ist automatisch Zeichner', dg().painters['Team 1'] === player.id);
+    player.emit('playerDiagrammeAddPoint', { u: 0.1, v: 0.5 });
+    const playerView = await once(player, 'diagrammeView');
+    check('Diagramme: Punkt wird auf rechte Hälfte begrenzt', playerView.drawings['Team 1'].length === 1 && playerView.drawings['Team 1'][0].u >= dg().shownCount / diagrams[0].values.length - 0.05 && playerView.solution === null);
+    admin.emit('getDiagrammeView');
+    const adminView = await once(admin, 'diagrammeView');
+    check('Diagramme: Admin sieht Zeichnung und Lösung', adminView.drawings['Team 1'].length === 1 && adminView.solution.length === diagrams[0].values.length);
+    admin.emit('playerDiagrammeAddPoint', { u: 0.9, v: 0.5 }); // Admin ist kein Zeichner: Zähler unten muss 2 bleiben
+    player.emit('playerDiagrammeAddPoint', { u: 1, v: 0.5 });
+    await sleep(150);
+    check('Diagramme: Punktezähler', dg().pointCounts['Team 1'] === 2 && dg().pointCounts['Team 2'] === 0);
+    admin.emit('adminCloseDiagrammeDrawing');
+    await sleep(150);
+    player.emit('playerDiagrammeAddPoint', { u: 1, v: 0.2 });
+    await sleep(150);
+    check('Diagramme: Admin schließt das Zeichnen', dg().drawingClosed === true && dg().drawingsRevealed === false && dg().pointCounts['Team 1'] === 2);
+    admin.emit('adminRevealDiagrammeSolution');
+    await sleep(150);
+    check('Diagramme: Auswertung mit Abweichung', dg().solution !== null && typeof dg().results['Team 1'].deviationPct === 'number' && dg().results['Team 2'] === null && dg().closestTeam === 'Team 1');
+    player.emit('playerDiagrammeAddPoint', { u: 1, v: 0.5 });
+    await sleep(150);
+    check('Diagramme: nach Aufdecken kein Zeichnen mehr', dg().pointCounts['Team 1'] === 2);
+    admin.emit('adminResetGame');
+    await sleep(100);
+    check('Diagramme: Reset', dg().phase === 'IDLE' && dg().solution === null && dg().pointCounts['Team 1'] === 0);
+
     // Teekesselchen (neu)
     let privateView = null;
     player.on('teekesselchenPlayerUpdate', v => { privateView = v; });
@@ -347,12 +386,46 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     admin.emit('adminResetGame');
 
     admin.emit('adminStartGame', 'FLAGGEN');
-    admin.emit('adminStartFlaggenRound', { country: 'Testland', elements: [], targetFlag: null });
+    const flaggenData = await new Promise(resolve => { admin.once('receiveFlaggenData', resolve); admin.emit('getFlaggenData'); });
+    check('Flaggen: viele Länder vorhanden (u. a. Kuba)', flaggenData.rounds.length >= 30 && flaggenData.rounds.some(round => round.id === 'kuba'));
+    admin.emit('adminStartFlaggenRound', { roundId: 'unbekannt' });
+    await sleep(100);
+    check('Flaggen: unbekannte Runde wird ignoriert', admin.state.flaggenGame.phase === 'IDLE');
+    admin.emit('adminStartFlaggenRound', { roundId: 'kuba' });
     await sleep(1300);
-    check('Flaggen: Bauen bleibt ohne Timer offen', admin.state.flaggenGame.phase === 'PLAYING' && admin.state.flaggenGame.buildingLocked === false && !('remaining' in admin.state.flaggenGame));
+    const fg = () => admin.state.flaggenGame;
+    check('Flaggen: Bauen bleibt ohne Timer offen', fg().phase === 'PLAYING' && fg().buildingLocked === false && !('remaining' in fg()));
+    check('Flaggen: Original bleibt bis zum Aufdecken im Server', fg().targetFlag === null && fg().elements.length > 0);
+    const kubaElement = fg().elements[0].id;
+    check('Flaggen: Bauflächen nicht im öffentlichen State', !('boards' in fg()));
+    let spectatorSawBoard = false;
+    spectator.once('flaggenView', view => { spectatorSawBoard = Object.keys(view.boards).length > 0; });
+    const flaggenPlayerViewPromise = once(player, 'flaggenView');
+    const flaggenAdminViewPromise = once(admin, 'flaggenView');
+    player.emit('playerUpdateFlaggenBoard', { placements: [
+        { id: 'a', elementId: kubaElement, x: 0.4, y: 2, rotation: 450, zIndex: 3 },
+        { id: 'b', elementId: 'gibt-es-nicht', x: 0.5, y: 0.5 },
+        { id: 'c', elementId: kubaElement, x: 'abc', y: 0.5 }
+    ] });
+    const flaggenPlayerView = await flaggenPlayerViewPromise;
+    const flaggenAdminView = await flaggenAdminViewPromise;
+    const placed = flaggenPlayerView.boards['Team 1'].placements;
+    check('Flaggen: Platzierungen werden geprüft', placed.length === 2 && placed[0].y === 1 && placed[0].rotation === 90 && placed[1].x === 0.5);
+    check('Flaggen: Admin sieht die Bauflächen live', flaggenAdminView.boards['Team 1'].placements.length === 2);
+    await sleep(150);
+    check('Flaggen: Zuschauer sieht vor dem Aufdecken keine Bauflächen', spectatorSawBoard === false);
     admin.emit('adminToggleFlaggenLock');
     await sleep(150);
-    check('Flaggen: Admin sperrt das Bauen', admin.state.flaggenGame.buildingLocked === true);
+    check('Flaggen: Admin sperrt das Bauen', fg().buildingLocked === true);
+    const blocked = Promise.race([once(player, 'flaggenView').then(() => false), sleep(300).then(() => true)]);
+    player.emit('playerClearFlaggenBoard');
+    check('Flaggen: gesperrt, Spieler kann nichts mehr ändern', await blocked);
+    const revealedView = once(spectator, 'flaggenView');
+    admin.emit('adminRevealFlaggen');
+    const specView = await revealedView;
+    await sleep(100);
+    check('Flaggen: Aufdecken zeigt dem Zuschauer die Bauflächen', specView.boards['Team 1'].placements.length === 2);
+    check('Flaggen: Aufdecken liefert die Original-Flagge', fg().revealed === true && typeof fg().targetFlag === 'string' && fg().targetFlag.includes('<svg'));
     admin.emit('adminResetGame');
 
     admin.emit('adminStartGame', 'BINGO');
@@ -377,7 +450,7 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     check('Umbenennen: Spieler zieht um', Object.values(st.players).every(p => p.team !== 'Team 1'));
 
     // Routen: Lösungen der neuen Spiele sind nicht mehr öffentlich
-    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json']) {
+    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json']) {
         check(`Nicht öffentlich ${url}`, !(await fetch(URL + url)).ok);
     }
 

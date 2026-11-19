@@ -57,7 +57,7 @@ Ein KI-Agent baut ein neues Spiel am besten, wenn er von dir alle Spielregeln un
 
 - Start-Button im Admin mit Spielnummer und Name, plus die Intro-Animation
 - Punkteanzeige je Team für Spieler und Zuschauer
-- Punkte **+1 / -1** je Team im Admin
+- Punkte **+1 / -1** je Team im Admin (die Punktevergabe per Admin-Klick ist der Standard)
 - **Reset-Button "Spiel zurücksetzen"** im Admin. Er setzt das ganze Spiel inklusive Punkte auf den Startzustand
 - Buzzer, **falls das Spiel einen hat**: Button für Spieler (unten fixiert), Ton, Anzeige für Zuschauer, im Admin "Buzzer sperren" und "Buzzer freigeben"
 - Textfelder für die Teams. Die schaltest du im Admin-Dashboard für alle Spiele gemeinsam ein oder aus
@@ -71,9 +71,8 @@ Ein KI-Agent baut ein neues Spiel am besten, wenn er von dir alle Spielregeln un
 | **Name** | Name des Spiels (erscheint auf dem Start-Button und im Intro). Optional: an welcher Stelle in der Reihenfolge | "Schätzfragen", als Spiel 6 |
 | **Ablauf** | Schritt für Schritt: Was macht der Admin, was machen die Spieler, was sieht der Zuschauer? | "Admin startet Frage, alle Teams tippen eine Zahl, Admin deckt Antworten auf" |
 | **Höchstpunktzahl** | Gibt es eine? Wie hoch? Oder zählen die Punkte einfach hoch (dann zeigt die Anzeige nur "n" statt "n / 5")? | "Maximal 5" oder "keine Grenze" |
-| **Punkte vergeben** | Vergibt der Admin per Klick, oder automatisch (wann)? Gibt es eine Gewinnbedingung (z. B. wer 5 erreicht, gewinnt und der Buzzer sperrt)? | "Admin klickt +1. Bei 5 gewinnt das Team" |
+| **Punkte vergeben** | **Standard: Admin per Klick (+1 / -1), das musst du nicht angeben.** Nur nennen, wenn es anders sein soll: automatische Vergabe (wann?) oder eine Gewinnbedingung (z. B. wer 5 erreicht, gewinnt und der Buzzer sperrt) | "Bei 5 gewinnt das Team" |
 | **Buzzer** | Ja/Nein. Wer darf buzzern, ab wann, was passiert danach (pausiert ein Timer, wertet der Admin)? | "Ja, ab Rundenstart, danach wertet der Admin" |
-| **Timer** | Der manuelle Host-Timer ist immer dabei (siehe oben). Nur angeben, wenn das Spiel einen **eigenen Timer mit Folgen** braucht. Dann: feste Dauer oder vom Admin einstellbar? Was passiert bei 0? | "Admin stellt Sekunden ein, bei 0 schließen die Eingaben" |
 | **Rollen** | Gibt es besondere Spieler (Maler, Referent, Rater)? Wer wird bestimmt und wie (Admin wählt im Dashboard)? | "Pro Team ein Rater, Admin wählt" |
 | **Teams** | Spielen beide Teams gleichzeitig oder abwechselnd? | "Abwechselnd, der Admin gibt weiter" |
 | **Eingaben der Spieler** | Nichts, Text, Zahl, Auswahl, Klicken, Zeichnen? Wer sieht sie wann? Prüft der Admin oder das System automatisch? | "Zahl eintippen, erst nach Aufdecken für alle sichtbar" |
@@ -108,11 +107,9 @@ Ablauf
 
 Punkte
 - Höchstpunktzahl: (Zahl / keine)
-- Vergabe: (Admin per Klick / automatisch wenn ...)
-- Gewinnbedingung (optional): 
+- Abweichung vom Standard "Admin per Klick" (optional, sonst weglassen): (automatisch wenn ... / Gewinnbedingung)
 
 Buzzer: (ja / nein, Details)
-Timer: (ja / nein, Dauer, was bei 0 passiert)
 Rollen: 
 Teams: (gleichzeitig / abwechselnd)
 Eingaben der Spieler: 
@@ -140,10 +137,8 @@ Ablauf
 
 Punkte
 - Höchstpunktzahl: keine
-- Vergabe: Admin per Klick (+1 / -1)
 
 Buzzer: nein
-Timer: ja, Admin stellt die Sekunden ein, bei 0 sind die Eingaben geschlossen
 Rollen: nein
 Teams: gleichzeitig
 Eingaben der Spieler: eine Zahl, erst nach dem Aufdecken für alle sichtbar
@@ -203,6 +198,7 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 - Buchstabensalat
 - Teekesselchen
 - Beugen
+- Diagramme
 
 
 # Was schon fertig ist für die Spielshow (inklusive Inhalt):

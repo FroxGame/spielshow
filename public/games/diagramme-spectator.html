@@ -1,0 +1,39 @@
+<section class="card" style="text-align:center;">
+    <h2>Diagramme</h2>
+    <div id="diagrammeSpecTitle" style="font-size:1.4rem; font-weight:bold; margin-bottom:10px;"></div>
+    <canvas id="diagrammeSpecCanvas" style="width:100%; max-width:1200px; border-radius:8px;"></canvas>
+    <div id="diagrammeSpecLegend" style="font-size:1.3rem; margin-top:10px;"></div>
+</section>
+
+<script>
+    const diagrammeSpecChart = Spielshow.createDiagramChart(document.getElementById('diagrammeSpecCanvas'));
+    let diagrammeSpecView = { drawings: {}, solution: null };
+    let diagrammeSpecState = null;
+
+    function diagrammeSpecRender() {
+        if (!diagrammeSpecState) return;
+        diagrammeSpecChart.render({
+            game: diagrammeSpecState.diagrammeGame,
+            drawings: diagrammeSpecView.drawings,
+            solution: diagrammeSpecView.solution,
+            colors: Spielshow.getTeamColors(diagrammeSpecState)
+        });
+    }
+
+    socket.off('diagrammeView');
+    socket.on('diagrammeView', view => {
+        diagrammeSpecView = view;
+        diagrammeSpecRender();
+    });
+    socket.emit('getDiagrammeView');
+
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.diagrammeGame || {};
+        const title = document.getElementById('diagrammeSpecTitle');
+        if (!title) return;
+        diagrammeSpecState = state;
+        title.textContent = game.phase === 'IDLE' ? 'Warte auf das nächste Diagramm...' : game.title;
+        Spielshow.renderDiagramLegend(document.getElementById('diagrammeSpecLegend'), state, game);
+        diagrammeSpecRender();
+    };
+</script>

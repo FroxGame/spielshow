@@ -190,7 +190,7 @@
 
     /* Individual Pool Tile Card (Inspired by Screenshot) */
     .flaggen-pool-tile {
-        background: #202431;
+        background: #4b5367;
         border: 3px solid #ffffff;
         border-radius: 10px;
         box-shadow: 0 4px 14px rgba(0,0,0,0.5);
@@ -365,6 +365,18 @@
     let _flaggenIsLocked = false;
     let _flaggenCurrentCountry = null;
     let _flaggenSelectedPieceId = null;
+    let _flaggenDragging = false;
+    let _flaggenView = { boards: {} };
+    let _flaggenLastState = null;
+    let _flaggenViewTeam;
+
+    socket.off('flaggenView');
+    socket.on('flaggenView', view => {
+        _flaggenView = view;
+        if (_flaggenDragging || !_flaggenLastState) return;
+        window.onModuleStateUpdate(_flaggenLastState);
+    });
+    socket.emit('getFlaggenView');
 
     function getElementDef(elementId) {
         return _flaggenElementsDef.find(e => e.id === elementId);
@@ -453,6 +465,7 @@
 
             _flaggenSelectedPieceId = piece.id;
             isDragging = true;
+            _flaggenDragging = true;
             startClientX = e.clientX !== undefined ? e.clientX : (e.touches && e.touches[0].clientX);
             startClientY = e.clientY !== undefined ? e.clientY : (e.touches && e.touches[0].clientY);
             startX = piece.x;
@@ -479,6 +492,7 @@
             function onPointerUp() {
                 if (!isDragging) return;
                 isDragging = false;
+                _flaggenDragging = false;
                 window.removeEventListener('pointermove', onPointerMove);
                 window.removeEventListener('pointerup', onPointerUp);
                 window.removeEventListener('pointercancel', onPointerUp);
@@ -597,8 +611,14 @@
     }
 
     window.onModuleStateUpdate = function(state) {
+        _flaggenLastState = state;
         const game = state.flaggenGame || {};
         const me = (state.players && state.players[socket.id]) || null;
+        const myCurrentTeam = me ? me.team : null;
+        if (myCurrentTeam !== _flaggenViewTeam) {
+            _flaggenViewTeam = myCurrentTeam;
+            socket.emit('getFlaggenView');
+        }
         const teams = state.teams || {};
         const teamNames = Object.keys(teams);
         const t1 = teamNames[0] || 'Team 1';
@@ -667,7 +687,7 @@
             const targetEl = document.getElementById('flaggenRevTargetFlag');
             if (targetEl && game.targetFlag) targetEl.innerHTML = game.targetFlag;
 
-            const boards = game.boards || {};
+            const boards = _flaggenView.boards || {};
             renderStaticBoard(document.getElementById('flaggenRevBoard1'), (boards[t1] || {}).placements || [], elements);
             renderStaticBoard(document.getElementById('flaggenRevBoard2'), (boards[t2] || {}).placements || [], elements);
 
@@ -681,12 +701,10 @@
                 clearBtn.style.display = (_flaggenIsBuilder && !_flaggenIsLocked) ? 'inline-block' : 'none';
             }
 
-            // Sync placements for my team
-            const myBoard = (game.boards && game.boards[myTeam]) || {};
-            // If not builder or incoming server update has new count, sync local placements
-            if (!_flaggenIsBuilder || myBoard.placements) {
-                _flaggenMyPlacements = myBoard.placements || [];
-            }
+            // Waehrend des Ziehens nichts ueberschreiben, sonst reisst die Bewegung ab
+            if (_flaggenDragging) return;
+            const myBoard = (_flaggenView.boards && _flaggenView.boards[myTeam]) || {};
+            _flaggenMyPlacements = myBoard.placements || [];
 
             renderMyBoard();
             renderPool(elements);

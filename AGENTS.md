@@ -22,7 +22,7 @@ Passwörter: `ADMIN_PASSWORD`, `SPECTATOR_PASSWORD` (Standard `1234`). Der Rauch
 
 ## 2. Vorgehen für ein neues Spiel
 
-1. **Anforderungen klären.** Du brauchst vom Nutzer mindestens: Ablauf (aus Sicht von Admin, Spieler, Zuschauer), Höchstpunktzahl (Zahl oder keine), Buzzer ja/nein, Timer ja/nein, spezielle Admin-Buttons, Inhalte und Format, Geheimnisse (was darf wer nicht sehen). Der vollständige Fragenkatalog steht in `README.md` ("Neues Spiel anfordern"). Frage gezielt nach, was fehlt. Rate nicht bei Punkte-Limit, Buzzer und Timer.
+1. **Anforderungen klären.** Du brauchst vom Nutzer mindestens: Ablauf (aus Sicht von Admin, Spieler, Zuschauer), Höchstpunktzahl (Zahl oder keine), Buzzer ja/nein, spezielle Admin-Buttons, Inhalte und Format, Geheimnisse (was darf wer nicht sehen). Der vollständige Fragenkatalog steht in `README.md` ("Neues Spiel anfordern"). Frage gezielt nach, was fehlt. Rate nicht bei Punkte-Limit und Buzzer. **Nicht nachfragen** (Standard, nur bei ausdrücklicher Abweichung ändern): Punktevergabe ist immer **Admin per Klick (+1 / -1)** über `adminAddGamePoint`, und der **globale Host-Timer** ist immer dabei (Abschnitt 4). Ein eigener Spiel-Timer mit Folgen wird nur gebaut, wenn der Nutzer ihn von sich aus verlangt.
 2. **Standard abbilden** (Abschnitt 4): Was der Kern liefert, baust du nicht nach.
 3. **Server-Modul** schreiben (Abschnitt 5) und in `server/registry.js` eintragen.
 4. **Drei Client-Seiten** schreiben (Abschnitt 6).
@@ -81,10 +81,12 @@ Die Spieleliste hat eine einzige Quelle: `server/registry.js`. Die Shells laden 
 | 10 | DRUDEL | image-guess | Buzzer | Bild erraten (Konfiguration) |
 | 11 | MERKEN | merken | Merkphase endet per Admin-Button, max. 7 | eigenes Limit, Phasenwechsel |
 | 12 | REALITAET | realitaet | Runde endet per Admin-Button, ohne Limit | einfache Runden |
-| 13 | FLAGGEN | flaggen | Bauen per Drag, Bauen sperren per Admin-Button | komplexe Spielereingaben |
+| 13 | FLAGGEN | flaggen | Bauen per Drag, Bauen sperren per Admin-Button, Original und Bauflächen privat bis zum Aufdecken (`flaggenView`). `flaggen.json` wird mit `node tools/flaggen-builder.js` erzeugt (Flaggen in `tools/flaggen-data.js`, Bauteile in `tools/flaggen-parts.js`, Ablenker im Builder) | komplexe Spielereingaben |
+ode tools/flaggen-builder.js erzeugt (Flaggen in 	ools/flaggen-data.js, Bauteile in 	ools/flaggen-parts.js, Ablenker im Builder) | komplexe Spielereingaben |
 | 14 | BUCHSTABENSALAT | buchstabensalat | Buzzer, Schritt-Takt, Lösung im Server | **Buzzer + Spiel-Takt (beste Vorlage)** |
 | 15 | TEEKESSELCHEN | teekesselchen | Buzzer, Schreibphase, private Kategorie je Team | **private Daten pro Team, Phasen** |
 | 16 | BEUGEN | beugen | Buzzer erst nach "Form zeigen", max. 7, Lösung nur im Server (`beugen.json`) | einfache Runden mit Aufdeck-Schritten |
+| 17 | DIAGRAMME | diagramme | Diagramm weiterzeichnen per Klick, Zeichner je Team, Auswertung als Abweichung, `layout: 'medium'`, max. 5 (`diagramme.json`) | **private Live-Daten pro Empfänger** (`diagrammeView`), gemeinsamer Canvas-Baustein `public/shared/diagram.js` |
 
 ## 4. Der Standard: Was der Kern automatisch liefert
 

@@ -1,0 +1,117 @@
+<div class="card">
+    <h2>Diagramme</h2>
+    <label>Diagramm:</label>
+    <select id="diagrammeSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+    <div id="diagrammePainters" style="margin: 8px 0;"></div>
+    <div style="margin: 10px 0;">
+        <button onclick="diagrammeStart()">Runde starten</button>
+        <button onclick="diagrammeCloseDrawing()">Zeichnen schließen</button>
+        <button onclick="diagrammeRevealDrawings()">Zeichnungen aufdecken</button>
+        <button onclick="diagrammeRevealSolution()">Lösung + Abweichung aufdecken</button>
+    </div>
+    <p id="diagrammeAdminStatus">Noch keine Runde aktiv.</p>
+    <canvas id="diagrammeAdminCanvas" style="width:100%; max-width:900px; border-radius:8px;"></canvas>
+    <div id="diagrammeAdminLegend"></div>
+</div>
+
+<script>
+    let diagrammeAdminChart = null;
+    let diagrammeAdminView = { drawings: {}, solution: null };
+    let diagrammeAdminLatest = null;
+    let diagrammePainterSignature = '';
+
+    function diagrammeAdminRender() {
+        if (!diagrammeAdminLatest) return;
+        const canvas = document.getElementById('diagrammeAdminCanvas');
+        if (!canvas) return;
+        diagrammeAdminChart = diagrammeAdminChart || Spielshow.createDiagramChart(canvas);
+        diagrammeAdminChart.render({
+            game: diagrammeAdminLatest.diagrammeGame,
+            drawings: diagrammeAdminView.drawings,
+            solution: diagrammeAdminView.solution,
+            colors: Spielshow.getTeamColors(diagrammeAdminLatest)
+        });
+    }
+
+    socket.off('receiveDiagrammeList');
+    socket.on('receiveDiagrammeList', diagrams => {
+        const select = document.getElementById('diagrammeSelect');
+        if (!select) return;
+        const current = select.value;
+        select.replaceChildren(...diagrams.map(diagram => {
+            const option = document.createElement('option');
+            option.value = diagram.id;
+            option.textContent = diagram.title;
+            return option;
+        }));
+        if (current) select.value = current;
+    });
+    socket.off('diagrammeView');
+    socket.on('diagrammeView', view => {
+        diagrammeAdminView = view;
+        diagrammeAdminRender();
+    });
+    socket.emit('getDiagrammeList');
+    socket.emit('getDiagrammeView');
+
+    function diagrammeCollectPainters() {
+        const painters = {};
+        document.querySelectorAll('#diagrammePainters select').forEach(select => { painters[select.dataset.team] = select.value || null; });
+        return painters;
+    }
+
+    function diagrammeBuildPainterSelects(state, game) {
+        const container = document.getElementById('diagrammePainters');
+        const players = Object.values(state.players || {});
+        const signature = Object.keys(game.scores || {}).map(team => `${team}:${players.filter(p => p.team === team).map(p => `${p.id}=${p.name}`).join(',')}`).join('|');
+        if (signature !== diagrammePainterSignature) {
+            diagrammePainterSignature = signature;
+            container.replaceChildren(...Object.keys(game.scores || {}).map(team => {
+                const label = document.createElement('label');
+                label.style.marginRight = '12px';
+                label.append(`Zeichner ${team}: `);
+                const select = document.createElement('select');
+                select.dataset.team = team;
+                const none = document.createElement('option');
+                none.value = '';
+                none.textContent = '-- automatisch --';
+                select.appendChild(none);
+                players.filter(player => player.team === team).forEach(player => {
+                    const option = document.createElement('option');
+                    option.value = player.id;
+                    option.textContent = player.name;
+                    select.appendChild(option);
+                });
+                select.addEventListener('change', () => socket.emit('adminSetDiagrammePainters', diagrammeCollectPainters()));
+                label.appendChild(select);
+                return label;
+            }));
+        }
+        container.querySelectorAll('select').forEach(select => {
+            if (document.activeElement !== select) select.value = (game.painters || {})[select.dataset.team] || '';
+        });
+    }
+
+    window.diagrammeStart = function() {
+        const select = document.getElementById('diagrammeSelect');
+        if (!select || !select.value) return alert('Bitte ein Diagramm wählen!');
+        socket.emit('adminStartDiagrammeRound', { diagramId: select.value, painters: diagrammeCollectPainters() });
+    };
+    window.diagrammeCloseDrawing = () => socket.emit('adminCloseDiagrammeDrawing');
+    window.diagrammeRevealDrawings = () => socket.emit('adminRevealDiagrammeDrawings');
+    window.diagrammeRevealSolution = () => socket.emit('adminRevealDiagrammeSolution');
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.diagrammeGame || {};
+        const status = document.getElementById('diagrammeAdminStatus');
+        if (!status) return;
+        diagrammeAdminLatest = state;
+        diagrammeBuildPainterSelects(state, game);
+        if (game.phase === 'IDLE') status.textContent = 'Noch keine Runde aktiv.';
+        else if (game.solution) status.textContent = 'Lösung ist aufgedeckt.';
+        else if (game.drawingClosed && !game.drawingsRevealed) status.textContent = 'Zeichnen ist geschlossen (Zeichnungen noch verdeckt).';
+        else status.textContent = game.drawingsRevealed ? 'Zeichnungen sind aufgedeckt.' : 'Die Spieler zeichnen (Zeichnungen sind noch verdeckt).';
+        Spielshow.renderDiagramLegend(document.getElementById('diagrammeAdminLegend'), state, game);
+        diagrammeAdminRender();
+    };
+</script>
