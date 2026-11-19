@@ -88,6 +88,7 @@ ode tools/flaggen-builder.js erzeugt (Flaggen in 	ools/flaggen-data.js, Bauteile
 | 16 | BEUGEN | beugen | Buzzer erst nach "Form zeigen", max. 7, Lösung nur im Server (`beugen.json`) | einfache Runden mit Aufdeck-Schritten |
 | 17 | DIAGRAMME | diagramme | Diagramm weiterzeichnen per Klick, Zeichner je Team, Auswertung als Abweichung, `layout: 'medium'`, max. 5 (`diagramme.json`) | **private Live-Daten pro Empfänger** (`diagrammeView`), gemeinsamer Canvas-Baustein `public/shared/diagram.js` |
 | 18 | RAP_BATTLE | rap-battle | Rappender sieht nur Reimwörter (aktuelle + 2 nächste Zeilen) zu synthetischem Beat, Teams tippen 12 Wörter und markieren sie, Admin gibt Rap per Button frei, ohne Limit (`rap-battle.json`) | **private Ansichten je Rolle** (`rapBattleView`), Takt-Animation und Beat im Client (`public/shared/rap-battle.js`), Server gibt nur `startAt` und Tempo vor |
+| 19 | SONGTEXTE | songtexte | Songtext-Abschnitt Wort für Wort aufdecken, 3 Startwörter, max. 5, nächstes Wort nur an Admins (`songtexteNextWord`) (`songtexte.json`) | **Aufdecken Schritt für Schritt mit Admin-Vorschau** |
 
 ## 4. Der Standard: Was der Kern automatisch liefert
 

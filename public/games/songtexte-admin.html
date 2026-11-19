@@ -1,0 +1,54 @@
+<div class="card">
+    <h2>Songtexte vervollständigen</h2>
+    <label for="songtexteSelect">Song und Abschnitt:</label>
+    <select id="songtexteSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+    <div style="margin: 10px 0;">
+        <button onclick="songtexteStart()">Song starten</button>
+        <button onclick="songtexteRevealWord()">Nächstes Wort aufdecken</button>
+        <button onclick="songtexteRevealAll()">Ganzen Text aufdecken</button>
+    </div>
+    <p id="songtexteAdminStatus">Noch kein Song aktiv.</p>
+    <p>Nächstes Wort (nur für dich sichtbar): <b id="songtexteAdminNext">-</b></p>
+</div>
+
+<script>
+    socket.off('receiveSongtexteSongs');
+    socket.on('receiveSongtexteSongs', songs => {
+        const select = document.getElementById('songtexteSelect');
+        if (!select) return;
+        const previous = select.value;
+        select.replaceChildren(...songs.map(song => {
+            const option = document.createElement('option');
+            option.value = song.id;
+            option.textContent = song.part ? `${song.title} (${song.part})` : song.title;
+            return option;
+        }));
+        if (previous) select.value = previous;
+    });
+    socket.emit('getSongtexteSongs');
+
+    socket.off('songtexteNextWord');
+    socket.on('songtexteNextWord', info => {
+        const next = document.getElementById('songtexteAdminNext');
+        if (!next) return;
+        next.textContent = info && info.word ? info.word : '-';
+    });
+    socket.emit('getSongtexteNextWord');
+
+    window.songtexteStart = function() {
+        const select = document.getElementById('songtexteSelect');
+        if (!select || !select.value) return alert('Bitte einen Song wählen!');
+        socket.emit('adminStartSongtexteSong', { songId: select.value });
+    };
+    window.songtexteRevealWord = () => socket.emit('adminRevealSongtexteWord');
+    window.songtexteRevealAll = () => socket.emit('adminRevealSongtexteAll');
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.songtexteGame || {};
+        const status = document.getElementById('songtexteAdminStatus');
+        if (!status) return;
+        if (game.phase === 'IDLE') status.textContent = 'Noch kein Song aktiv.';
+        else if (game.phase === 'REVEALED') status.textContent = 'Der ganze Text ist aufgedeckt.';
+        else status.textContent = `${game.revealed.length} von ${game.totalWords} Wörtern aufgedeckt.`;
+    };
+</script>

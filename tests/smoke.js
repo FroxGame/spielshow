@@ -290,6 +290,33 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     await sleep(100);
     check('Beugen: Reset', beugenGame().phase === 'IDLE' && beugenGame().answer === '' && beugenGame().verb === '');
 
+    // Songtexte: 3 Startwoerter, Wort fuer Wort aufdecken, Teamwechsel, ganzen Text aufdecken, Reset
+    admin.emit('adminStartGame', 'SONGTEXTE');
+    const songtexteSongs = await new Promise(resolve => { admin.once('receiveSongtexteSongs', resolve); admin.emit('getSongtexteSongs'); });
+    check('Songtexte: Songs per Admin-Event', songtexteSongs.length > 0);
+    const songtexteDenied = await Promise.race([
+        new Promise(resolve => { player.once('receiveSongtexteSongs', () => resolve(false)); player.emit('getSongtexteSongs'); }),
+        sleep(300).then(() => true)
+    ]);
+    check('Songtexte: Spieler bekommt keine Songliste', songtexteDenied === true);
+    const songtexteNext = new Promise(resolve => admin.once('songtexteNextWord', resolve));
+    admin.emit('adminStartSongtexteSong', { songId: songtexteSongs[0].id });
+    const songtexteNextInfo = await songtexteNext;
+    await sleep(150);
+    const songtexteGame = () => admin.state.songtexteGame;
+    check('Songtexte: drei Wörter sichtbar', songtexteGame().phase === 'PLAYING' && songtexteGame().revealed.length === 3);
+    check('Songtexte: nächstes Wort nur für Admin, nicht im State', typeof songtexteNextInfo.word === 'string'
+        && !JSON.stringify(songtexteGame()).includes(`"${songtexteNextInfo.word}"`));
+    admin.emit('adminRevealSongtexteWord');
+    await sleep(150);
+    check('Songtexte: Wort aufgedeckt', songtexteGame().revealed.length === 4);
+    admin.emit('adminRevealSongtexteAll');
+    await sleep(150);
+    check('Songtexte: Aufdecken zeigt alles', songtexteGame().phase === 'REVEALED' && songtexteGame().revealed.length === songtexteGame().totalWords);
+    admin.emit('adminResetGame');
+    await sleep(100);
+    check('Songtexte: Reset', songtexteGame().phase === 'IDLE' && songtexteGame().revealed.length === 0);
+
     // Diagramme: Zeichnen, Privatsphaere, Auswertung, Reset
     admin.emit('adminStartGame', 'DIAGRAMME');
     const diagrams = await new Promise(resolve => { admin.once('receiveDiagrammeList', resolve); admin.emit('getDiagrammeList'); });
@@ -513,7 +540,7 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     check('Umbenennen: Spieler zieht um', Object.values(st.players).every(p => p.team !== 'Team 1'));
 
     // Routen: Lösungen der neuen Spiele sind nicht mehr öffentlich
-    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json', '/rap-battle.json']) {
+    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json', '/rap-battle.json', '/songtexte.json']) {
         check(`Nicht öffentlich ${url}`, !(await fetch(URL + url)).ok);
     }
 

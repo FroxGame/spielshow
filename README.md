@@ -200,6 +200,7 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 - Beugen
 - Diagramme
 - Rap Battle (Beispiel-Raps in `rap-battle.json`, Beat wird im Browser erzeugt)
+- Songtexte vervollständigen (`songtexte.json`: Array aus `{ id, title, part, lyrics }`, `lyrics` ist ein Strophen- oder Refrain-Ausschnitt mit `\n` zwischen den Zeilen. Enthält nur Beispiele mit gemeinfreien Liedern, bitte eigene Songs ergänzen)
 
 
 # Was schon fertig ist für die Spielshow (inklusive Inhalt):

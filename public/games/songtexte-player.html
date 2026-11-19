@@ -1,0 +1,42 @@
+<style>
+    .songtexte-game { text-align: center; }
+    .songtexte-title { color: #a4b0be; margin-top: 10px; }
+    .songtexte-text { margin: 10px 0; font-size: clamp(1.2rem, 5vw, 1.8rem); line-height: 1.5; overflow-wrap: anywhere; }
+    .songtexte-line { min-height: 1.5em; }
+    .songtexte-next-slot { color: #ffd166; }
+</style>
+
+<div class="songtexte-game">
+    <h2>Songtexte vervollständigen</h2>
+    <div id="songtextePlayerTitle" class="songtexte-title"></div>
+    <div id="songtextePlayerText" class="songtexte-text"></div>
+</div>
+
+<script>
+    window.songtexteRender = function(game, titleEl, textEl) {
+        if (!titleEl || !textEl) return;
+        const idle = game.phase === 'IDLE';
+        titleEl.textContent = idle ? 'Warte auf den nächsten Song...' : (game.part ? `${game.title} (${game.part})` : game.title);
+        const lines = [];
+        (game.revealed || []).forEach(word => {
+            if (word.newLine || !lines.length) lines.push([]);
+            lines[lines.length - 1].push(word.text);
+        });
+        if (game.phase === 'PLAYING') {
+            if (!lines.length) lines.push([]);
+            lines[lines.length - 1].push('…');
+        }
+        textEl.replaceChildren(...lines.map(line => {
+            const div = document.createElement('div');
+            div.className = 'songtexte-line';
+            div.textContent = line.join(' ');
+            return div;
+        }));
+    };
+
+    window.onModuleStateUpdate = function(state) {
+        window.songtexteRender(state.songtexteGame || {},
+            document.getElementById('songtextePlayerTitle'),
+            document.getElementById('songtextePlayerText'));
+    };
+</script>

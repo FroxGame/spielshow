@@ -1,0 +1,20 @@
+[
+    {
+        "id": "beispiel-entchen",
+        "title": "Alle meine Entchen (Beispiel)",
+        "part": "Strophe 1",
+        "lyrics": "Alle meine Entchen\nschwimmen auf dem See,\nschwimmen auf dem See,\nKöpfchen in das Wasser,\nSchwänzchen in die Höh."
+    },
+    {
+        "id": "beispiel-hase",
+        "title": "Hänschen klein (Beispiel)",
+        "part": "Strophe 1",
+        "lyrics": "Hänschen klein\nging allein\nin die weite Welt hinein.\nStock und Hut\nsteht ihm gut,\nist ganz wohlgemut."
+    },
+    {
+        "id": "beispiel-mond",
+        "title": "Der Mond ist aufgegangen (Beispiel)",
+        "part": "Strophe 1",
+        "lyrics": "Der Mond ist aufgegangen,\ndie goldnen Sternlein prangen\nam Himmel hell und klar;\nder Wald steht schwarz und schweiget,\nund aus den Wiesen steiget\nder weiße Nebel wunderbar."
+    }
+]
