@@ -25,6 +25,7 @@ module.exports = function createMalenGame(ctx) {
         const game = gameState.malenGame;
         game.word = String(word || '').trim();
         game.wordRevealed = false;
+        game.artworksShown = false;
         game.drawings = byTeam(() => []);
         io.emit('malenCanvasCleared', { team: 'ALL' });
     }
@@ -34,6 +35,7 @@ module.exports = function createMalenGame(ctx) {
                 phase: 'IDLE',
                 word: '',
                 wordRevealed: false,
+                artworksShown: false,
                 painters: byTeam(() => null),
                 drawings: byTeam(() => []),
                 scores: createScores()
@@ -78,6 +80,12 @@ module.exports = function createMalenGame(ctx) {
             gameState.malenGame.wordRevealed = true;
             io.emit('stateUpdate', gameState);
         });
+        // Zeigt allen Spielern beide Kunstwerke (auch der Maler sieht sein eigenes). Zweiter Klick blendet wieder aus.
+        socket.on('adminToggleMalenArtworks', () => {
+            if (!adminSockets.has(socket.id) || gameState.malenGame.phase !== 'PLAYING') return;
+            gameState.malenGame.artworksShown = !gameState.malenGame.artworksShown;
+            io.emit('stateUpdate', gameState);
+        });
         socket.on('adminClearAllMalenCanvases', () => {
             if (!adminSockets.has(socket.id)) return;
             if (!gameState.malenGame) return;
@@ -88,7 +96,7 @@ module.exports = function createMalenGame(ctx) {
 
 
         socket.on('playerMalenDrawBatch', ({ lines }) => {
-            if (!gameState.malenGame || gameState.malenGame.phase !== 'PLAYING') return;
+            if (!gameState.malenGame || gameState.malenGame.phase !== 'PLAYING' || gameState.malenGame.artworksShown) return;
             const player = gameState.players[socket.id];
             if (!player) return;
             const team = player.team;

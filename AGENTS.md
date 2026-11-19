@@ -84,11 +84,13 @@ Die Spieleliste hat eine einzige Quelle: `server/registry.js`. Die Shells laden 
 | 13 | FLAGGEN | flaggen | Bauen per Drag, Bauen sperren per Admin-Button, Original und Bauflächen privat bis zum Aufdecken (`flaggenView`). `flaggen.json` wird mit `node tools/flaggen-builder.js` erzeugt (Flaggen in `tools/flaggen-data.js`, Bauteile in `tools/flaggen-parts.js`, Ablenker im Builder) | komplexe Spielereingaben |
 ode tools/flaggen-builder.js erzeugt (Flaggen in 	ools/flaggen-data.js, Bauteile in 	ools/flaggen-parts.js, Ablenker im Builder) | komplexe Spielereingaben |
 | 14 | BUCHSTABENSALAT | buchstabensalat | Buzzer, Schritt-Takt, Lösung im Server | **Buzzer + Spiel-Takt (beste Vorlage)** |
-| 15 | TEEKESSELCHEN | teekesselchen | Buzzer, Schreibphase, private Kategorie je Team | **private Daten pro Team, Phasen** |
+| 15 | TEEKESSELCHEN | teekesselchen | Beide Teams gleichzeitig, je Team Spieler 1 = Bedeutung 1, Spieler 2 = Bedeutung 2 (privat), jeder trägt ein Wort ein, Admin gibt frei (Teampartner sehen sich), Buzzer | **private Daten pro Spieler, Phasen** |
 | 16 | BEUGEN | beugen | Buzzer erst nach "Form zeigen", max. 7, Lösung nur im Server (`beugen.json`) | einfache Runden mit Aufdeck-Schritten |
 | 17 | DIAGRAMME | diagramme | Diagramm weiterzeichnen per Klick, Zeichner je Team, Auswertung als Abweichung, `layout: 'medium'`, max. 5 (`diagramme.json`) | **private Live-Daten pro Empfänger** (`diagrammeView`), gemeinsamer Canvas-Baustein `public/shared/diagram.js` |
 | 18 | RAP_BATTLE | rap-battle | Rappender sieht nur Reimwörter (aktuelle + 2 nächste Zeilen) zu synthetischem Beat, Teams tippen 12 Wörter und markieren sie, Admin gibt Rap per Button frei, ohne Limit (`rap-battle.json`) | **private Ansichten je Rolle** (`rapBattleView`), Takt-Animation und Beat im Client (`public/shared/rap-battle.js`), Server gibt nur `startAt` und Tempo vor |
 | 19 | SONGTEXTE | songtexte | Songtext-Abschnitt Wort für Wort aufdecken, 3 Startwörter, max. 5, nächstes Wort nur an Admins (`songtexteNextWord`) (`songtexte.json`) | **Aufdecken Schritt für Schritt mit Admin-Vorschau** |
+| 20 | DU_SAGST | du-sagst | Frage mit 4 Antworten, je Team Antwortender + Einschätzender (vom Admin per Dropdown vergeben, bleiben über Fragen hinweg), Auswahl änderbar bis "Schließen", Antworten und Einschätzungen getrennt aufdecken, max. 5 (`du-sagst.json`) | **Live-Übersicht nur für Admin und Zuschauer** (`duSagstOverview`), Rollen über `addStateDecorator` nach Teamwechseln nachziehen |
+| 21 | DIE_MITTE | die-mitte | Schätzfrage, Mittelwert der Teamschätzungen zählt, näheres Team wird angezeigt, Felder schließen, Schätzungen+Mitte und Ergebnis getrennt aufdecken, max. 5 (`die-mitte.json`) | **Zahleneingabe (deutsches Format) und Auswertung im Server**, Live-Eingaben für Admin und Zuschauer (`dieMitteOverview`) |
 
 ## 4. Der Standard: Was der Kern automatisch liefert
 
@@ -279,6 +281,7 @@ Globale Variablen in Seiten: `socket` (Socket.IO), `Spielshow` (Hilfsobjekt, sie
 
 - Handler: Admin- und Spielerseite `window.onModuleStateUpdate = function(state) {...}`, Zuschauerseite `window.onSpectatorStateUpdate = function(state) {...}`. Der Handler wird bei jedem `stateUpdate` und einmal nach dem Laden mit dem letzten State aufgerufen. Er muss wiederholt ausführbar sein und fehlende Elemente abfangen (`if (!el) return;`).
 - Funktionen für `onclick` als `window.name = function() {...}` definieren (sonst nicht erreichbar).
+- **Genau ein `<script>`-Block pro Seite.** Die Shells führen jeden Block in einer eigenen `new Function` aus, `let`/`const`/`function` aus einem Block sind im nächsten nicht sichtbar. `tests/check-html.js` meldet mehrere Blöcke.
 - Daten sofort anfordern (kein `DOMContentLoaded`). Vor jedem `socket.on('x', ...)` ein `socket.off('x')`, sonst läuft der Handler nach erneutem Laden doppelt.
 - Eigene Variablen/Funktionen mit spielspezifischem Präfix benennen (alle Seiten teilen den globalen Scope).
 - Spielinfos nicht hartkodieren: `const game = Spielshow.getGame(state.currentScreen)` liefert `title`, `stateKey`, `maxScore`, `buzzer`, `layout`. Den Spielstate liest man mit `state[game.stateKey]`.
@@ -416,6 +419,7 @@ Ein grüner Check ersetzt keinen Blick in den Browser. Sage dem Nutzer, was du *
 
 - Zeitgesteuerte Abläufe im Client (Rap Battle): Der Server schickt nur `startAt` (Server-Zeit) und Tempo. Jede Ansicht bringt `serverNow` mit, der Client rechnet damit die Uhr um (`RapBattle.createClock`). Private Daten gehen nie über `stateUpdate`, auch nicht an den Rappenden.
 - Teamwechsel durch den Admin löst kein `emitUpdates` aus: Spielerseiten mit privaten Ansichten fordern die Ansicht bei geändertem Team neu an (Rap Battle, `getRapBattleView`).
+- Rollen nach Teamwechsel nachziehen (Du sagst): `ctx.addStateDecorator` läuft vor jedem `stateUpdate`, also auch nach `adminUpdatePlayerTeam`. Der Decorator wird bei der Registrierung einmal sofort aufgerufen, bevor der Spiel-State existiert, und muss das abfangen (`if (!state()) return;`).
 - Punkte lassen sich nicht erhöhen: Prüfung `!scores[team]` statt `=== undefined`.
 - Handler wirft ReferenceError: Konstante nicht importiert. Der Server läuft weiter und loggt `Fehler im Event "<name>"`. Der Lint meldet es vorher.
 - Update kommt nicht an: falscher Handler-Name für die Seite, `emitState()` vergessen oder nur auf einem Sonderkanal gesendet.
@@ -429,7 +433,7 @@ Ein grüner Check ersetzt keinen Blick in den Browser. Sage dem Nutzer, was du *
 
 ## 13. Bekannte offene Punkte
 
-- Nur Buchstabensalat (Schritt-Takt der Buchstaben) hat noch einen eigenen Timer im Modul. Er ist Spielmechanik und läuft getrennt vom globalen Host-Timer. Alle anderen Spiele nutzen keine eigenen Timer mehr. Folgen wie Phasenwechsel löst der Admin per Button aus (Merken: `adminEndMerkenMemorizing`, Realität: `adminEndRealitaet`, Flaggen: `adminToggleFlaggenLock`, Teekesselchen: `adminCloseTeekesselchenInputs`).
+- Nur Buchstabensalat (Schritt-Takt der Buchstaben) hat noch einen eigenen Timer im Modul. Er ist Spielmechanik und läuft getrennt vom globalen Host-Timer. Alle anderen Spiele nutzen keine eigenen Timer mehr. Folgen wie Phasenwechsel löst der Admin per Button aus (Merken: `adminEndMerkenMemorizing`, Realität: `adminEndRealitaet`, Flaggen: `adminToggleFlaggenLock`, Teekesselchen: `adminReleaseTeekesselchenWords`).
 - **Optionales TODO:** Aktionen bei Timer-Ablauf. Idee: Der Admin wählt im Dashboard, was bei 0:00 passieren soll (nichts, Buzzer sperren, Eingaben schließen, Signalton, nächstes Team). Dafür bräuchte jedes Spiel einen kleinen Hook (z. B. onTimerEnd) und die Auswahl im Admin. Bisher bewusst nicht gebaut: Der Host löst Folgen von Hand aus.
 
 ## 14. Code-Qualität

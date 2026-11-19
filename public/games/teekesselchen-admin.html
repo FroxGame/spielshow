@@ -4,12 +4,12 @@
     <select id="teeRoundSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
     <div style="margin: 10px 0;">
         <button onclick="startTeekesselchen()">Runde starten</button>
-        <button onclick="closeTeekesselchenInputs()">Textfelder schließen</button>
+        <button onclick="releaseTeekesselchenWords()">Wörter freigeben</button>
         <button onclick="revealTeekesselchen()">Wort auflösen</button>
     </div>
-    <div id="teeRevealButtons" style="margin: 10px 0;"></div>
     <p id="teeAdminStatus">Noch keine Runde aktiv.</p>
     <p>Lösung (nur für dich sichtbar): <b id="teeAdminSolution">-</b></p>
+    <div id="teeAdminOverview"></div>
 </div>
 
 <script>
@@ -29,12 +29,32 @@
     });
     socket.emit('getTeekesselchenRounds');
 
+    socket.off('teekesselchenOverview');
+    socket.on('teekesselchenOverview', overview => {
+        const box = document.getElementById('teeAdminOverview');
+        if (!box) return;
+        box.replaceChildren(...Object.entries(overview).map(([team, entries]) => {
+            const section = document.createElement('div');
+            section.style.margin = '8px 0';
+            const heading = document.createElement('b');
+            heading.textContent = team;
+            section.appendChild(heading);
+            entries.forEach(entry => {
+                const line = document.createElement('div');
+                line.textContent = `${entry.name} (${entry.category}): ${entry.word || '-'}`;
+                section.appendChild(line);
+            });
+            return section;
+        }));
+    });
+    socket.emit('getTeekesselchenOverview');
+
     window.startTeekesselchen = function() {
         const roundId = document.getElementById('teeRoundSelect').value;
         if (!roundId) return alert('Bitte eine Runde wählen!');
         socket.emit('adminStartTeekesselchenRound', { roundId });
     };
-    window.closeTeekesselchenInputs = () => socket.emit('adminCloseTeekesselchenInputs');
+    window.releaseTeekesselchenWords = () => socket.emit('adminReleaseTeekesselchenWords');
     window.revealTeekesselchen = () => socket.emit('adminRevealTeekesselchen');
 
     window.onModuleStateUpdate = function(state) {
@@ -44,18 +64,11 @@
 
         const round = teeRounds.find(entry => entry.id === game.roundId);
         document.getElementById('teeAdminSolution').textContent = round ? round.answer : '-';
-        status.textContent = game.phase === 'IDLE'
-            ? 'Noch keine Runde aktiv.'
-            : game.phase;
-
-        const buttons = document.getElementById('teeRevealButtons');
-        buttons.replaceChildren(...Object.keys(state.teams).map(team => {
-            const button = document.createElement('button');
-            const revealed = Boolean(game.revealedTeams && game.revealedTeams[team]);
-            button.textContent = revealed ? `${team}: gezeigt` : `${team}: Beschreibung zeigen`;
-            button.disabled = game.phase === 'IDLE' || game.phase === 'WRITING';
-            button.onclick = () => socket.emit('adminRevealTeekesselchenTeam', team);
-            return button;
-        }));
+        status.textContent = {
+            IDLE: 'Noch keine Runde aktiv.',
+            WRITING: 'Spieler tragen ihre Wörter ein, Buzzer offen.',
+            GUESSING: 'Wörter sind freigegeben, Buzzer offen.',
+            REVEALED: 'Aufgelöst.'
+        }[game.phase] || game.phase;
     };
 </script>

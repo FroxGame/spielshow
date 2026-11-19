@@ -1,0 +1,133 @@
+<div class="card">
+    <h2>Du sagst</h2>
+    <label for="dsQuestionSelect">Frage:</label>
+    <select id="dsQuestionSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+    <div style="margin: 10px 0;">
+        <button onclick="dsStartQuestion()">Frage starten</button>
+        <button id="dsCloseBtn" onclick="dsToggleClosed()">Schließen</button>
+        <button onclick="dsRevealAnswers()">Antworten aufdecken</button>
+        <button onclick="dsRevealGuesses()">Einschätzungen aufdecken</button>
+    </div>
+    <p id="dsAdminStatus">Noch keine Frage aktiv.</p>
+    <div id="dsAdminOptions"></div>
+    <div id="dsAdminTeams"></div>
+</div>
+
+<script>
+    let dsAdminOverview = {};
+    let dsAdminState = null;
+
+    socket.off('receiveDuSagstQuestions');
+    socket.on('receiveDuSagstQuestions', questions => {
+        const select = document.getElementById('dsQuestionSelect');
+        if (!select) return;
+        select.replaceChildren(...questions.map(question => {
+            const option = document.createElement('option');
+            option.value = question.id;
+            option.textContent = question.question;
+            return option;
+        }));
+    });
+    socket.emit('getDuSagstQuestions');
+
+    socket.off('duSagstOverview');
+    socket.on('duSagstOverview', overview => {
+        dsAdminOverview = overview || {};
+        dsAdminRender();
+    });
+    socket.emit('getDuSagstOverview');
+
+    window.dsStartQuestion = function() {
+        const select = document.getElementById('dsQuestionSelect');
+        if (!select || !select.value) return alert('Bitte eine Frage wählen!');
+        socket.emit('adminStartDuSagstQuestion', { questionId: select.value });
+    };
+    window.dsToggleClosed = () => socket.emit('adminToggleDuSagstClosed');
+    window.dsRevealAnswers = () => socket.emit('adminRevealDuSagstAnswers');
+    window.dsRevealGuesses = () => socket.emit('adminRevealDuSagstGuesses');
+    window.dsSetRole = (team, role, playerId) => socket.emit('adminSetDuSagstRole', { team, role, playerId });
+
+
+    function dsAdminRender() {
+        const box = document.getElementById('dsAdminTeams');
+        if (!box || !dsAdminState) return;
+        const game = dsAdminState.duSagstGame || {};
+        const players = dsAdminState.players || {};
+        const roles = game.roles || {};
+        // Nur neu aufbauen, wenn sich Teams, Spieler oder Rollen ändern (sonst schließt ein offenes Dropdown)
+        const signature = JSON.stringify([roles, Object.values(players).map(p => [p.id, p.name, p.team])]);
+        if (box.dataset.signature !== signature) {
+            box.dataset.signature = signature;
+            box.replaceChildren(...Object.entries(roles).map(([team, role]) => {
+                const section = document.createElement('div');
+                section.style.margin = '10px 0';
+                const heading = document.createElement('b');
+                heading.textContent = team;
+                const answer = document.createElement('div');
+                answer.dataset.dsTeam = team;
+                answer.dataset.dsKey = 'answer';
+                const guess = document.createElement('div');
+                guess.dataset.dsTeam = team;
+                guess.dataset.dsKey = 'guess';
+                section.append(heading, dsRoleSelect(team, 'answerer', 'Antwortet', role, players), answer,
+                    dsRoleSelect(team, 'guesser', 'Schätzt ein', role, players), guess);
+                return section;
+            }));
+        }
+        const optionText = index => (index === null || index === undefined ? 'noch nichts' : ['A', 'B', 'C', 'D'][index]);
+        box.querySelectorAll('div[data-ds-team]').forEach(line => {
+            const entry = dsAdminOverview[line.dataset.dsTeam] || {};
+            const label = line.dataset.dsKey === 'answer' ? 'Antwort' : 'Einschätzung';
+            line.textContent = `→ ${label}: ${optionText(entry[line.dataset.dsKey])}`;
+        });
+    }
+
+    function dsRoleSelect(team, key, label, role, players) {
+        const wrap = document.createElement('label');
+        wrap.style.display = 'block';
+        wrap.style.marginTop = '6px';
+        wrap.textContent = `${label}: `;
+        const select = document.createElement('select');
+        const empty = document.createElement('option');
+        empty.value = '';
+        empty.textContent = '-- Spieler wählen --';
+        select.appendChild(empty);
+        Object.values(players).filter(player => player.team === team).forEach(player => {
+            const option = document.createElement('option');
+            option.value = player.id;
+            option.textContent = player.name;
+            select.appendChild(option);
+        });
+        select.value = role[key] || '';
+        select.onchange = () => window.dsSetRole(team, key, select.value);
+        wrap.appendChild(select);
+        return wrap;
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        dsAdminState = state;
+        const game = state.duSagstGame || {};
+        const status = document.getElementById('dsAdminStatus');
+        if (!status) return;
+        const revealed = [game.answersRevealed && 'Antworten', game.guessesRevealed && 'Einschätzungen'].filter(Boolean);
+        status.textContent = {
+            IDLE: 'Noch keine Frage aktiv.',
+            OPEN: 'Auswahl offen.',
+            CLOSED: 'Auswahl geschlossen.'
+        }[game.phase] + (revealed.length ? ` Aufgedeckt: ${revealed.join(', ')}.` : '');
+        const optionsBox = document.getElementById('dsAdminOptions');
+        const optionsSignature = JSON.stringify([game.question, game.options]);
+        if (optionsBox.dataset.signature !== optionsSignature) {
+            optionsBox.dataset.signature = optionsSignature;
+            const items = game.phase === 'IDLE' ? [] : [game.question, ...(game.options || []).map((text, index) => `${['A', 'B', 'C', 'D'][index]}: ${text}`)];
+            optionsBox.replaceChildren(...items.map((text, index) => {
+                const line = document.createElement(index === 0 ? 'b' : 'div');
+                line.style.display = 'block';
+                line.textContent = text;
+                return line;
+            }));
+        }
+        document.getElementById('dsCloseBtn').textContent = game.phase === 'CLOSED' ? 'Wieder öffnen' : 'Schließen';
+        dsAdminRender();
+    };
+</script>

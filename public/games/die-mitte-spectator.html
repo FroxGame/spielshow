@@ -1,0 +1,83 @@
+<style>
+    .dm-spec { text-align: center; }
+    .dm-spec-question { margin: 16px 0; font-size: clamp(1.8rem, 4vw, 3rem); font-weight: bold; }
+    .dm-spec-teams { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
+    .dm-spec-team { min-width: 300px; padding: 14px 20px; border: 3px solid #566078; border-radius: 10px; text-align: left; font-size: 1.5rem; }
+    .dm-spec-middle { margin-top: 8px; font-weight: bold; color: #ffd166; }
+    .dm-spec-result { margin-top: 18px; font-size: clamp(1.8rem, 4vw, 3rem); font-weight: bold; color: #2ed573; }
+</style>
+
+<section class="card dm-spec">
+    <h2>Die Mitte</h2>
+    <p id="dmSpecStatus">Warte auf die nächste Frage...</p>
+    <div id="dmSpecQuestion" class="dm-spec-question"></div>
+    <div id="dmSpecTeams" class="dm-spec-teams"></div>
+    <div id="dmSpecResult" class="dm-spec-result"></div>
+</section>
+
+<script>
+    let dmSpecOverview = {};
+    let dmSpecState = null;
+
+    const dmSpecFormat = (value, unit) => (value === null || value === undefined ? '-'
+        : value.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + (unit ? ` ${unit}` : ''));
+
+    function dmSpecLine(text, className) {
+        const div = document.createElement('div');
+        if (className) div.className = className;
+        div.textContent = text;
+        return div;
+    }
+
+
+    function dmSpecRender() {
+        const box = document.getElementById('dmSpecTeams');
+        if (!box || !dmSpecState) return;
+        const game = dmSpecState.dieMitteGame || {};
+        const teams = dmSpecState.teams || {};
+        const idle = game.phase === 'IDLE';
+        document.getElementById('dmSpecStatus').textContent = idle ? 'Warte auf die nächste Frage...'
+            : (game.phase === 'OPEN' ? 'Die Spieler schätzen...' : 'Eingabe geschlossen');
+        document.getElementById('dmSpecQuestion').textContent = idle ? '' : game.question + (game.unit ? ` (in ${game.unit})` : '');
+        // Eingaben live aus der Übersicht, Mitte und Ergebnis erst nach dem Aufdecken
+        box.replaceChildren(...(idle ? [] : Object.keys(teams)).map(team => {
+            const div = document.createElement('div');
+            div.className = 'dm-spec-team';
+            div.style.borderColor = teams[team].color || '#566078';
+            if (game.resultRevealed && game.closerTeam === team) div.style.background = '#1f3b2a';
+            const heading = dmSpecLine(team);
+            heading.style.fontWeight = 'bold';
+            heading.style.color = teams[team].color || '#fff';
+            div.appendChild(heading);
+            const entries = dmSpecOverview[team] || [];
+            if (!entries.length) div.appendChild(dmSpecLine('noch keine Schätzung'));
+            entries.forEach(entry => div.appendChild(dmSpecLine(`${entry.name}: ${dmSpecFormat(entry.value, game.unit)}`)));
+            if (game.guessesRevealed) {
+                div.appendChild(dmSpecLine(`Mitte: ${dmSpecFormat((game.middles || {})[team], game.unit)}`, 'dm-spec-middle'));
+            }
+            if (game.resultRevealed) {
+                div.appendChild(dmSpecLine(`Abstand: ${dmSpecFormat((game.distances || {})[team], game.unit)}`));
+            }
+            return div;
+        }));
+        const result = document.getElementById('dmSpecResult');
+        result.textContent = '';
+        if (game.resultRevealed) {
+            const winner = game.closerTeam === 'TIE' ? 'Gleichstand!'
+                : (game.closerTeam ? `${game.closerTeam} ist näher dran!` : 'Keine Schätzungen.');
+            result.textContent = `Richtige Antwort: ${dmSpecFormat(game.answer, game.unit)}. ${winner}`;
+        }
+    }
+
+    socket.off('dieMitteOverview');
+    socket.on('dieMitteOverview', overview => {
+        dmSpecOverview = overview || {};
+        dmSpecRender();
+    });
+    socket.emit('getDieMitteOverview');
+
+    window.onSpectatorStateUpdate = function(state) {
+        dmSpecState = state;
+        dmSpecRender();
+    };
+</script>

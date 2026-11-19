@@ -1,0 +1,8 @@
+[
+    { "id": "urlaub", "question": "Wo würdest du am liebsten Urlaub machen?", "options": ["Strand", "Berge", "Großstadt", "Zu Hause auf dem Sofa"] },
+    { "id": "superkraft", "question": "Welche Superkraft hättest du am liebsten?", "options": ["Fliegen", "Unsichtbar sein", "Gedanken lesen", "Zeit anhalten"] },
+    { "id": "fruehstueck", "question": "Was ist dein perfektes Frühstück?", "options": ["Brötchen mit Aufstrich", "Müsli", "Rührei mit Speck", "Nur Kaffee"] },
+    { "id": "freitagabend", "question": "Wie verbringst du am liebsten einen Freitagabend?", "options": ["Party", "Serien schauen", "Mit Freunden essen", "Früh schlafen"] },
+    { "id": "haustier", "question": "Welches Haustier würdest du wählen?", "options": ["Hund", "Katze", "Fische", "Gar keins"] },
+    { "id": "lotto", "question": "Was machst du zuerst nach einem Lottogewinn?", "options": ["Kündigen", "Weltreise", "Haus kaufen", "Erstmal niemandem erzählen"] }
+]

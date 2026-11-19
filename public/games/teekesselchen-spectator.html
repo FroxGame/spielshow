@@ -1,6 +1,6 @@
 <style>
     .tee-spec { text-align: center; }
-    .tee-spec-team { margin: 12px auto; padding: 14px; max-width: 800px; border: 1px solid #566078; border-radius: 8px; text-align: left; }
+    .tee-spec-team { margin: 12px auto; padding: 14px; max-width: 800px; border: 1px solid #566078; border-radius: 8px; text-align: left; font-size: 1.4rem; }
     .tee-spec-answer { margin-top: 16px; font-size: 3rem; font-weight: bold; color: #2ed573; }
 </style>
 
@@ -12,31 +12,39 @@
 </section>
 
 <script>
-    window.onSpectatorStateUpdate = function(state) {
-        const game = state.teekesselchenGame || {};
+    socket.off('teekesselchenOverview');
+    socket.on('teekesselchenOverview', overview => {
         const teams = document.getElementById('teeSpecTeams');
         if (!teams) return;
-
-        document.getElementById('teeSpecStatus').textContent = {
-            IDLE: 'Warte auf die nächste Runde...',
-            WRITING: 'Die Teams beschreiben ihr Wort...',
-            GUESSING: 'Welches Wort ist gemeint?',
-            REVEALED: 'Auflösung'
-        }[game.phase] || '';
-
-        teams.replaceChildren(...Object.entries(game.revealedTeams || {}).map(([team, info]) => {
+        teams.replaceChildren(...Object.entries(overview).filter(([, entries]) => entries.length).map(([team, entries]) => {
             const box = document.createElement('div');
             box.className = 'tee-spec-team';
             const heading = document.createElement('b');
-            heading.textContent = `${team}: ${info.category}`;
+            heading.textContent = team;
             box.appendChild(heading);
-            info.texts.forEach(entry => {
+            entries.forEach(entry => {
                 const line = document.createElement('div');
-                line.textContent = `${entry.name}: ${entry.text}`;
+                line.textContent = `${entry.name} (${entry.category}): ${entry.word || '-'}`;
                 box.appendChild(line);
             });
             return box;
         }));
+    });
+    socket.emit('getTeekesselchenOverview');
+
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.teekesselchenGame || {};
+        const status = document.getElementById('teeSpecStatus');
+        if (!status) return;
+        status.textContent = {
+            IDLE: 'Warte auf die nächste Runde...',
+            WRITING: 'Die Spieler tragen ihre Wörter ein...',
+            GUESSING: 'Welches Wort ist gemeint?',
+            REVEALED: 'Auflösung'
+        }[game.phase] || '';
         document.getElementById('teeSpecAnswer').textContent = game.answer || '';
+        if (game.phase === 'IDLE' || game.phase === 'WRITING') {
+            socket.emit('getTeekesselchenOverview');
+        }
     };
 </script>

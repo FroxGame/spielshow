@@ -1,0 +1,91 @@
+<style>
+    .ds-spec { text-align: center; }
+    .ds-spec-question { margin: 16px 0; font-size: clamp(1.8rem, 4vw, 3rem); font-weight: bold; }
+    .ds-spec-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; max-width: 1100px; margin: 0 auto; }
+    .ds-spec-option { padding: 18px; font-size: clamp(1.3rem, 2.5vw, 2rem); border: 2px solid #4a5676; border-radius: 10px; background: #1c202c; }
+    .ds-spec-marks { margin-top: 8px; min-height: 1.4em; font-size: 1.1rem; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+    .ds-spec-mark { padding: 3px 10px; border-radius: 12px; color: #fff; font-weight: bold; }
+    .ds-spec-letter { display: inline-block; min-width: 1.6em; margin-right: 10px; color: #ffd166; }
+    .ds-spec-roles { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 18px; font-size: 1.2rem; }
+    .ds-spec-role-team { padding: 10px 18px; border: 2px solid #566078; border-radius: 8px; text-align: left; min-width: 260px; }
+</style>
+
+<section class="card ds-spec">
+    <h2>Du sagst</h2>
+    <p id="dsSpecStatus">Warte auf die nächste Frage...</p>
+    <div id="dsSpecQuestion" class="ds-spec-question"></div>
+    <div id="dsSpecOptions" class="ds-spec-options"></div>
+    <div id="dsSpecRoles" class="ds-spec-roles"></div>
+</section>
+
+<script>
+    const DS_SPEC_LETTERS = ['A', 'B', 'C', 'D'];
+    let dsSpecOverview = {};
+    let dsSpecState = null;
+
+    function dsSpecMark(text, color) {
+        const span = document.createElement('span');
+        span.className = 'ds-spec-mark';
+        span.style.background = color;
+        span.textContent = text;
+        return span;
+    }
+
+    function dsSpecRender() {
+        const options = document.getElementById('dsSpecOptions');
+        if (!options || !dsSpecState) return;
+        const game = dsSpecState.duSagstGame || {};
+        const teams = dsSpecState.teams || {};
+        const players = dsSpecState.players || {};
+        const idle = game.phase === 'IDLE';
+        document.getElementById('dsSpecStatus').textContent = idle ? 'Warte auf die nächste Frage...'
+            : (game.phase === 'CLOSED' ? 'Auswahl geschlossen' : 'Die Spieler wählen...');
+        document.getElementById('dsSpecQuestion').textContent = idle ? '' : game.question;
+        options.replaceChildren(...(idle ? [] : game.options).map((text, index) => {
+            const div = document.createElement('div');
+            div.className = 'ds-spec-option';
+            const letter = document.createElement('b');
+            letter.className = 'ds-spec-letter';
+            letter.textContent = `${DS_SPEC_LETTERS[index]}`;
+            div.append(letter, document.createTextNode(text));
+            const marks = document.createElement('div');
+            marks.className = 'ds-spec-marks';
+            Object.entries(dsSpecOverview).forEach(([team, entry]) => {
+                const color = (teams[team] || {}).color || '#566078';
+                if (entry.answer === index) marks.appendChild(dsSpecMark(`${team}: Antwort`, color));
+                if (entry.guess === index) marks.appendChild(dsSpecMark(`${team}: Einschätzung`, color));
+            });
+            div.appendChild(marks);
+            return div;
+        }));
+        const name = id => (players[id] ? players[id].name : 'noch nicht vergeben');
+        // Ein eigener Block je Team, damit beim Umbrechen nichts dem falschen Team zugeordnet wirkt
+        document.getElementById('dsSpecRoles').replaceChildren(...(idle ? [] : Object.entries(game.roles || {}))
+            .map(([team, role]) => {
+                const block = document.createElement('div');
+                block.className = 'ds-spec-role-team';
+                block.style.borderColor = (teams[team] || {}).color || '#566078';
+                const heading = document.createElement('b');
+                heading.textContent = team;
+                heading.style.color = (teams[team] || {}).color || '#fff';
+                const answerer = document.createElement('div');
+                answerer.textContent = `Antwortet: ${name(role.answerer)}`;
+                const guesser = document.createElement('div');
+                guesser.textContent = `Schätzt ein: ${name(role.guesser)}`;
+                block.append(heading, answerer, guesser);
+                return block;
+            }));
+    }
+
+    socket.off('duSagstOverview');
+    socket.on('duSagstOverview', overview => {
+        dsSpecOverview = overview || {};
+        dsSpecRender();
+    });
+    socket.emit('getDuSagstOverview');
+
+    window.onSpectatorStateUpdate = function(state) {
+        dsSpecState = state;
+        dsSpecRender();
+    };
+</script>

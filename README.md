@@ -155,7 +155,6 @@ Nach der Umsetzung: `npm run check` ausführen (der Agent macht das auch) und da
 
 # 📝 Nächste TODOs:
 2. Frage zu Bild
-3. Buchstabensalat
 4. 10 gegen Willy
 5. Size it up
 6. Partner Antowort erraten
@@ -201,6 +200,8 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 - Diagramme
 - Rap Battle (Beispiel-Raps in `rap-battle.json`, Beat wird im Browser erzeugt)
 - Songtexte vervollständigen (`songtexte.json`: Array aus `{ id, title, part, lyrics }`, `lyrics` ist ein Strophen- oder Refrain-Ausschnitt mit `\n` zwischen den Zeilen. Enthält nur Beispiele mit gemeinfreien Liedern, bitte eigene Songs ergänzen)
+- Du sagst (`du-sagst.json`: Array aus `{ id, question, options: [4 Antworten] }`, enthält Beispielfragen)
+- Die Mitte (`die-mitte.json`: Array aus `{ id, question, answer: Zahl, unit }`, enthält Beispielfragen)
 
 
 # Was schon fertig ist für die Spielshow (inklusive Inhalt):
@@ -225,10 +226,6 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 7. Referatbingo - thema den leuten anzeigen die begriffe eingeben, Punktezähler bugged - 4,5-5/5 -> Thema wird beim Eintragen angezeigt, Punkte behoben
 8. Das kam bei Discord nicht an - keine Fehler - 4/5 auch gut als letztes Spiel
 9. Promis raten - Buzzer villeicht nicht verschieben - 4/5 -> andere Sachen z.B. Viedeospielcharaktere oder so -> Buzzer sitzt jetzt fest unten. Neue Inhalte: Bilder und Namen in `public/games/promis/` bzw. `drudel/` austauschen
-
-generell: 
-- Eingabefelder im Zuschauermodus sind nicht vergrößerbar -> behoben (lesbar und vergrößerbar, nicht editierbar)
-- Beim reinladen sollte man standardmäßig in keinem Team sein -> umgesetzt, der Admin weist Teams zu
 
 # Spiele für übernächste Spielshow
 - Drudel

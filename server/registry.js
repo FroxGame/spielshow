@@ -22,7 +22,9 @@ const GAME_FACTORIES = [
     require('./games/beugen'),
     require('./games/diagramme'),
     require('./games/rap-battle'),
-    require('./games/songtexte')
+    require('./games/songtexte'),
+    require('./games/du-sagst'),
+    require('./games/die-mitte')
 ];
 
 const REQUIRED_FIELDS = ['id', 'title', 'stateKey', 'clientModule', 'createState', 'reset', 'register', 'renameTeam'];

@@ -1,0 +1,9 @@
+[
+    { "id": "eiffelturm", "question": "Wie hoch ist der Eiffelturm (mit Antennen)?", "answer": 330, "unit": "Meter" },
+    { "id": "knochen", "question": "Wie viele Knochen hat ein erwachsener Mensch?", "answer": 206, "unit": "Knochen" },
+    { "id": "zugspitze", "question": "Wie hoch ist die Zugspitze?", "answer": 2962, "unit": "Meter" },
+    { "id": "rhein", "question": "Wie lang ist der Rhein?", "answer": 1233, "unit": "Kilometer" },
+    { "id": "mauerfall", "question": "In welchem Jahr fiel die Berliner Mauer?", "answer": 1989, "unit": "" },
+    { "id": "mond", "question": "Wie weit ist der Mond im Mittel von der Erde entfernt?", "answer": 384400, "unit": "Kilometer" },
+    { "id": "herz", "question": "Wie oft schlägt ein menschliches Herz ungefähr pro Tag?", "answer": 100000, "unit": "Schläge" }
+]

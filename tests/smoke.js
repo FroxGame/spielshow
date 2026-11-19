@@ -317,6 +317,94 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     await sleep(100);
     check('Songtexte: Reset', songtexteGame().phase === 'IDLE' && songtexteGame().revealed.length === 0);
 
+    // Du sagst: Frage starten, Rolle, Auswahl privat, Schliessen, getrennt aufdecken, Reset
+    admin.emit('adminStartGame', 'DU_SAGST');
+    const dsQuestions = await new Promise(resolve => { admin.once('receiveDuSagstQuestions', resolve); admin.emit('getDuSagstQuestions'); });
+    check('Du sagst: Fragen per Admin-Event', dsQuestions.length > 0);
+    const dsDenied = await Promise.race([
+        new Promise(resolve => { player.once('duSagstOverview', () => resolve(false)); player.emit('getDuSagstOverview'); }),
+        sleep(300).then(() => true)
+    ]);
+    check('Du sagst: Spieler bekommt keine Übersicht', dsDenied === true);
+    admin.emit('adminStartDuSagstQuestion', { questionId: dsQuestions[0].id });
+    await sleep(150);
+    const ds = () => admin.state.duSagstGame;
+    check('Du sagst: Frage offen mit 4 Antworten', ds().phase === 'OPEN' && ds().options.length === 4);
+    check('Du sagst: keine automatische Rolle', ds().roles['Team 1'].answerer === null && ds().roles['Team 1'].guesser === null);
+    player.emit('playerChooseDuSagst', 0);
+    player.emit('adminSetDuSagstRole', { team: 'Team 1', role: 'answerer', playerId: player.id });
+    await sleep(150);
+    check('Du sagst: ohne Rolle keine Auswahl, Spieler vergibt keine Rollen', ds().roles['Team 1'].answerer === null);
+    admin.emit('adminSetDuSagstRole', { team: 'Team 2', role: 'answerer', playerId: player.id });
+    admin.emit('adminSetDuSagstRole', { team: 'Team 1', role: 'answerer', playerId: player.id });
+    await sleep(150);
+    check('Du sagst: Admin vergibt Rolle nur im eigenen Team', ds().roles['Team 1'].answerer === player.id && ds().roles['Team 2'].answerer === null);
+    admin.emit('adminSetDuSagstRole', { team: 'Team 1', role: 'guesser', playerId: player.id });
+    await sleep(150);
+    check('Du sagst: Spieler hat nur eine Rolle', ds().roles['Team 1'].guesser === player.id && ds().roles['Team 1'].answerer === null);
+    admin.emit('adminSetDuSagstRole', { team: 'Team 1', role: 'answerer', playerId: player.id });
+    await sleep(150);
+    let dsOverview = null;
+    admin.on('duSagstOverview', overview => { dsOverview = overview; });
+    player.emit('playerChooseDuSagst', 2);
+    await sleep(150);
+    check('Du sagst: Admin sieht Auswahl live', dsOverview && dsOverview['Team 1'].answer === 2);
+    check('Du sagst: Auswahl nicht im State vor Aufdecken', ds().revealed['Team 1'].answer === null);
+    player.emit('playerChooseDuSagst', 7);
+    admin.emit('adminToggleDuSagstClosed');
+    await sleep(150);
+    player.emit('playerChooseDuSagst', 1);
+    await sleep(150);
+    check('Du sagst: Schließen sperrt Auswahl', ds().phase === 'CLOSED' && dsOverview['Team 1'].answer === 2);
+    admin.emit('adminRevealDuSagstAnswers');
+    await sleep(150);
+    check('Du sagst: Antworten getrennt aufgedeckt', ds().revealed['Team 1'].answer === 2 && ds().guessesRevealed === false);
+    admin.emit('adminRevealDuSagstGuesses');
+    await sleep(150);
+    check('Du sagst: Einschätzungen aufgedeckt', ds().guessesRevealed === true);
+    admin.off('duSagstOverview');
+    admin.emit('adminResetGame');
+    await sleep(100);
+    check('Du sagst: Reset', ds().phase === 'IDLE' && ds().answersRevealed === false && ds().question === '');
+
+    // Die Mitte: Schätzung privat, Schließen, Mitte aufdecken, Ergebnis mit näherem Team, Reset
+    admin.emit('adminStartGame', 'DIE_MITTE');
+    const dmQuestions = await new Promise(resolve => { admin.once('receiveDieMitteQuestions', resolve); admin.emit('getDieMitteQuestions'); });
+    check('Die Mitte: Fragen per Admin-Event', dmQuestions.length > 0);
+    const dmDenied = await Promise.race([
+        new Promise(resolve => { player.once('receiveDieMitteQuestions', () => resolve(false)); player.emit('getDieMitteQuestions'); }),
+        sleep(300).then(() => true)
+    ]);
+    check('Die Mitte: Spieler bekommt keine Lösungen', dmDenied === true);
+    const dmQuestion = dmQuestions[0];
+    admin.emit('adminStartDieMitteQuestion', { questionId: dmQuestion.id });
+    await sleep(150);
+    const dm = () => admin.state.dieMitteGame;
+    check('Die Mitte: Frage offen, Lösung nicht im State', dm().phase === 'OPEN' && dm().answer === null && !JSON.stringify(dm()).includes(`"answer":${dmQuestion.answer}`));
+    let dmOverview = null;
+    spectator.on('dieMitteOverview', overview => { dmOverview = overview; });
+    player.emit('playerDieMitteGuess', 'Unsinn');
+    player.emit('playerDieMitteGuess', '1.500');
+    await sleep(150);
+    check('Die Mitte: Zuschauer sieht Eingabe live, deutsche Zahl gelesen', dmOverview && dmOverview['Team 1'][0].value === 1500);
+    check('Die Mitte: Eingabe vor Aufdecken nicht im State', dm().revealedGuesses['Team 1'].length === 0 && dm().middles['Team 1'] === null);
+    admin.emit('adminToggleDieMitteClosed');
+    await sleep(150);
+    player.emit('playerDieMitteGuess', '7');
+    await sleep(150);
+    check('Die Mitte: Schließen sperrt Eingabe', dm().phase === 'CLOSED' && dmOverview['Team 1'][0].value === 1500);
+    admin.emit('adminRevealDieMitteGuesses');
+    await sleep(150);
+    check('Die Mitte: Schätzungen und Mitte aufgedeckt, Ergebnis noch nicht', dm().middles['Team 1'] === 1500 && dm().answer === null && dm().closerTeam === null);
+    admin.emit('adminRevealDieMitteResult');
+    await sleep(150);
+    check('Die Mitte: Ergebnis zeigt Lösung und näheres Team', dm().answer === dmQuestion.answer && dm().closerTeam === 'Team 1'
+        && dm().distances['Team 1'] === Math.abs(1500 - dmQuestion.answer));
+    spectator.off('dieMitteOverview');
+    admin.emit('adminResetGame');
+    await sleep(100);
+    check('Die Mitte: Reset', dm().phase === 'IDLE' && dm().answer === null && dm().middles['Team 1'] === null);
+
     // Diagramme: Zeichnen, Privatsphaere, Auswertung, Reset
     admin.emit('adminStartGame', 'DIAGRAMME');
     const diagrams = await new Promise(resolve => { admin.once('receiveDiagrammeList', resolve); admin.emit('getDiagrammeList'); });
@@ -366,21 +454,21 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     await sleep(300);
     await sleep(1300);
     check('Teekesselchen: Schreibphase läuft ohne eigenen Timer weiter', admin.state.teekesselchenGame.phase === 'WRITING' && !('timeRemaining' in admin.state.teekesselchenGame));
-    check('Teekesselchen: eigene Kategorie privat, Lösung nicht im State', Boolean(privateView && privateView.category) && !JSON.stringify(admin.state.teekesselchenGame).includes(tRounds[0].answer));
+    check('Teekesselchen: eigene Bedeutung privat, Lösung nicht im State', Boolean(privateView && privateView.category) && !JSON.stringify(admin.state.teekesselchenGame).includes(tRounds[0].answer));
     player.emit('pressBuzzer');
     await sleep(100);
-    check('Teekesselchen: Buzzer in Schreibphase abgelehnt', admin.state.teekesselchenGame.buzzerWinner === null);
-    player.emit('updateTeekesselchenText', 'Etwas zum Beschreiben');
-    admin.emit('adminCloseTeekesselchenInputs');
+    check('Teekesselchen: Buzzer schon in Schreibphase offen', Boolean(admin.state.teekesselchenGame.buzzerWinner));
+    admin.emit('adminResetBuzzer');
+    await sleep(100);
+    player.emit('updateTeekesselchenWord', 'Heft');
+    await sleep(100);
+    check('Teekesselchen: Wörter vor Freigabe nicht im State', !JSON.stringify(admin.state.teekesselchenGame).includes('Heft') && admin.state.teekesselchenGame.wordsReleased === false);
+    admin.emit('adminReleaseTeekesselchenWords');
     await sleep(150);
-    check('Teekesselchen: Eingaben schließen -> GUESSING', admin.state.teekesselchenGame.phase === 'GUESSING');
+    check('Teekesselchen: Freigabe -> GUESSING', admin.state.teekesselchenGame.phase === 'GUESSING' && admin.state.teekesselchenGame.wordsReleased === true);
     player.emit('pressBuzzer');
     await sleep(100);
-    check('Teekesselchen: Buzzer in Ratephase', Boolean(admin.state.teekesselchenGame.buzzerWinner));
-    admin.emit('adminRevealTeekesselchenTeam', 'Team 1');
-    await sleep(100);
-    check('Teekesselchen: Team-Beschreibung aufdecken', admin.state.teekesselchenGame.revealedTeams['Team 1'].texts[0].text === 'Etwas zum Beschreiben');
-    admin.emit('adminRevealTeekesselchen');
+    check('Teekesselchen: Buzzer in Ratephase', Boolean(admin.state.teekesselchenGame.buzzerWinner));    admin.emit('adminRevealTeekesselchen');
     await sleep(100);
     check('Teekesselchen: Auflösen zeigt Lösung', admin.state.teekesselchenGame.answer === tRounds[0].answer);
     admin.emit('adminResetGame');
@@ -540,7 +628,7 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     check('Umbenennen: Spieler zieht um', Object.values(st.players).every(p => p.team !== 'Team 1'));
 
     // Routen: Lösungen der neuen Spiele sind nicht mehr öffentlich
-    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json', '/rap-battle.json', '/songtexte.json']) {
+    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json', '/rap-battle.json', '/songtexte.json', '/du-sagst.json', '/die-mitte.json']) {
         check(`Nicht öffentlich ${url}`, !(await fetch(URL + url)).ok);
     }
 

@@ -1,0 +1,102 @@
+<div class="card">
+    <h2>Die Mitte</h2>
+    <label for="dmQuestionSelect">Frage:</label>
+    <select id="dmQuestionSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+    <div style="margin: 10px 0;">
+        <button onclick="dmStartQuestion()">Frage starten</button>
+        <button id="dmCloseBtn" onclick="dmToggleClosed()">Felder schließen</button>
+        <button onclick="dmRevealGuesses()">Schätzungen und Mitte aufdecken</button>
+        <button onclick="dmRevealResult()">Ergebnis aufdecken</button>
+    </div>
+    <p id="dmAdminStatus">Noch keine Frage aktiv.</p>
+    <p>Richtige Antwort (nur für dich sichtbar): <b id="dmAdminSolution">-</b></p>
+    <div id="dmAdminTeams"></div>
+</div>
+
+<script>
+    let dmAdminQuestions = [];
+    let dmAdminOverview = {};
+    let dmAdminState = null;
+
+    const dmAdminFormat = (value, unit) => (value === null || value === undefined ? '-'
+        : value.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + (unit ? ` ${unit}` : ''));
+    const dmAdminMiddle = entries => (entries.length ? entries.reduce((sum, e) => sum + e.value, 0) / entries.length : null);
+
+    function dmAdminRender() {
+        const box = document.getElementById('dmAdminTeams');
+        if (!box || !dmAdminState) return;
+        const game = dmAdminState.dieMitteGame || {};
+        const question = dmAdminQuestions.find(entry => entry.id === game.questionId);
+        const answer = question ? question.answer : null;
+        document.getElementById('dmAdminSolution').textContent = question ? dmAdminFormat(answer, game.unit) : '-';
+        box.replaceChildren(...(game.phase === 'IDLE' ? [] : Object.keys(dmAdminState.teams || {})).map(team => {
+            const entries = dmAdminOverview[team] || [];
+            const middle = dmAdminMiddle(entries);
+            const section = document.createElement('div');
+            section.style.margin = '10px 0';
+            const heading = document.createElement('b');
+            heading.textContent = team;
+            section.appendChild(heading);
+            entries.forEach(entry => {
+                const line = document.createElement('div');
+                line.textContent = `${entry.name}: ${dmAdminFormat(entry.value, game.unit)}`;
+                section.appendChild(line);
+            });
+            const summary = document.createElement('div');
+            summary.textContent = `Mitte (live): ${dmAdminFormat(middle, game.unit)}`
+                + (middle !== null && answer !== null ? `, Abstand: ${dmAdminFormat(Math.abs(middle - answer), game.unit)}` : '');
+            section.appendChild(summary);
+            return section;
+        }));
+    }
+
+    socket.off('receiveDieMitteQuestions');
+    socket.on('receiveDieMitteQuestions', questions => {
+        dmAdminQuestions = questions;
+        const select = document.getElementById('dmQuestionSelect');
+        if (!select) return;
+        select.replaceChildren(...questions.map(question => {
+            const option = document.createElement('option');
+            option.value = question.id;
+            option.textContent = question.question;
+            return option;
+        }));
+        dmAdminRender();
+    });
+    socket.emit('getDieMitteQuestions');
+
+    socket.off('dieMitteOverview');
+    socket.on('dieMitteOverview', overview => {
+        dmAdminOverview = overview || {};
+        dmAdminRender();
+    });
+    socket.emit('getDieMitteOverview');
+
+    window.dmStartQuestion = function() {
+        const select = document.getElementById('dmQuestionSelect');
+        if (!select || !select.value) return alert('Bitte eine Frage wählen!');
+        socket.emit('adminStartDieMitteQuestion', { questionId: select.value });
+    };
+    window.dmToggleClosed = () => socket.emit('adminToggleDieMitteClosed');
+    window.dmRevealGuesses = () => socket.emit('adminRevealDieMitteGuesses');
+    window.dmRevealResult = () => socket.emit('adminRevealDieMitteResult');
+
+    window.onModuleStateUpdate = function(state) {
+        dmAdminState = state;
+        const game = state.dieMitteGame || {};
+        const status = document.getElementById('dmAdminStatus');
+        if (!status) return;
+        let text = { IDLE: 'Noch keine Frage aktiv.', OPEN: 'Eingabe offen.', CLOSED: 'Eingabe geschlossen.' }[game.phase] || '';
+        if (game.resultRevealed) {
+            text += game.closerTeam === 'TIE' ? ' Ergebnis: Gleichstand.'
+                : (game.closerTeam ? ` Ergebnis: ${game.closerTeam} ist näher dran.` : ' Ergebnis: keine Schätzungen.');
+        } else if (game.guessesRevealed) {
+            text += ' Schätzungen und Mitte sind aufgedeckt.';
+        }
+        status.textContent = text;
+        const closeBtn = document.getElementById('dmCloseBtn');
+        closeBtn.textContent = game.phase === 'CLOSED' ? 'Felder wieder öffnen' : 'Felder schließen';
+        closeBtn.disabled = game.phase === 'IDLE' || game.guessesRevealed;
+        dmAdminRender();
+    };
+</script>

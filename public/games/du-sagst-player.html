@@ -1,0 +1,108 @@
+<style>
+    .ds-game { text-align: center; }
+    .ds-role { color: #a4b0be; margin: 8px 0; }
+    .ds-question { margin: 10px 0 14px; font-size: clamp(1.2rem, 5vw, 1.6rem); font-weight: bold; }
+    .ds-options { display: grid; gap: 10px; }
+    .ds-option { padding: 14px; font-size: 1.1rem; border-radius: 8px; border: 2px solid #4a5676; background: #1c202c; color: #fff; cursor: pointer; }
+    .ds-option.ds-chosen { border-color: #ffd166; background: #3a3420; font-weight: bold; }
+    .ds-option:disabled { cursor: default; opacity: 0.85; }
+    .ds-results { margin-top: 14px; text-align: left; }
+    .ds-result { margin: 6px 0; padding: 10px; border: 1px solid #566078; border-radius: 7px; }
+</style>
+
+<div class="ds-game">
+    <h2>Du sagst</h2>
+    <p id="dsPlayerStatus">Warte auf die nächste Frage...</p>
+    <div id="dsPlayerRole" class="ds-role"></div>
+    <div id="dsPlayerQuestion" class="ds-question"></div>
+    <div id="dsPlayerOptions" class="ds-options"></div>
+    <div id="dsPlayerResults" class="ds-results"></div>
+</div>
+
+<script>
+    const DS_LETTERS = ['A', 'B', 'C', 'D'];
+    let dsOwnChoice = null;
+    let dsLastState = null;
+    let dsLastTeam = null;
+
+    window.dsChoose = index => socket.emit('playerChooseDuSagst', index);
+
+    function dsRoleText(state, game) {
+        const me = (state.players || {})[socket.id];
+        if (!me || !me.team) return { role: null, text: 'Du bist in keinem Team.' };
+        const role = (game.roles || {})[me.team] || {};
+        const partnerId = role.answerer === socket.id ? role.guesser : role.answerer;
+        const partner = (state.players || {})[partnerId];
+        const partnerName = partner ? partner.name : 'dein Teampartner';
+        if (role.answerer === socket.id) return { role: 'answerer', text: 'Du antwortest: Was würdest du sagen?' };
+        if (role.guesser === socket.id) return { role: 'guesser', text: `Du schätzt ein: Was antwortet ${partnerName}?` };
+        return { role: null, text: 'Du hast keine Rolle. Der Admin vergibt die Rollen.' };
+    }
+
+    function dsRenderResults(game) {
+        const box = document.getElementById('dsPlayerResults');
+        if (!box) return;
+        if (!game.answersRevealed && !game.guessesRevealed) return box.replaceChildren();
+        const optionText = index => (index === null || index === undefined ? '-' : DS_LETTERS[index]);
+        box.replaceChildren(...Object.entries(game.revealed || {}).map(([team, result]) => {
+            const div = document.createElement('div');
+            div.className = 'ds-result';
+            const heading = document.createElement('b');
+            heading.textContent = team;
+            div.appendChild(heading);
+            if (game.answersRevealed) {
+                const line = document.createElement('div');
+                line.textContent = `Antwort: ${optionText(result.answer)}`;
+                div.appendChild(line);
+            }
+            if (game.guessesRevealed) {
+                const line = document.createElement('div');
+                line.textContent = `Einschätzung: ${optionText(result.guess)}`;
+                div.appendChild(line);
+            }
+            return div;
+        }));
+    }
+
+    function dsRender() {
+        const options = document.getElementById('dsPlayerOptions');
+        if (!options || !dsLastState) return;
+        const game = dsLastState.duSagstGame || {};
+        const idle = game.phase === 'IDLE';
+        const info = dsRoleText(dsLastState, game);
+        document.getElementById('dsPlayerStatus').textContent = idle
+            ? 'Warte auf die nächste Frage...'
+            : (game.phase === 'CLOSED' ? 'Auswahl geschlossen.' : 'Klicke eine Antwort an. Du kannst sie noch ändern.');
+        document.getElementById('dsPlayerRole').textContent = idle ? '' : info.text;
+        document.getElementById('dsPlayerQuestion').textContent = idle ? '' : game.question;
+        const canChoose = game.phase === 'OPEN' && info.role !== null;
+        options.replaceChildren(...(idle ? [] : game.options).map((text, index) => {
+            const button = document.createElement('button');
+            button.className = 'ds-option' + (dsOwnChoice === index ? ' ds-chosen' : '');
+            button.textContent = `${DS_LETTERS[index]}: ${text}`;
+            button.disabled = !canChoose;
+            button.onclick = () => window.dsChoose(index);
+            return button;
+        }));
+        dsRenderResults(game);
+    }
+
+    socket.off('duSagstPlayerUpdate');
+    socket.on('duSagstPlayerUpdate', view => {
+        dsOwnChoice = view.choice;
+        dsRender();
+    });
+
+    window.onModuleStateUpdate = function(state) {
+        dsLastState = state;
+        const me = (state.players || {})[socket.id];
+        const myTeam = me ? me.team : null;
+        if (myTeam !== dsLastTeam) {
+            dsLastTeam = myTeam;
+            socket.emit('getDuSagstView');
+        }
+        dsRender();
+    };
+
+    socket.emit('getDuSagstView');
+</script>

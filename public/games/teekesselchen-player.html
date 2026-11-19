@@ -1,20 +1,9 @@
 <style>
     .tee-game { text-align: center; }
-    .tee-category {
-        margin: 10px 0;
-        padding: 12px;
-        border-radius: 8px;
-        background: #202a2b;
-        font-weight: bold;
-    }
-    #teeText {
-        width: 100%;
-        min-height: 110px;
-        box-sizing: border-box;
-        padding: 12px;
-        font: inherit;
-        resize: vertical;
-    }
+    .tee-category { margin: 10px 0; padding: 12px; border-radius: 8px; background: #202a2b; font-weight: bold; }
+    #teeWord { width: 100%; box-sizing: border-box; padding: 12px; font: inherit; font-size: 1.2rem; text-align: center; }
+    .tee-partner { margin: 12px 0; padding: 12px; border: 1px solid #566078; border-radius: 7px; }
+    .tee-partner-word { font-size: 1.6rem; font-weight: bold; color: #ffd166; }
     .tee-revealed { margin: 8px 0; padding: 10px; border: 1px solid #566078; border-radius: 7px; text-align: left; }
     .tee-answer { margin-top: 12px; font-size: 1.6rem; font-weight: bold; color: #2ed573; }
 </style>
@@ -23,60 +12,83 @@
     <h2>Teekesselchen</h2>
     <p id="teeStatus">Warte auf die nächste Runde...</p>
     <div id="teeCategory" class="tee-category" style="display:none;"></div>
-    <textarea id="teeText" maxlength="200" placeholder="Beschreibe dein Wort, ohne es zu nennen..." style="display:none;"></textarea>
+    <input id="teeWord" type="text" maxlength="40" autocomplete="off" placeholder="Dein Wort zu dieser Bedeutung..." style="display:none;">
+    <div id="teePartner" class="tee-partner" style="display:none;">
+        <div id="teePartnerLabel"></div>
+        <div id="teePartnerWord" class="tee-partner-word"></div>
+    </div>
     <div id="teeRevealed"></div>
     <div id="teeAnswer" class="tee-answer"></div>
 </div>
 
 <script>
-    let teeOwnCategory = '';
+    let teeView = { category: '', ownWord: '', partnerName: '', partnerWord: '' };
+    let teeLastState = null;
+    let teeLastTeam = null;
 
-    socket.off('teekesselchenPlayerUpdate');
-    socket.on('teekesselchenPlayerUpdate', view => {
-        teeOwnCategory = view.category || '';
-        const category = document.getElementById('teeCategory');
-        const text = document.getElementById('teeText');
-        if (!category || !text) return;
-        category.style.display = teeOwnCategory ? 'block' : 'none';
-        category.textContent = `Dein Teekesselchen ist: ${teeOwnCategory}`;
-        if (document.activeElement !== text) text.value = view.ownText || '';
-    });
-
-    window.onModuleStateUpdate = function(state) {
-        const game = state.teekesselchenGame || {};
-        const text = document.getElementById('teeText');
-        if (!text) return;
-
+    function teeRender() {
+        const word = document.getElementById('teeWord');
+        if (!word || !teeLastState) return;
+        const game = teeLastState.teekesselchenGame || {};
         const writing = game.phase === 'WRITING';
-        text.style.display = game.phase === 'IDLE' || !teeOwnCategory ? 'none' : 'block';
-        text.disabled = !writing;
+
+        const category = document.getElementById('teeCategory');
+        category.style.display = teeView.category && game.phase !== 'IDLE' ? 'block' : 'none';
+        category.textContent = `Deine Bedeutung: ${teeView.category}`;
+
+        word.style.display = game.phase === 'IDLE' || !teeView.category ? 'none' : 'block';
+        word.disabled = !writing;
+        if (document.activeElement !== word) word.value = teeView.ownWord || '';
+
+        const partner = document.getElementById('teePartner');
+        partner.style.display = teeView.partnerName && teeView.partnerWord ? 'block' : 'none';
+        document.getElementById('teePartnerLabel').textContent = `Das Wort von ${teeView.partnerName}:`;
+        document.getElementById('teePartnerWord').textContent = teeView.partnerWord;
+
         document.getElementById('teeStatus').textContent = {
             IDLE: 'Warte auf die nächste Runde...',
-            WRITING: 'Beschreibe dein Wort!',
-            GUESSING: 'Jetzt wird geraten. Buzzer drücken, wenn du das Wort kennst!',
+            WRITING: 'Trage ein Wort zu deiner Bedeutung ein! Wenn du das Teekesselchen schon weißt: Buzzer drücken.',
+            GUESSING: 'Welches Wort passt zu beiden Bedeutungen? Buzzer drücken, wenn du es weißt!',
             REVEALED: 'Auflösung'
         }[game.phase] || '';
 
         const revealed = document.getElementById('teeRevealed');
-        revealed.replaceChildren(...Object.entries(game.revealedTeams || {}).map(([team, info]) => {
+        revealed.replaceChildren(...Object.entries(game.revealedTeams || {}).map(([team, entries]) => {
             const box = document.createElement('div');
             box.className = 'tee-revealed';
             const heading = document.createElement('b');
-            heading.textContent = `${team}: ${info.category}`;
+            heading.textContent = team;
             box.appendChild(heading);
-            info.texts.forEach(entry => {
+            entries.forEach(entry => {
                 const line = document.createElement('div');
-                line.textContent = `${entry.name}: ${entry.text}`;
+                line.textContent = `${entry.name} (${entry.category}): ${entry.word}`;
                 box.appendChild(line);
             });
             return box;
         }));
         document.getElementById('teeAnswer').textContent = game.answer || '';
+    }
+
+    socket.off('teekesselchenPlayerUpdate');
+    socket.on('teekesselchenPlayerUpdate', view => {
+        teeView = view;
+        teeRender();
+    });
+
+    window.onModuleStateUpdate = function(state) {
+        teeLastState = state;
+        const me = (state.players || {})[socket.id];
+        const myTeam = me ? me.team : null;
+        if (myTeam !== teeLastTeam) {
+            teeLastTeam = myTeam;
+            socket.emit('getTeekesselchenView');
+        }
+        teeRender();
     };
 
     socket.emit('getTeekesselchenView');
 
-    document.getElementById('teeText').addEventListener('input', event => {
-        socket.emit('updateTeekesselchenText', event.target.value);
+    document.getElementById('teeWord').addEventListener('input', event => {
+        socket.emit('updateTeekesselchenWord', event.target.value);
     });
 </script>

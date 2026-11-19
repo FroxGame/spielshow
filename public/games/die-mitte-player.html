@@ -1,0 +1,102 @@
+<style>
+    .dm-game { text-align: center; }
+    .dm-question { margin: 10px 0 14px; font-size: clamp(1.2rem, 5vw, 1.6rem); font-weight: bold; }
+    #dmGuessInput { width: 100%; box-sizing: border-box; padding: 12px; font: inherit; font-size: 1.4rem; text-align: center; }
+    .dm-own { margin: 8px 0; color: #a4b0be; min-height: 1.3em; }
+    .dm-results { margin-top: 14px; text-align: left; }
+    .dm-team { margin: 8px 0; padding: 10px; border: 2px solid #566078; border-radius: 8px; }
+    .dm-answer { margin-top: 12px; font-size: 1.5rem; font-weight: bold; color: #2ed573; }
+</style>
+
+<div class="dm-game">
+    <h2>Die Mitte</h2>
+    <p id="dmPlayerStatus">Warte auf die nächste Frage...</p>
+    <div id="dmPlayerQuestion" class="dm-question"></div>
+    <input id="dmGuessInput" type="text" inputmode="decimal" maxlength="30" autocomplete="off" placeholder="Deine Schätzung" style="display:none;">
+    <div id="dmPlayerOwn" class="dm-own"></div>
+    <div id="dmPlayerResults" class="dm-results"></div>
+    <div id="dmPlayerAnswer" class="dm-answer"></div>
+</div>
+
+<script>
+    let dmOwnGuess = null;
+    let dmLastState = null;
+
+    window.dmFormat = (value, unit) => (value === null || value === undefined ? '-'
+        : value.toLocaleString('de-DE', { maximumFractionDigits: 2 }) + (unit ? ` ${unit}` : ''));
+
+    function dmRender() {
+        const input = document.getElementById('dmGuessInput');
+        if (!input || !dmLastState) return;
+        const game = dmLastState.dieMitteGame || {};
+        const me = (dmLastState.players || {})[socket.id];
+        const idle = game.phase === 'IDLE';
+        document.getElementById('dmPlayerStatus').textContent = idle ? 'Warte auf die nächste Frage...'
+            : (!me || !me.team ? 'Du bist in keinem Team.'
+                : (game.phase === 'OPEN' ? 'Gib deine Schätzung ein. Du kannst sie noch ändern.' : 'Eingabe geschlossen.'));
+        document.getElementById('dmPlayerQuestion').textContent = idle ? '' : game.question + (game.unit ? ` (in ${game.unit})` : '');
+        input.style.display = idle || !me || !me.team ? 'none' : 'block';
+        input.disabled = game.phase !== 'OPEN';
+        if (input.dataset.questionId !== String(game.questionId)) {
+            input.dataset.questionId = String(game.questionId);
+            input.value = '';
+        }
+        document.getElementById('dmPlayerOwn').textContent = !idle && dmOwnGuess !== null
+            ? `Deine Schätzung: ${window.dmFormat(dmOwnGuess, game.unit)}` : '';
+        window.dmRenderResults(document.getElementById('dmPlayerResults'), game, dmLastState.teams || {});
+        document.getElementById('dmPlayerAnswer').textContent = game.resultRevealed
+            ? `Richtige Antwort: ${window.dmFormat(game.answer, game.unit)}` : '';
+    }
+
+
+    /** Zeigt je Team die aufgedeckten Schätzungen, die Mitte und nach dem Ergebnis den Abstand. */
+    window.dmRenderResults = function(box, game, teams) {
+        if (!box) return;
+        if (!game.guessesRevealed) return box.replaceChildren();
+        const winner = document.createElement('div');
+        winner.className = 'dm-answer';
+        winner.textContent = !game.resultRevealed ? ''
+            : (game.closerTeam === 'TIE' ? 'Gleichstand!' : (game.closerTeam ? `${game.closerTeam} ist näher dran!` : 'Keine Schätzungen.'));
+        box.replaceChildren(...Object.entries(game.revealedGuesses || {}).map(([team, entries]) => {
+            const div = document.createElement('div');
+            div.className = 'dm-team';
+            div.style.borderColor = (teams[team] || {}).color || '#566078';
+            if (game.resultRevealed && game.closerTeam === team) div.style.background = '#1f3b2a';
+            const heading = document.createElement('b');
+            heading.textContent = team;
+            div.appendChild(heading);
+            entries.forEach(entry => {
+                const line = document.createElement('div');
+                line.textContent = `${entry.name}: ${window.dmFormat(entry.value, game.unit)}`;
+                div.appendChild(line);
+            });
+            const middle = document.createElement('div');
+            middle.style.fontWeight = 'bold';
+            middle.textContent = `Mitte: ${window.dmFormat((game.middles || {})[team], game.unit)}`;
+            div.appendChild(middle);
+            if (game.resultRevealed) {
+                const distance = document.createElement('div');
+                distance.textContent = `Abstand: ${window.dmFormat((game.distances || {})[team], game.unit)}`;
+                div.appendChild(distance);
+            }
+            return div;
+        }), winner);
+    };
+
+    socket.off('dieMittePlayerUpdate');
+    socket.on('dieMittePlayerUpdate', view => {
+        dmOwnGuess = view.guess;
+        dmRender();
+    });
+
+    window.onModuleStateUpdate = function(state) {
+        dmLastState = state;
+        dmRender();
+    };
+
+    socket.emit('getDieMitteView');
+
+    document.getElementById('dmGuessInput').addEventListener('input', event => {
+        socket.emit('playerDieMitteGuess', event.target.value);
+    });
+</script>

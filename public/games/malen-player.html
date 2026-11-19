@@ -286,6 +286,50 @@
         const isPainter = painters[me.team] === socket.id;
         const role = isPainter ? 'PAINTER' : 'GUESSER';
 
+        // Admin hat die Kunstwerke freigegeben: alle sehen beide Zeichnungen, auch der Maler.
+        if (malen.artworksShown) {
+            if (_malenCurrentRole !== 'GALLERY') {
+                _malenCurrentRole = 'GALLERY';
+                _removePainterListeners();
+                container.innerHTML = '';
+                const title = document.createElement('div');
+                title.className = 'malen-role-info';
+                title.style.fontSize = '1.1rem';
+                title.style.fontWeight = 'bold';
+                title.style.color = '#fff';
+                title.textContent = 'Die Kunstwerke';
+                container.appendChild(title);
+                Object.keys(teams).forEach((team, index) => {
+                    const box = document.createElement('div');
+                    box.style.cssText = 'width:100%; max-width:600px; margin-bottom:14px;';
+                    const label = document.createElement('div');
+                    label.className = 'malen-role-info';
+                    label.style.color = (teams[team] || {}).color || '#fff';
+                    label.style.fontWeight = 'bold';
+                    label.dataset.team = team;
+                    box.appendChild(label);
+                    const canvas = document.createElement('canvas');
+                    canvas.id = 'malenGalleryCanvas' + index;
+                    canvas.dataset.team = team;
+                    canvas.width = 1200;
+                    canvas.height = 900;
+                    canvas.style.cssText = 'width:100%; aspect-ratio:4/3; background:#fff; border-radius:8px; border:3px solid #3d4763; display:block;';
+                    box.appendChild(canvas);
+                    container.appendChild(box);
+                });
+            }
+            container.querySelectorAll('canvas[data-team]').forEach(canvas => {
+                const team = canvas.dataset.team;
+                _clearCanvas(canvas);
+                _drawLines(canvas.getContext('2d'), canvas, (malen.drawings && malen.drawings[team]) || []);
+            });
+            container.querySelectorAll('div[data-team]').forEach(label => {
+                const painter = (state.players || {})[(malen.painters || {})[label.dataset.team]];
+                label.textContent = label.dataset.team + (painter ? ` (gemalt von ${painter.name})` : '');
+            });
+            return;
+        }
+
         if (_malenCurrentRole !== role) {
             _malenCurrentRole = role;
             // Reset coordinates when switching roles

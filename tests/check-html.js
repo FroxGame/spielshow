@@ -43,6 +43,11 @@ files.forEach(file => {
             problems++;
             console.log(`JSON-FETCH ${name}: ${jsonFetches.join(', ')} (Inhalte nur per Admin-Event laden)`);
         }
+        // Die Shells fuehren jeden Block in einer eigenen Funktion aus: let/const/function sind nicht geteilt
+        if (scripts.length > 1) {
+            problems++;
+            console.log(`MEHRERE SKRIPTE ${name}: ${scripts.length} Blöcke (nur einer erlaubt, Blöcke teilen keine Variablen)`);
+        }
         const oldEvents = [...new Set(code.match(OLD_EVENTS) || [])];
         if (oldEvents.length) {
             problems++;

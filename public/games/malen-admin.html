@@ -97,6 +97,7 @@
         <div class="malen-admin-row" style="margin-top: 12px; gap: 8px;">
             <button onclick="startMalenRound()" style="background: #2ed573; color: #000; font-weight: bold; font-size: 1rem; padding: 8px 16px;">▶ Runde starten / Neuer Begriff</button>
             <button onclick="revealMalenWord()" style="background: #3742fa; color: #fff; font-weight: bold;">👁 Begriff aufdecken</button>
+            <button id="malenArtworksBtn" onclick="toggleMalenArtworks()" style="background: #8e44ad; color: #fff; font-weight: bold;">🖼️ Kunstwerke für alle zeigen</button>
             <button onclick="clearAllCanvases()" style="background: #e67e22; color: #fff; font-weight: bold;">🗑️ Beide Canvas leeren</button>
         </div>
     </div>
@@ -275,6 +276,10 @@
         socket.emit('adminRevealMalenWord');
     };
 
+    window.toggleMalenArtworks = function() {
+        socket.emit('adminToggleMalenArtworks');
+    };
+
     window.clearAllCanvases = function() {
         if (typeof socket !== 'undefined') {
             socket.emit('adminClearAllMalenCanvases');
@@ -316,6 +321,10 @@
             }
             select.value = painters[team] || '';
         });
+        const artworksBtn = document.getElementById('malenArtworksBtn');
+        if (artworksBtn) {
+            artworksBtn.textContent = malen.artworksShown ? '🖼️ Kunstwerke wieder ausblenden' : '🖼️ Kunstwerke für alle zeigen';
+        }
         const activeDiv = document.getElementById('malenActiveInfo');
         if (activeDiv) {
             activeDiv.style.display = phase === 'PLAYING' ? 'block' : 'none';
