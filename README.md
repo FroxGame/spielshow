@@ -193,7 +193,7 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 - Wo ist das auf der Karte?
 - Merken
 - Ist es real oder ist es nicht Wirklichkeit?
-- Flaggen bauen -> WIP
+- Flaggen bauen
 - Buchstabensalat
 - Teekesselchen
 - Beugen
@@ -228,10 +228,13 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 8. Das kam bei Discord nicht an - keine Fehler - 4/5 auch gut als letztes Spiel
 9. Promis raten - Buzzer villeicht nicht verschieben - 4/5 -> andere Sachen z.B. Viedeospielcharaktere oder so -> Buzzer sitzt jetzt fest unten. Neue Inhalte: Bilder und Namen in `public/games/promis/` bzw. `drudel/` austauschen
 
-# Spiele für übernächste Spielshow
-- Drudel
-- Morsen
-- Merksätze
-- Flaggen bauen
-- Tabu
-- Merken
+# Spiele für Spielshow am 29.11.26/Dezember
+1. Du sagst
+2. Merken - fertig
+3. Die Mitte
+4. Teekesselchen
+5. Flaggen bauen - fertig
+6. Rap Battle
+7. Diagramme - fertig
+8. Beugen
+9. Songtexte vervollständigen
