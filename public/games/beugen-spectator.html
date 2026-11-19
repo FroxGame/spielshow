@@ -1,0 +1,28 @@
+<style>
+    .beugen-spec { text-align: center; }
+    .beugen-spec-label { color: #a4b0be; font-size: 1.3rem; }
+    .beugen-spec-verb { margin: 20px 0; font-size: clamp(2.4rem, 9vw, 6rem); font-weight: bold; color: #ffd166; overflow-wrap: anywhere; }
+    .beugen-spec-form { min-height: 1.4em; font-size: clamp(1.6rem, 5vw, 3.2rem); }
+    .beugen-spec-answer { min-height: 1.4em; margin: 20px 0; font-size: clamp(2rem, 7vw, 4.5rem); font-weight: bold; color: #2ed573; overflow-wrap: anywhere; }
+</style>
+
+<section class="card beugen-spec">
+    <h2>Beugen</h2>
+    <div id="beugenSpecHint" class="beugen-spec-label"></div>
+    <div id="beugenSpecVerb" class="beugen-spec-verb"></div>
+    <div id="beugenSpecForm" class="beugen-spec-form"></div>
+    <div id="beugenSpecAnswer" class="beugen-spec-answer"></div>
+</section>
+
+<script>
+    window.onSpectatorStateUpdate = function(state) {
+        const game = state.beugenGame || {};
+        const verb = document.getElementById('beugenSpecVerb');
+        if (!verb) return;
+        const idle = game.phase === 'IDLE';
+        document.getElementById('beugenSpecHint').textContent = idle ? 'Warte auf die nächste Runde...' : 'Verb:';
+        verb.textContent = idle ? '' : game.verb;
+        document.getElementById('beugenSpecForm').textContent = game.formShown ? game.form : '';
+        document.getElementById('beugenSpecAnswer').textContent = game.answer || '';
+    };
+</script>

@@ -18,7 +18,8 @@ const GAME_FACTORIES = [
     require('./games/realitaet'),
     require('./games/flaggen'),
     require('./games/buchstabensalat'),
-    require('./games/teekesselchen')
+    require('./games/teekesselchen'),
+    require('./games/beugen')
 ];
 
 const REQUIRED_FIELDS = ['id', 'title', 'stateKey', 'clientModule', 'createState', 'reset', 'register', 'renameTeam'];

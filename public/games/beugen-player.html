@@ -1,0 +1,28 @@
+<style>
+    .beugen-game { text-align: center; }
+    .beugen-label { color: #a4b0be; margin-top: 10px; }
+    .beugen-verb { margin: 8px 0; font-size: clamp(1.8rem, 7vw, 3rem); font-weight: bold; color: #ffd166; overflow-wrap: anywhere; }
+    .beugen-form { min-height: 1.4em; font-size: clamp(1.2rem, 5vw, 1.8rem); }
+    .beugen-answer { min-height: 1.4em; margin: 8px 0; font-size: clamp(1.4rem, 6vw, 2.2rem); font-weight: bold; color: #2ed573; overflow-wrap: anywhere; }
+</style>
+
+<div class="beugen-game">
+    <h2>Beugen</h2>
+    <div id="beugenPlayerHint" class="beugen-label"></div>
+    <div id="beugenPlayerVerb" class="beugen-verb"></div>
+    <div id="beugenPlayerForm" class="beugen-form"></div>
+    <div id="beugenPlayerAnswer" class="beugen-answer"></div>
+</div>
+
+<script>
+    window.onModuleStateUpdate = function(state) {
+        const game = state.beugenGame || {};
+        const verb = document.getElementById('beugenPlayerVerb');
+        if (!verb) return;
+        const idle = game.phase === 'IDLE';
+        document.getElementById('beugenPlayerHint').textContent = idle ? 'Warte auf die nächste Runde...' : 'Verb:';
+        verb.textContent = idle ? '' : game.verb;
+        document.getElementById('beugenPlayerForm').textContent = game.formShown ? game.form : '';
+        document.getElementById('beugenPlayerAnswer').textContent = game.answer || '';
+    };
+</script>

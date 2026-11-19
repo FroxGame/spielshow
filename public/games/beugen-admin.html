@@ -1,0 +1,51 @@
+<div class="card">
+    <h2>Beugen</h2>
+    <label>Verb und Form:</label>
+    <select id="beugenRoundSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+    <div style="margin: 10px 0;">
+        <button onclick="beugenStart()">Nächste Runde starten (Verb zeigen)</button>
+        <button onclick="beugenShowForm()">Form zeigen</button>
+        <button onclick="beugenReveal()">Lösung aufdecken</button>
+    </div>
+    <p id="beugenAdminStatus">Noch keine Runde aktiv.</p>
+    <p>Lösung (nur für dich sichtbar): <b id="beugenAdminSolution">-</b></p>
+</div>
+
+<script>
+    let beugenRounds = [];
+
+    socket.off('receiveBeugenRounds');
+    socket.on('receiveBeugenRounds', rounds => {
+        beugenRounds = rounds;
+        const select = document.getElementById('beugenRoundSelect');
+        if (!select) return;
+        select.replaceChildren(...rounds.map(round => {
+            const option = document.createElement('option');
+            option.value = round.id;
+            option.textContent = `${round.verb}: ${round.form}`;
+            return option;
+        }));
+    });
+    socket.emit('getBeugenRounds');
+
+    window.beugenStart = function() {
+        const select = document.getElementById('beugenRoundSelect');
+        if (!select || !select.value) return alert('Bitte ein Verb wählen!');
+        socket.emit('adminStartBeugenRound', { roundId: select.value });
+        // Auswahl springt auf das nächste Verb, damit "Nächste Runde" direkt weiterschaltet
+        if (select.selectedIndex < select.options.length - 1) select.selectedIndex += 1;
+    };
+    window.beugenShowForm = () => socket.emit('adminShowBeugenForm');
+    window.beugenReveal = () => socket.emit('adminRevealBeugen');
+
+    window.onModuleStateUpdate = function(state) {
+        const game = state.beugenGame || {};
+        const status = document.getElementById('beugenAdminStatus');
+        if (!status) return;
+        const round = beugenRounds.find(entry => entry.id === game.roundId);
+        document.getElementById('beugenAdminSolution').textContent = round ? round.answer : '-';
+        if (game.phase === 'IDLE') status.textContent = 'Noch keine Runde aktiv.';
+        else if (game.phase === 'REVEALED') status.textContent = 'Lösung ist aufgedeckt.';
+        else status.textContent = game.formShown ? 'Verb und Form sind sichtbar, Buzzer offen.' : 'Verb ist sichtbar, Form noch verdeckt.';
+    };
+</script>

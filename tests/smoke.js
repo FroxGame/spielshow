@@ -266,6 +266,30 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     await sleep(100);
     check('Buchstabensalat: Reset', admin.state.buchstabensalatGame.phase === 'IDLE' && admin.state.buchstabensalatGame.answer === '');
 
+    // Beugen: Verb, Form zeigen, Buzzer erst nach Form, Aufdecken, Reset
+    admin.emit('adminStartGame', 'BEUGEN');
+    const beugenRounds = await new Promise(resolve => { admin.once('receiveBeugenRounds', resolve); admin.emit('getBeugenRounds'); });
+    check('Beugen: Runden per Admin-Event', beugenRounds.length > 0);
+    const beugenDenied = await Promise.race([
+        new Promise(resolve => { player.once('receiveBeugenRounds', () => resolve(false)); player.emit('getBeugenRounds'); }),
+        sleep(300).then(() => true)
+    ]);
+    check('Beugen: Spieler bekommt keine Lösungen', beugenDenied === true);
+    admin.emit('adminStartBeugenRound', { roundId: beugenRounds[0].id });
+    await sleep(150);
+    const beugenGame = () => admin.state.beugenGame;
+    check('Beugen: Verb sichtbar, Form und Lösung verborgen', beugenGame().verb === beugenRounds[0].verb && beugenGame().form === '' && !JSON.stringify(beugenGame()).includes(beugenRounds[0].answer));
+    check('Beugen: Buzzer vor Form gesperrt', admin.state.beugenGame.buzzerOpen === false);
+    admin.emit('adminShowBeugenForm');
+    await sleep(150);
+    check('Beugen: Form sichtbar, Buzzer offen', beugenGame().form === beugenRounds[0].form && beugenGame().buzzerOpen === true);
+    admin.emit('adminRevealBeugen');
+    await sleep(150);
+    check('Beugen: Aufdecken zeigt Lösung', beugenGame().phase === 'REVEALED' && beugenGame().answer === beugenRounds[0].answer);
+    admin.emit('adminResetGame');
+    await sleep(100);
+    check('Beugen: Reset', beugenGame().phase === 'IDLE' && beugenGame().answer === '' && beugenGame().verb === '');
+
     // Teekesselchen (neu)
     let privateView = null;
     player.on('teekesselchenPlayerUpdate', v => { privateView = v; });
@@ -353,7 +377,7 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     check('Umbenennen: Spieler zieht um', Object.values(st.players).every(p => p.team !== 'Team 1'));
 
     // Routen: Lösungen der neuen Spiele sind nicht mehr öffentlich
-    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json']) {
+    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json']) {
         check(`Nicht öffentlich ${url}`, !(await fetch(URL + url)).ok);
     }
 

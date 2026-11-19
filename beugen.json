@@ -1,0 +1,7 @@
+[
+    { "id": "b1", "verb": "gehen", "form": "2. Person Plural Passiv Plusquamperfekt", "answer": "ihr wart gegangen worden" },
+    { "id": "b2", "verb": "sehen", "form": "1. Person Singular Aktiv Futur II", "answer": "ich werde gesehen haben" },
+    { "id": "b3", "verb": "laufen", "form": "3. Person Plural Aktiv Perfekt", "answer": "sie sind gelaufen" },
+    { "id": "b4", "verb": "geben", "form": "2. Person Singular Aktiv Präteritum", "answer": "du gabst" },
+    { "id": "b5", "verb": "nehmen", "form": "1. Person Plural Aktiv Plusquamperfekt", "answer": "wir hatten genommen" }
+]

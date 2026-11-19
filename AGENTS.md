@@ -84,6 +84,7 @@ Die Spieleliste hat eine einzige Quelle: `server/registry.js`. Die Shells laden 
 | 13 | FLAGGEN | flaggen | Bauen per Drag, Bauen sperren per Admin-Button | komplexe Spielereingaben |
 | 14 | BUCHSTABENSALAT | buchstabensalat | Buzzer, Schritt-Takt, Lösung im Server | **Buzzer + Spiel-Takt (beste Vorlage)** |
 | 15 | TEEKESSELCHEN | teekesselchen | Buzzer, Schreibphase, private Kategorie je Team | **private Daten pro Team, Phasen** |
+| 16 | BEUGEN | beugen | Buzzer erst nach "Form zeigen", max. 7, Lösung nur im Server (`beugen.json`) | einfache Runden mit Aufdeck-Schritten |
 
 ## 4. Der Standard: Was der Kern automatisch liefert
 
