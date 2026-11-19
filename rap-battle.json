@@ -1,0 +1,23 @@
+[
+    {
+        "id": "sommer",
+        "title": "Sommer (Beispiel)",
+        "topic": "Sommer",
+        "bpm": 90,
+        "lines": ["Sommer", "Zimmer", "Sonne", "Wonne", "Eis", "heiß", "Meer", "mehr", "Nacht", "Pracht", "Wind", "Kind"]
+    },
+    {
+        "id": "essen",
+        "title": "Essen (Beispiel)",
+        "topic": "Essen",
+        "bpm": 90,
+        "lines": ["Brot", "rot", "Käse", "Gemüse", "Suppe", "Gruppe", "Kuchen", "suchen", "Teller", "schneller", "Hunger", "Wunder"]
+    },
+    {
+        "id": "alltag",
+        "title": "Alltag (Beispiel)",
+        "topic": "Alltag",
+        "bpm": 90,
+        "lines": ["Montag", "Tag", "Wecker", "Bäcker", "Bus", "Schluss", "Pause", "Hause", "Zeit", "weit", "Büro", "froh"]
+    }
+]

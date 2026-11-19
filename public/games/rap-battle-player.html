@@ -1,0 +1,171 @@
+<div id="rbRoot" class="rb-game">
+    <h2 style="margin:0 0 6px; text-align:center;">Rap Battle</h2>
+    <div id="rbTopic" style="text-align:center;"></div>
+    <p id="rbStatus" class="rb-muted" style="text-align:center;">Warte auf die nächste Runde...</p>
+    <p id="rbSoundHint" class="rb-muted" style="text-align:center; display:none;">Kein Beat zu hören? Tippe einmal auf den Bildschirm.</p>
+
+    <label id="rbBeatOption" class="rb-muted" style="display:none; text-align:center;">
+        <input type="checkbox" id="rbBeatToggle" checked> Beat mithören
+    </label>
+
+    <div id="rbStage" style="display:none;"></div>
+
+    <div id="rbWriting" style="display:none;">
+        <div id="rbInputs" style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:8px;"></div>
+        <p id="rbProgress" class="rb-muted" style="text-align:center;"></p>
+    </div>
+
+    <div id="rbPlaying" style="display:none;">
+        <div id="rbChips"></div>
+        <p id="rbHeard" class="rb-muted" style="text-align:center;"></p>
+    </div>
+
+    <div id="rbLineSection" style="display:none;">
+        <h3 style="margin:14px 0 6px; text-align:center;">Rap-Feld</h3>
+        <div id="rbLineField"></div>
+    </div>
+
+    <div id="rbReveal" style="display:none;"></div>
+</div>
+
+<script>
+    const rbWordCount = 12;
+    const rbClock = RapBattle.createClock();
+    const rbBeat = RapBattle.createBeat();
+    const rbStage = RapBattle.createStage(document.getElementById('rbStage'), rbClock);
+    const rbLineField = RapBattle.createLineField(document.getElementById('rbLineField'), rbClock);
+    let rbState = null;
+    let rbView = null;
+    let rbKnownTeam;
+    let rbBeatKey = '';
+
+    const rbShow = (id, visible) => {
+        const element = document.getElementById(id);
+        if (element) element.style.display = visible ? 'block' : 'none';
+    };
+
+    function rbBuildInputs() {
+        const container = document.getElementById('rbInputs');
+        if (!container || container.children.length) return;
+        for (let index = 0; index < rbWordCount; index++) {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.maxLength = 40;
+            input.placeholder = `Wort ${index + 1}`;
+            input.style.cssText = 'padding:10px 12px; border-radius:999px; border:2px solid #4a5676; background:#1c202c; color:#fff; font:inherit; width:100%; box-sizing:border-box;';
+            input.addEventListener('input', () => socket.emit('playerSetRapBattleWord', { index, word: input.value }));
+            container.appendChild(input);
+        }
+    }
+
+    function rbUpdateInputs(board, enabled) {
+        const inputs = Array.from(document.querySelectorAll('#rbInputs input'));
+        inputs.forEach((input, index) => {
+            input.readOnly = !enabled;
+            const word = board ? board.words[index] : '';
+            if (document.activeElement !== input && input.value !== word) input.value = word;
+        });
+        const progress = document.getElementById('rbProgress');
+        if (progress && board) progress.textContent = `${board.words.filter(Boolean).length} / ${rbWordCount} Wörter`;
+    }
+
+    function rbUpdateBeat(wantBeat, lineCount) {
+        const timing = rbView.timing;
+        if (!wantBeat || !timing) {
+            rbBeat.stop();
+            rbBeatKey = '';
+            rbShow('rbSoundHint', false);
+            return;
+        }
+        const key = `${timing.startAt}|${timing.bpm}`;
+        if (key === rbBeatKey) return;
+        rbBeatKey = key;
+        rbBeat.start({
+            startAt: rbClock.toLocal(timing.startAt),
+            bpm: timing.bpm,
+            countInBeats: timing.countInBeats,
+            totalBeats: lineCount * timing.beatsPerBar * timing.barsPerLine
+        });
+        setTimeout(() => rbShow('rbSoundHint', rbBeat.isBlocked()), 400);
+    }
+
+    function rbDescribe(game, me, role) {
+        if (game.phase === 'IDLE') return 'Warte auf die nächste Runde...';
+        if (game.revealed) return 'Auflösung: Das waren die Wörter der Teams.';
+        if (role === 'rapper') {
+            return game.rapperShown ? '' : 'Du rappst gleich! Die anderen tippen Wörter, die du sagen könntest. Dein Rap erscheint, sobald der Admin ihn freigibt.';
+        }
+        if (!me || !me.team) return 'Du bist in keinem Team. Warte, bis der Admin dich zuweist.';
+        if (game.phase === 'WRITING') return 'Schreibt gemeinsam 12 Wörter auf, die der Rapper vermutlich sagt.';
+        return 'Tippe auf ein Wort, sobald es im Rap gesagt wird.';
+    }
+
+    function rbRender() {
+        if (!rbState || !rbView || !rbRootElement.isConnected) return;
+        const game = rbState.rapBattleGame || {};
+        const me = rbState.players ? rbState.players[socket.id] : null;
+        const role = rbView.role;
+        const active = game.phase !== 'IDLE';
+        const isRapper = role === 'rapper';
+        const isWriter = active && !isRapper && Boolean(me && me.team) && !game.revealed;
+        const stageVisible = active && isRapper && game.rapperShown && !game.revealed && Boolean(rbView.lines);
+
+        document.getElementById('rbTopic').replaceChildren(...(active && game.topic
+            ? [Object.assign(document.createElement('span'), { className: 'rb-topic', textContent: `Thema: ${game.topic}` })] : []));
+        document.getElementById('rbStatus').textContent = rbDescribe(game, me, isRapper ? 'rapper' : 'player');
+
+        rbShow('rbStage', stageVisible);
+        rbStage.setData(stageVisible ? rbView.lines : [], stageVisible ? rbView.timing : null);
+        const beatToggle = document.getElementById('rbBeatToggle');
+        rbShow('rbBeatOption', active && !isRapper);
+        rbUpdateBeat(active && !game.revealed && (isRapper || beatToggle.checked), game.lineCount || 0);
+
+        const writing = isWriter && game.phase === 'WRITING';
+        const playing = isWriter && game.phase !== 'WRITING';
+        rbShow('rbWriting', writing);
+        rbShow('rbPlaying', playing);
+        if (writing) { rbBuildInputs(); rbUpdateInputs(rbView.board, true); }
+        if (playing && rbView.board) {
+            RapBattle.renderChips(document.getElementById('rbChips'), rbView.board, {
+                onToggle: index => socket.emit('playerToggleRapBattleMark', { index })
+            });
+            document.getElementById('rbHeard').textContent = `${rbView.board.marked.filter(Boolean).length} gehört`;
+        }
+
+        const showLines = Boolean(rbView.lines) && !stageVisible;
+        rbShow('rbLineSection', showLines);
+        rbLineField.setData(showLines ? rbView.lines : null, showLines ? rbView.timing : null);
+
+        const reveal = document.getElementById('rbReveal');
+        const showReveal = game.revealed && Boolean(rbView.boards);
+        rbShow('rbReveal', showReveal);
+        if (showReveal) RapBattle.renderTeamBoards(reveal, rbView.boards, rbState);
+    }
+
+    socket.off('rapBattleView');
+    socket.on('rapBattleView', view => {
+        rbClock.sync(view);
+        rbView = view;
+        rbRender();
+    });
+    socket.emit('getRapBattleView');
+    document.getElementById('rbBeatToggle').addEventListener('change', rbRender);
+
+    window.onModuleStateUpdate = function(state) {
+        rbState = state;
+        const me = state.players ? state.players[socket.id] : null;
+        const team = me ? me.team : null;
+        if (rbKnownTeam !== team) {
+            rbKnownTeam = team;
+            socket.emit('getRapBattleView');
+        }
+        rbRender();
+    };
+
+    const rbRootElement = document.getElementById('rbRoot');
+    const rbGuard = setInterval(() => {
+        if (rbRootElement.isConnected) return;
+        rbBeat.stop();
+        clearInterval(rbGuard);
+    }, 500);
+</script>

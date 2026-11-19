@@ -20,7 +20,8 @@ const GAME_FACTORIES = [
     require('./games/buchstabensalat'),
     require('./games/teekesselchen'),
     require('./games/beugen'),
-    require('./games/diagramme')
+    require('./games/diagramme'),
+    require('./games/rap-battle')
 ];
 
 const REQUIRED_FIELDS = ['id', 'title', 'stateKey', 'clientModule', 'createState', 'reset', 'register', 'renameTeam'];

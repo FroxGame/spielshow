@@ -87,6 +87,7 @@ ode tools/flaggen-builder.js erzeugt (Flaggen in 	ools/flaggen-data.js, Bauteile
 | 15 | TEEKESSELCHEN | teekesselchen | Buzzer, Schreibphase, private Kategorie je Team | **private Daten pro Team, Phasen** |
 | 16 | BEUGEN | beugen | Buzzer erst nach "Form zeigen", max. 7, Lösung nur im Server (`beugen.json`) | einfache Runden mit Aufdeck-Schritten |
 | 17 | DIAGRAMME | diagramme | Diagramm weiterzeichnen per Klick, Zeichner je Team, Auswertung als Abweichung, `layout: 'medium'`, max. 5 (`diagramme.json`) | **private Live-Daten pro Empfänger** (`diagrammeView`), gemeinsamer Canvas-Baustein `public/shared/diagram.js` |
+| 18 | RAP_BATTLE | rap-battle | Rappender sieht nur Reimwörter (aktuelle + 2 nächste Zeilen) zu synthetischem Beat, Teams tippen 12 Wörter und markieren sie, Admin gibt Rap per Button frei, ohne Limit (`rap-battle.json`) | **private Ansichten je Rolle** (`rapBattleView`), Takt-Animation und Beat im Client (`public/shared/rap-battle.js`), Server gibt nur `startAt` und Tempo vor |
 
 ## 4. Der Standard: Was der Kern automatisch liefert
 
@@ -412,6 +413,8 @@ Ein grüner Check ersetzt keinen Blick in den Browser. Sage dem Nutzer, was du *
 
 ## 12. Fehlersuche und Lessons Learned
 
+- Zeitgesteuerte Abläufe im Client (Rap Battle): Der Server schickt nur `startAt` (Server-Zeit) und Tempo. Jede Ansicht bringt `serverNow` mit, der Client rechnet damit die Uhr um (`RapBattle.createClock`). Private Daten gehen nie über `stateUpdate`, auch nicht an den Rappenden.
+- Teamwechsel durch den Admin löst kein `emitUpdates` aus: Spielerseiten mit privaten Ansichten fordern die Ansicht bei geändertem Team neu an (Rap Battle, `getRapBattleView`).
 - Punkte lassen sich nicht erhöhen: Prüfung `!scores[team]` statt `=== undefined`.
 - Handler wirft ReferenceError: Konstante nicht importiert. Der Server läuft weiter und loggt `Fehler im Event "<name>"`. Der Lint meldet es vorher.
 - Update kommt nicht an: falscher Handler-Name für die Seite, `emitState()` vergessen oder nur auf einem Sonderkanal gesendet.

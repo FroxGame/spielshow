@@ -199,6 +199,7 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 - Teekesselchen
 - Beugen
 - Diagramme
+- Rap Battle (Beispiel-Raps in `rap-battle.json`, Beat wird im Browser erzeugt)
 
 
 # Was schon fertig ist für die Spielshow (inklusive Inhalt):

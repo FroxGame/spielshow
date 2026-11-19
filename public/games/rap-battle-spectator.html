@@ -1,0 +1,122 @@
+<section id="rbSpecRoot" class="card">
+    <h2 style="margin:0 0 6px;">Rap Battle</h2>
+    <div id="rbSpecInfo" style="font-size:1.2rem; margin-bottom:6px;"></div>
+    <div id="rbSpecStatus" style="font-size:1.5rem; font-weight:800; color:#ffd166; min-height:1.4em; margin-bottom:8px;"></div>
+    <label class="rb-muted" style="display:block; margin-bottom:10px;">
+        <input type="checkbox" id="rbSpecBeat" checked> Beat auf diesem Bildschirm abspielen
+    </label>
+    <div style="display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.4fr); gap:20px; align-items:start;">
+        <div>
+            <h3 style="margin:0 0 8px;">Rap-Feld</h3>
+            <div id="rbSpecLines"></div>
+        </div>
+        <div>
+            <h3 style="margin:0 0 8px;">Wörter der Teams</h3>
+            <div id="rbSpecBoards" class="rb-large"></div>
+        </div>
+    </div>
+</section>
+
+<script>
+    const rbSpecClock = RapBattle.createClock();
+    const rbSpecBeat = RapBattle.createBeat();
+    const rbSpecLines = RapBattle.createLineField(document.getElementById('rbSpecLines'), rbSpecClock, { large: true });
+    const rbSpecRoot = document.getElementById('rbSpecRoot');
+    let rbSpecState = null;
+    let rbSpecView = null;
+    let rbSpecBeatKey = '';
+
+    function rbSpecSyncBeat() {
+        const checkbox = document.getElementById('rbSpecBeat');
+        const timing = rbSpecView ? rbSpecView.timing : null;
+        const lineCount = rbSpecState && rbSpecState.rapBattleGame ? rbSpecState.rapBattleGame.lineCount : 0;
+        if (!checkbox || !checkbox.checked || !timing || !lineCount) {
+            rbSpecBeat.stop();
+            rbSpecBeatKey = '';
+            return;
+        }
+        const key = `${timing.startAt}|${timing.bpm}`;
+        if (key === rbSpecBeatKey) return;
+        rbSpecBeatKey = key;
+        rbSpecBeat.start({
+            startAt: rbSpecClock.toLocal(timing.startAt),
+            bpm: timing.bpm,
+            countInBeats: timing.countInBeats,
+            totalBeats: lineCount * timing.beatsPerBar * timing.barsPerLine
+        });
+    }
+
+    function rbSpecDescribeRap(game, view) {
+        if (view.timing && view.lines) {
+            const located = RapBattle.locate(view.timing, rbSpecClock.now(), view.lines.length);
+            if (located.phase === 'waiting') return 'Gleich geht’s los …';
+            if (located.phase === 'countin') return `Einzähler: ${located.countdown}`;
+            if (located.phase === 'rap') return `Zeile ${located.line + 1} von ${view.lines.length}`;
+            return 'Rap geschafft!';
+        }
+        return '';
+    }
+
+    function rbSpecDescribe() {
+        const game = rbSpecState && rbSpecState.rapBattleGame;
+        if (!game || !rbSpecView) return '';
+        if (game.phase === 'IDLE') return 'Warte auf die nächste Runde...';
+        if (game.revealed) return 'Auflösung';
+        if (game.phase === 'WRITING') {
+            const progress = Object.entries(game.boardProgress || {}).map(([team, entry]) => `${team}: ${entry.filled}/${game.wordsPerBoard}`);
+            return `Die Teams schreiben Wörter … ${progress.join(' | ')}`;
+        }
+        return rbSpecDescribeRap(game, rbSpecView) || 'Rap beendet';
+    }
+
+    function rbSpecRender() {
+        if (!rbSpecState || !rbSpecView || !rbSpecRoot.isConnected) return;
+        const game = rbSpecState.rapBattleGame || {};
+        const rapper = rbSpecState.players ? rbSpecState.players[game.rapperId] : null;
+        const info = document.getElementById('rbSpecInfo');
+        if (info) {
+            const parts = [];
+            if (rapper) parts.push(`Rapper: ${rapper.name} (${rapper.team})`);
+            if (game.topic) parts.push(`Thema: ${game.topic}`);
+            info.textContent = parts.join('  ·  ');
+        }
+        rbSpecLines.setData(rbSpecView.lines, rbSpecView.timing);
+        const boards = document.getElementById('rbSpecBoards');
+        if (boards) {
+            RapBattle.renderTeamBoards(boards, rbSpecView.boards || {}, rbSpecState, { large: true });
+            boards.style.display = rbSpecView.boards && Object.keys(rbSpecView.boards).length ? 'block' : 'none';
+        }
+        rbSpecSyncBeat();
+    }
+
+    function rbSpecRenderStatus() {
+        const status = document.getElementById('rbSpecStatus');
+        if (status) status.textContent = rbSpecDescribe();
+    }
+
+    socket.off('rapBattleView');
+    socket.on('rapBattleView', view => {
+        rbSpecClock.sync(view);
+        rbSpecView = view;
+        rbSpecRender();
+        rbSpecRenderStatus();
+    });
+    socket.emit('getRapBattleView');
+
+    document.getElementById('rbSpecBeat').addEventListener('change', rbSpecSyncBeat);
+
+    window.onSpectatorStateUpdate = function(state) {
+        rbSpecState = state;
+        rbSpecRender();
+        rbSpecRenderStatus();
+    };
+
+    const rbSpecTimer = setInterval(() => {
+        if (!rbSpecRoot.isConnected) {
+            rbSpecBeat.stop();
+            clearInterval(rbSpecTimer);
+            return;
+        }
+        rbSpecRenderStatus();
+    }, 200);
+</script>

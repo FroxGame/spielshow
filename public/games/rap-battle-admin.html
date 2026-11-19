@@ -1,0 +1,157 @@
+<div id="rbAdminRoot" class="card">
+    <h2>Rap Battle</h2>
+
+    <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:12px;">
+        <label>Rap<br>
+            <select id="rbAdminRapSelect" style="min-width:220px; padding:7px 10px;"></select>
+        </label>
+        <label>Rappender Spieler<br>
+            <select id="rbAdminRapperSelect" style="min-width:200px; padding:7px 10px;"></select>
+        </label>
+        <label>Tempo (BPM)<br>
+            <input type="number" id="rbAdminBpm" min="60" max="240" value="90" style="width:80px; padding:7px 10px;">
+        </label>
+        <button id="rbAdminStartRound">Runde starten</button>
+    </div>
+
+    <p id="rbAdminStatus" style="font-weight:bold; margin:8px 0;">Noch keine Runde aktiv.</p>
+
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+        <button id="rbAdminShowOthers">Rap den Mitspielern zeigen</button>
+        <button id="rbAdminStartRap">Rap dem Rappenden zeigen (Beat startet)</button>
+        <button id="rbAdminStopRap">Rap stoppen</button>
+        <button id="rbAdminReveal">Begriffe aufdecken</button>
+    </div>
+
+    <div id="rbAdminPreview" style="display:none;">
+        <h3 style="margin:10px 0 6px;">Rap-Feld</h3>
+        <div id="rbAdminLines"></div>
+        <h3 style="margin:14px 0 6px;">Wörter der Teams</h3>
+        <div id="rbAdminBoards"></div>
+    </div>
+</div>
+
+<script>
+    const rbAdminClock = RapBattle.createClock();
+    const rbAdminRoot = document.getElementById('rbAdminRoot');
+    const rbAdminLines = RapBattle.createLineField(document.getElementById('rbAdminLines'), rbAdminClock);
+    let rbAdminRaps = [];
+    let rbAdminState = null;
+    let rbAdminView = null;
+    let rbAdminPlayersSignature = '';
+
+    const rbAdminById = id => document.getElementById(id);
+
+    function rbAdminFillSelect(select, entries) {
+        const previous = select.value;
+        select.replaceChildren(...entries.map(([value, label]) => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label;
+            return option;
+        }));
+        if (entries.some(([value]) => value === previous)) select.value = previous;
+    }
+
+    function rbAdminSelectedRap() {
+        return rbAdminRaps.find(rap => rap.id === rbAdminById('rbAdminRapSelect').value) || null;
+    }
+
+    function rbAdminApplyRapTempo() {
+        const rap = rbAdminSelectedRap();
+        if (rap) rbAdminById('rbAdminBpm').value = rap.bpm;
+    }
+
+    function rbAdminFillRaps() {
+        rbAdminFillSelect(rbAdminById('rbAdminRapSelect'), rbAdminRaps.map(rap => [rap.id, `${rap.title} (${rap.lines.length} Zeilen)`]));
+        rbAdminApplyRapTempo();
+    }
+
+    function rbAdminFillPlayers(state) {
+        const players = Object.values(state.players || {}).filter(player => player.team);
+        const signature = JSON.stringify(players.map(player => [player.id, player.name, player.team]));
+        if (signature === rbAdminPlayersSignature) return;
+        rbAdminPlayersSignature = signature;
+        rbAdminFillSelect(rbAdminById('rbAdminRapperSelect'), players.map(player => [player.id, `${player.name} (${player.team})`]));
+    }
+
+    function rbAdminDescribe(game, state) {
+        if (game.phase === 'IDLE') return 'Noch keine Runde aktiv.';
+        const rapper = state.players ? state.players[game.rapperId] : null;
+        const phase = { WRITING: 'Teams schreiben Wörter', RAPPING: 'Rap läuft', FINISHED: 'Rap beendet' }[game.phase] || game.phase;
+        const progress = Object.entries(game.boardProgress || {})
+            .map(([team, entry]) => `${team}: ${entry.filled}/${game.wordsPerBoard} Wörter, ${entry.marked} gehört`).join(' | ');
+        const parts = [phase, rapper ? `Rapper: ${rapper.name} (${rapper.team})` : 'Rapper nicht mehr verbunden'];
+        if (rbAdminView && rbAdminView.title) parts.push(rbAdminView.title);
+        if (game.revealed) parts.push('aufgedeckt');
+        return `${parts.join(' · ')}${progress ? ` · ${progress}` : ''}`;
+    }
+
+    function rbAdminRenderButtons(game) {
+        const open = game.phase !== 'IDLE' && !game.revealed;
+        const showOthers = rbAdminById('rbAdminShowOthers');
+        showOthers.disabled = !open;
+        showOthers.textContent = game.othersShown ? 'Rap vor den Mitspielern verbergen' : 'Rap den Mitspielern zeigen';
+        const startRap = rbAdminById('rbAdminStartRap');
+        startRap.disabled = !open;
+        startRap.textContent = game.rapperShown ? 'Rap neu starten' : 'Rap dem Rappenden zeigen (Beat startet)';
+        rbAdminById('rbAdminStopRap').disabled = !open || !game.rapperShown;
+        rbAdminById('rbAdminReveal').disabled = game.phase === 'IDLE' || Boolean(game.revealed);
+    }
+
+    function rbAdminRender() {
+        if (!rbAdminState || !rbAdminRoot.isConnected) return;
+        const game = rbAdminState.rapBattleGame || {};
+        rbAdminFillPlayers(rbAdminState);
+        rbAdminById('rbAdminStatus').textContent = rbAdminDescribe(game, rbAdminState);
+        rbAdminRenderButtons(game);
+
+        const hasView = Boolean(rbAdminView && rbAdminView.lines) && game.phase !== 'IDLE';
+        rbAdminById('rbAdminPreview').style.display = hasView ? 'block' : 'none';
+        rbAdminLines.setData(hasView ? rbAdminView.lines : null, hasView ? rbAdminView.timing : null);
+        RapBattle.renderTeamBoards(rbAdminById('rbAdminBoards'), hasView ? (rbAdminView.boards || {}) : {}, rbAdminState);
+    }
+
+    socket.off('receiveRapBattleRaps');
+    socket.on('receiveRapBattleRaps', raps => {
+        rbAdminRaps = Array.isArray(raps) ? raps : [];
+        rbAdminFillRaps();
+    });
+    socket.emit('getRapBattleRaps');
+
+    socket.off('rapBattleView');
+    socket.on('rapBattleView', view => {
+        rbAdminClock.sync(view);
+        rbAdminView = view;
+        rbAdminRender();
+    });
+    socket.emit('getRapBattleView');
+
+    rbAdminById('rbAdminRapSelect').addEventListener('change', rbAdminApplyRapTempo);
+
+    rbAdminById('rbAdminStartRound').addEventListener('click', () => {
+        const rap = rbAdminSelectedRap();
+        const rapperId = rbAdminById('rbAdminRapperSelect').value;
+        if (!rap) { alert('Bitte einen Rap auswählen!'); return; }
+        if (!rapperId) { alert('Bitte einen Spieler mit Team auswählen!'); return; }
+        socket.emit('adminStartRapBattleRound', { rapId: rap.id, rapperId });
+    });
+
+    rbAdminById('rbAdminShowOthers').addEventListener('click', () => {
+        const game = rbAdminState && rbAdminState.rapBattleGame;
+        socket.emit('adminShowRapBattleToOthers', !(game && game.othersShown));
+    });
+
+    rbAdminById('rbAdminStartRap').addEventListener('click', () => {
+        socket.emit('adminStartRapBattleRap', { bpm: Number(rbAdminById('rbAdminBpm').value) });
+    });
+
+    rbAdminById('rbAdminStopRap').addEventListener('click', () => socket.emit('adminStopRapBattleRap'));
+
+    rbAdminById('rbAdminReveal').addEventListener('click', () => socket.emit('adminRevealRapBattleWords'));
+
+    window.onModuleStateUpdate = function(state) {
+        rbAdminState = state;
+        rbAdminRender();
+    };
+</script>

@@ -435,6 +435,69 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     admin.emit('adminResetGame');
     await sleep(100);
 
+    // Rap Battle: Reimwoerter und Woerter der Teams bleiben privat, Rap per Admin-Button freigeben
+    const mate = await connect();
+    mate.emit('registerAsPlayer');
+    await sleep(200);
+    admin.emit('adminUpdatePlayerTeam', { socketId: mate.id, team: 'Team 2' });
+    const rapViews = {};
+    [['rapper', player], ['mate', mate], ['host', admin], ['spectator', spectator]].forEach(([name, socket]) => {
+        socket.on('rapBattleView', view => { rapViews[name] = view; });
+    });
+    const rb = () => admin.state.rapBattleGame;
+    admin.emit('adminStartGame', 'RAP_BATTLE');
+    const raps = await new Promise(resolve => { admin.once('receiveRapBattleRaps', resolve); admin.emit('getRapBattleRaps'); });
+    check('Rap Battle: Raps mit 12 Zeilen per Admin-Event', raps.length > 0 && raps[0].lines.length === 12);
+    admin.emit('adminStartRapBattleRound', { rapId: 'gibt-es-nicht', rapperId: player.id });
+    admin.emit('adminStartRapBattleRound', { rapId: raps[0].id, rapperId: 'unbekannt' });
+    await sleep(150);
+    check('Rap Battle: ungültige Runde wird ignoriert', rb().phase === 'IDLE');
+    mate.emit('adminStartRapBattleRound', { rapId: raps[0].id, rapperId: player.id });
+    await sleep(150);
+    check('Rap Battle: Spieler kann keine Runde starten', rb().phase === 'IDLE');
+    admin.emit('adminStartRapBattleRound', { rapId: raps[0].id, rapperId: player.id });
+    await sleep(250);
+    check('Rap Battle: Runde startet mit Schreibphase', rb().phase === 'WRITING' && rb().rapperId === player.id && rb().rapperTeam === 'Team 1');
+    const secretLines = raps[0].lines.slice(2);
+    check('Rap Battle: Reimwörter nicht im öffentlichen State', secretLines.every(line => !JSON.stringify(admin.state.rapBattleGame).includes(line)));
+    check('Rap Battle: Rappender und Mitspieler sehen den Rap noch nicht', rapViews.rapper.lines === null && rapViews.mate.lines === null);
+    check('Rap Battle: Admin und Zuschauer sehen den Rap', rapViews.host.lines.length === 12 && rapViews.spectator.lines.length === 12);
+    mate.emit('playerSetRapBattleWord', { index: 0, word: 'Beispielwort' });
+    mate.emit('playerSetRapBattleWord', { index: 99, word: 'ungültig' });
+    mate.emit('playerSetRapBattleWord', { index: 1, word: 42 });
+    player.emit('playerSetRapBattleWord', { index: 1, word: 'Rapper darf nicht' });
+    await sleep(250);
+    check('Rap Battle: Mitspieler schreibt ins Wortfeld des Teams', rapViews.mate.board.words[0] === 'Beispielwort' && rapViews.host.boards['Team 2'].words[0] === 'Beispielwort');
+    check('Rap Battle: ungültige Eingaben und Rappender werden abgelehnt', rapViews.host.boards['Team 2'].words[1] === '' && rapViews.host.boards['Team 1'].words[1] === '');
+    check('Rap Battle: Wörter sind für Rappenden und im State verborgen', rapViews.rapper.board === null && rapViews.rapper.boards === null && !JSON.stringify(admin.state.rapBattleGame).includes('Beispielwort'));
+    mate.emit('playerToggleRapBattleMark', { index: 0 });
+    await sleep(150);
+    check('Rap Battle: Markieren erst nach Rap-Start', rapViews.host.boards['Team 2'].marked[0] === false);
+    admin.emit('adminShowRapBattleToOthers', true);
+    await sleep(200);
+    check('Rap Battle: Rap für Mitspieler freigegeben, Rappender sieht ihn weiter nicht', rapViews.mate.lines.length === 12 && rapViews.rapper.lines === null);
+    admin.emit('adminStartRapBattleRap', { bpm: 500 });
+    await sleep(250);
+    check('Rap Battle: Rap-Start zeigt dem Rappenden die Zeilen mit Takt', rb().phase === 'RAPPING' && rapViews.rapper.lines.length === 12 && rapViews.rapper.timing.bpm === 240 && rapViews.rapper.timing.startAt > rapViews.rapper.serverNow);
+    check('Rap Battle: Wörter bleiben für den Rappenden verborgen', rapViews.rapper.boards === null);
+    mate.emit('playerToggleRapBattleMark', { index: 0 });
+    mate.emit('playerToggleRapBattleMark', { index: 5 });
+    player.emit('playerToggleRapBattleMark', { index: 0 });
+    await sleep(250);
+    check('Rap Battle: Mitspieler markiert gesagtes Wort (leere Felder nicht)', rapViews.host.boards['Team 2'].marked[0] === true && rapViews.host.boards['Team 2'].marked[5] === false);
+    check('Rap Battle: Fortschritt im State', rb().boardProgress['Team 2'].filled === 1 && rb().boardProgress['Team 2'].marked === 1);
+    admin.emit('adminRevealRapBattleWords');
+    await sleep(250);
+    check('Rap Battle: Aufdecken zeigt allen die Wörter und Zeilen', rb().revealed === true && rapViews.rapper.boards['Team 2'].words[0] === 'Beispielwort' && rapViews.rapper.lines.length === 12);
+    mate.emit('playerSetRapBattleWord', { index: 2, word: 'zu spät' });
+    await sleep(150);
+    check('Rap Battle: nach dem Aufdecken keine Änderungen mehr', rapViews.host.boards['Team 2'].words[2] === '');
+    admin.emit('adminResetGame');
+    await sleep(250);
+    check('Rap Battle: Reset leert Runde und Ansichten', rb().phase === 'IDLE' && rapViews.rapper.lines === null && rapViews.host.boards === null);
+    mate.close();
+    await sleep(150);
+
     // Team umbenennen
     for (const game of games) {
         admin.emit('adminStartGame', game.id);
@@ -450,7 +513,7 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     check('Umbenennen: Spieler zieht um', Object.values(st.players).every(p => p.team !== 'Team 1'));
 
     // Routen: Lösungen der neuen Spiele sind nicht mehr öffentlich
-    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json']) {
+    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json', '/rap-battle.json']) {
         check(`Nicht öffentlich ${url}`, !(await fetch(URL + url)).ok);
     }
 
@@ -458,7 +521,8 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
         ['getReferatTopics', 'receiveReferatTopics'],
         ['getMalenWords', 'receiveMalenWords'],
         ['getKartePlaces', 'receiveKartePlaces'],
-        ['getFlaggenData', 'receiveFlaggenData']
+        ['getFlaggenData', 'receiveFlaggenData'],
+        ['getRapBattleRaps', 'receiveRapBattleRaps']
     ];
     for (const [request, response] of contentEvents) {
         const adminData = await Promise.race([
