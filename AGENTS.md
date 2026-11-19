@@ -91,6 +91,7 @@ ode tools/flaggen-builder.js erzeugt (Flaggen in 	ools/flaggen-data.js, Bauteile
 | 19 | SONGTEXTE | songtexte | Songtext-Abschnitt Wort für Wort aufdecken, 3 Startwörter, max. 5, nächstes Wort nur an Admins (`songtexteNextWord`) (`songtexte.json`) | **Aufdecken Schritt für Schritt mit Admin-Vorschau** |
 | 20 | DU_SAGST | du-sagst | Frage mit 4 Antworten, je Team Antwortender + Einschätzender (vom Admin per Dropdown vergeben, bleiben über Fragen hinweg), Auswahl änderbar bis "Schließen", Antworten und Einschätzungen getrennt aufdecken, max. 5 (`du-sagst.json`) | **Live-Übersicht nur für Admin und Zuschauer** (`duSagstOverview`), Rollen über `addStateDecorator` nach Teamwechseln nachziehen |
 | 21 | DIE_MITTE | die-mitte | Schätzfrage, Mittelwert der Teamschätzungen zählt, näheres Team wird angezeigt, Felder schließen, Schätzungen+Mitte und Ergebnis getrennt aufdecken, max. 5 (`die-mitte.json`) | **Zahleneingabe (deutsches Format) und Auswertung im Server**, Live-Eingaben für Admin und Zuschauer (`dieMitteOverview`) |
+| 22 | HINWEIS_QUIZ | hinweis-quiz | Endlösung über bis zu 6 Hinweise, je Hinweis eine Frage, Admin deckt Frage/Antwort auf und weist den Hinweis einem Team zu, Buzzer offen bis zur Endlösung, max. 5 (`hinweis-quiz.json`) | **private Daten je Team** (`hinweisQuizView`: Team sieht nur eigene Hinweise, Admin und Zuschauer alle) |
 
 ## 4. Der Standard: Was der Kern automatisch liefert
 

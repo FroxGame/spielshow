@@ -1,0 +1,76 @@
+<style>
+    .hq-spec { text-align: center; }
+    .hq-spec-title { font-size: 1.5rem; color: #a4b0be; }
+    .hq-spec-question { margin: 14px auto; max-width: 1100px; font-size: clamp(1.6rem, 3.5vw, 2.6rem); font-weight: bold; }
+    .hq-spec-answer { color: #2ed573; }
+    .hq-spec-teams { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+    .hq-spec-team { flex: 1; min-width: 300px; max-width: 600px; padding: 14px; border: 3px solid #566078; border-radius: 10px; text-align: left; }
+    .hq-spec-hint { margin: 8px 0; font-size: 1.5rem; color: #ffd166; }
+    .hq-spec-solution { margin-top: 18px; font-size: clamp(2rem, 5vw, 3.5rem); font-weight: bold; color: #2ed573; }
+</style>
+
+<section class="card hq-spec">
+    <h2>Hinweis Quiz</h2>
+    <div id="hqSpecTitle" class="hq-spec-title">Warte auf die nächste Runde...</div>
+    <div id="hqSpecQuestion" class="hq-spec-question"></div>
+    <div id="hqSpecTeams" class="hq-spec-teams"></div>
+    <div id="hqSpecSolution" class="hq-spec-solution"></div>
+</section>
+
+<script>
+    let hqSpecHints = [];
+    let hqSpecState = null;
+
+    function hqSpecRender() {
+        const teamsBox = document.getElementById('hqSpecTeams');
+        if (!teamsBox || !hqSpecState) return;
+        const game = hqSpecState.hinweisQuizGame || {};
+        const teams = hqSpecState.teams || {};
+        const idle = game.phase === 'IDLE';
+        document.getElementById('hqSpecTitle').textContent = idle ? 'Warte auf die nächste Runde...'
+            : `${game.title} · ${(game.hintOwners || []).filter(Boolean).length} von ${game.totalHints} Hinweisen vergeben`;
+        const question = document.getElementById('hqSpecQuestion');
+        question.replaceChildren();
+        if (!idle && game.phase === 'PLAYING' && game.question) {
+            question.appendChild(document.createTextNode(`Frage für Hinweis ${game.activeIndex + 1}: ${game.question}`));
+            if (game.questionAnswer) {
+                const answer = document.createElement('div');
+                answer.className = 'hq-spec-answer';
+                answer.textContent = `Antwort: ${game.questionAnswer}`;
+                question.appendChild(answer);
+            }
+        }
+        teamsBox.replaceChildren(...(idle ? [] : Object.keys(teams)).map(team => {
+            const box = document.createElement('div');
+            box.className = 'hq-spec-team';
+            box.style.borderColor = teams[team].color || '#566078';
+            const heading = document.createElement('b');
+            heading.textContent = team;
+            heading.style.color = teams[team].color || '#fff';
+            heading.style.fontSize = '1.4rem';
+            box.appendChild(heading);
+            const own = hqSpecHints.filter(entry => entry.owner === team);
+            if (!own.length) box.appendChild(document.createTextNode(' · noch keine Hinweise'));
+            own.forEach(entry => {
+                const line = document.createElement('div');
+                line.className = 'hq-spec-hint';
+                line.textContent = `${entry.index + 1}. ${entry.hint}`;
+                box.appendChild(line);
+            });
+            return box;
+        }));
+        document.getElementById('hqSpecSolution').textContent = game.phase === 'SOLVED' ? `Lösung: ${game.solution}` : '';
+    }
+
+    socket.off('hinweisQuizView');
+    socket.on('hinweisQuizView', view => {
+        hqSpecHints = (view && view.hints) || [];
+        hqSpecRender();
+    });
+    socket.emit('getHinweisQuizView');
+
+    window.onSpectatorStateUpdate = function(state) {
+        hqSpecState = state;
+        hqSpecRender();
+    };
+</script>

@@ -24,7 +24,8 @@ const GAME_FACTORIES = [
     require('./games/rap-battle'),
     require('./games/songtexte'),
     require('./games/du-sagst'),
-    require('./games/die-mitte')
+    require('./games/die-mitte'),
+    require('./games/hinweis-quiz')
 ];
 
 const REQUIRED_FIELDS = ['id', 'title', 'stateKey', 'clientModule', 'createState', 'reset', 'register', 'renameTeam'];

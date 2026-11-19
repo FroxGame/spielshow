@@ -202,6 +202,7 @@ https://youtu.be/2PX22Zyvbe4?si=CW9G_m8nL6mKYopb
 - Songtexte vervollständigen (`songtexte.json`: Array aus `{ id, title, part, lyrics }`, `lyrics` ist ein Strophen- oder Refrain-Ausschnitt mit `\n` zwischen den Zeilen. Enthält nur Beispiele mit gemeinfreien Liedern, bitte eigene Songs ergänzen)
 - Du sagst (`du-sagst.json`: Array aus `{ id, question, options: [4 Antworten] }`, enthält Beispielfragen)
 - Die Mitte (`die-mitte.json`: Array aus `{ id, question, answer: Zahl, unit }`, enthält Beispielfragen)
+- Hinweis Quiz (`hinweis-quiz.json`: Array aus `{ id, title, solution, hints: [bis zu 6 × { hint, question, answer }] }`, enthält zwei Beispielrunden)
 
 
 # Was schon fertig ist für die Spielshow (inklusive Inhalt):

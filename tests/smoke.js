@@ -405,6 +405,53 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     await sleep(100);
     check('Die Mitte: Reset', dm().phase === 'IDLE' && dm().answer === null && dm().middles['Team 1'] === null);
 
+    // Hinweis Quiz: Frage, Antwort, Hinweis zuweisen (privat je Team), Buzzer, Endlösung, Reset
+    admin.emit('adminStartGame', 'HINWEIS_QUIZ');
+    const hqRounds = await new Promise(resolve => { admin.once('receiveHinweisQuizRounds', resolve); admin.emit('getHinweisQuizRounds'); });
+    check('Hinweis Quiz: Runden per Admin-Event', hqRounds.length > 0);
+    const hqDenied = await Promise.race([
+        new Promise(resolve => { player.once('receiveHinweisQuizRounds', () => resolve(false)); player.emit('getHinweisQuizRounds'); }),
+        sleep(300).then(() => true)
+    ]);
+    check('Hinweis Quiz: Spieler bekommt keine Lösungen', hqDenied === true);
+    const hqRound = hqRounds[0];
+    let hqPlayerView = null;
+    let hqSpecView = null;
+    player.on('hinweisQuizView', view => { hqPlayerView = view; });
+    spectator.on('hinweisQuizView', view => { hqSpecView = view; });
+    admin.emit('adminStartHinweisQuizRound', { roundId: hqRound.id });
+    await sleep(150);
+    const hq = () => admin.state.hinweisQuizGame;
+    const hqStateText = () => JSON.stringify(hq());
+    check('Hinweis Quiz: Runde läuft, Lösung und Hinweise nicht im State', hq().phase === 'PLAYING'
+        && !hqStateText().includes(hqRound.solution) && !hqStateText().includes(hqRound.hints[0].hint));
+    admin.emit('adminShowHinweisQuizQuestion', 0);
+    await sleep(150);
+    check('Hinweis Quiz: Frage sichtbar, Antwort verdeckt', hq().question === hqRound.hints[0].question && hq().questionAnswer === '');
+    player.emit('pressBuzzer');
+    await sleep(100);
+    check('Hinweis Quiz: Buzzer während der Runde', Boolean(hq().buzzerWinner));
+    admin.emit('adminRevealHinweisQuizAnswer');
+    await sleep(100);
+    check('Hinweis Quiz: Antwort aufgedeckt', hq().questionAnswer === hqRound.hints[0].answer);
+    admin.emit('adminAssignHinweisQuizHint', { index: 1, team: 'Team 2' });
+    await sleep(150);
+    check('Hinweis Quiz: fremder Hinweis nur beim Zuschauer', hqPlayerView && hqPlayerView.hints.length === 0
+        && hqSpecView && hqSpecView.hints.length === 1 && hqSpecView.hints[0].hint === hqRound.hints[1].hint);
+    admin.emit('adminAssignHinweisQuizHint', { index: 0, team: 'Team 1' });
+    await sleep(150);
+    check('Hinweis Quiz: eigener Hinweis beim Team', hqPlayerView.hints.length === 1 && hqPlayerView.hints[0].hint === hqRound.hints[0].hint
+        && hq().hintOwners[0] === 'Team 1' && !hqStateText().includes(hqRound.hints[0].hint));
+    admin.emit('adminRevealHinweisQuizSolution');
+    await sleep(150);
+    check('Hinweis Quiz: Endlösung zeigt Lösung und alle Hinweise', hq().phase === 'SOLVED' && hq().solution === hqRound.solution
+        && hq().allHints.length === hqRound.hints.length);
+    player.off('hinweisQuizView');
+    spectator.off('hinweisQuizView');
+    admin.emit('adminResetGame');
+    await sleep(100);
+    check('Hinweis Quiz: Reset', hq().phase === 'IDLE' && hq().solution === '' && hq().hintOwners.length === 0);
+
     // Diagramme: Zeichnen, Privatsphaere, Auswertung, Reset
     admin.emit('adminStartGame', 'DIAGRAMME');
     const diagrams = await new Promise(resolve => { admin.once('receiveDiagrammeList', resolve); admin.emit('getDiagrammeList'); });
@@ -628,7 +675,7 @@ const sumScores = scores => Object.values(scores).reduce((a, b) => a + b, 0);
     check('Umbenennen: Spieler zieht um', Object.values(st.players).every(p => p.team !== 'Team 1'));
 
     // Routen: Lösungen der neuen Spiele sind nicht mehr öffentlich
-    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json', '/rap-battle.json', '/songtexte.json', '/du-sagst.json', '/die-mitte.json']) {
+    for (const url of ['/kategorien.json', '/bingo.json', '/malen.json', '/karte.json', '/flaggen.json', '/buchstabensalat.json', '/teekesselchen.json', '/beugen.json', '/diagramme.json', '/rap-battle.json', '/songtexte.json', '/du-sagst.json', '/die-mitte.json', '/hinweis-quiz.json']) {
         check(`Nicht öffentlich ${url}`, !(await fetch(URL + url)).ok);
     }
 

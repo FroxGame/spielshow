@@ -1,0 +1,97 @@
+<style>
+    .hq-admin-hint { margin: 10px 0; padding: 10px; border: 1px solid #3d4763; border-radius: 8px; }
+    .hq-admin-hint.hq-active { border-color: #ffd166; }
+    .hq-admin-hint button { margin: 4px 4px 0 0; }
+    .hq-admin-meta { color: #a4b0be; font-size: 0.9rem; }
+</style>
+
+<div class="card">
+    <h2>Hinweis Quiz</h2>
+    <label for="hqRoundSelect">Runde:</label>
+    <select id="hqRoundSelect" style="width:100%; padding:8px; margin:5px 0 10px;"></select>
+    <div style="margin: 10px 0;">
+        <button onclick="hqStartRound()">Runde starten</button>
+        <button onclick="hqRevealAnswer()">Antwort auf aktuelle Frage aufdecken</button>
+        <button onclick="hqRevealSolution()">Endlösung aufdecken</button>
+    </div>
+    <p id="hqAdminStatus">Noch keine Runde aktiv.</p>
+    <p>Endlösung (nur für dich sichtbar): <b id="hqAdminSolution">-</b></p>
+    <div id="hqAdminHints"></div>
+</div>
+
+<script>
+    let hqAdminRounds = [];
+    let hqAdminState = null;
+
+    socket.off('receiveHinweisQuizRounds');
+    socket.on('receiveHinweisQuizRounds', rounds => {
+        hqAdminRounds = rounds;
+        const select = document.getElementById('hqRoundSelect');
+        if (!select) return;
+        select.replaceChildren(...rounds.map(round => {
+            const option = document.createElement('option');
+            option.value = round.id;
+            option.textContent = `${round.solution} (${round.title})`;
+            return option;
+        }));
+        hqAdminRender();
+    });
+    socket.emit('getHinweisQuizRounds');
+
+    window.hqStartRound = function() {
+        const select = document.getElementById('hqRoundSelect');
+        if (!select || !select.value) return alert('Bitte eine Runde wählen!');
+        socket.emit('adminStartHinweisQuizRound', { roundId: select.value });
+    };
+    window.hqShowQuestion = index => socket.emit('adminShowHinweisQuizQuestion', index);
+    window.hqRevealAnswer = () => socket.emit('adminRevealHinweisQuizAnswer');
+    window.hqAssign = (index, team) => socket.emit('adminAssignHinweisQuizHint', { index, team });
+    window.hqRevealSolution = () => socket.emit('adminRevealHinweisQuizSolution');
+
+    function hqAdminButton(text, onClick, disabled) {
+        const button = document.createElement('button');
+        button.textContent = text;
+        button.disabled = Boolean(disabled);
+        button.onclick = onClick;
+        return button;
+    }
+
+    function hqAdminRender() {
+        const box = document.getElementById('hqAdminHints');
+        if (!box || !hqAdminState) return;
+        const game = hqAdminState.hinweisQuizGame || {};
+        const round = hqAdminRounds.find(entry => entry.id === game.roundId);
+        document.getElementById('hqAdminSolution').textContent = round ? round.solution : '-';
+        if (!round || game.phase === 'IDLE') return box.replaceChildren();
+        const teams = Object.keys(hqAdminState.teams || {});
+        const solved = game.phase === 'SOLVED';
+        box.replaceChildren(...round.hints.map((entry, index) => {
+            const owner = (game.hintOwners || [])[index];
+            const div = document.createElement('div');
+            div.className = 'hq-admin-hint' + (game.activeIndex === index ? ' hq-active' : '');
+            const title = document.createElement('b');
+            title.textContent = `Hinweis ${index + 1}: ${entry.hint}`;
+            const meta = document.createElement('div');
+            meta.className = 'hq-admin-meta';
+            meta.textContent = `Frage: ${entry.question} · Antwort: ${entry.answer} · Vergeben an: ${owner || 'niemand'}`;
+            div.append(title, meta,
+                hqAdminButton(game.activeIndex === index ? 'Frage wird gezeigt' : 'Frage aufdecken', () => window.hqShowQuestion(index), solved),
+                ...teams.map(team => hqAdminButton(owner === team ? `${team} ✓` : `Hinweis an ${team}`, () => window.hqAssign(index, team), owner === team)),
+                hqAdminButton('Zuweisung entfernen', () => window.hqAssign(index, ''), !owner));
+            return div;
+        }));
+    }
+
+    window.onModuleStateUpdate = function(state) {
+        hqAdminState = state;
+        const game = state.hinweisQuizGame || {};
+        const status = document.getElementById('hqAdminStatus');
+        if (!status) return;
+        const assigned = (game.hintOwners || []).filter(Boolean).length;
+        status.textContent = game.phase === 'IDLE' ? 'Noch keine Runde aktiv.'
+            : (game.phase === 'SOLVED' ? 'Endlösung ist aufgedeckt.'
+                : `${assigned} von ${game.totalHints} Hinweisen vergeben.`
+                + (game.question ? ` Aktuelle Frage: Hinweis ${game.activeIndex + 1}${game.questionAnswer ? ' (Antwort aufgedeckt)' : ''}.` : ''));
+        hqAdminRender();
+    };
+</script>

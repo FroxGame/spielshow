@@ -1,0 +1,28 @@
+[
+    {
+        "id": "einstein",
+        "title": "Gesucht ist eine Person",
+        "solution": "Albert Einstein",
+        "hints": [
+            { "hint": "Ich wurde 1879 in Ulm geboren.", "question": "Wie heißt die Hauptstadt von Baden-Württemberg?", "answer": "Stuttgart" },
+            { "hint": "Ich habe in einem Patentamt in Bern gearbeitet.", "question": "In welchem Land liegt Bern?", "answer": "Schweiz" },
+            { "hint": "1921 bekam ich den Nobelpreis für Physik.", "question": "Wie viele Kontinente gibt es?", "answer": "7" },
+            { "hint": "Ein Foto zeigt mich mit herausgestreckter Zunge.", "question": "Welches Tier ist das größte Landtier?", "answer": "Afrikanischer Elefant" },
+            { "hint": "Ich bin für eine berühmte Formel mit Energie bekannt.", "question": "Wofür steht das chemische Zeichen O?", "answer": "Sauerstoff" },
+            { "hint": "E = mc²", "question": "Wie viele Minuten hat ein Tag?", "answer": "1440" }
+        ]
+    },
+    {
+        "id": "eiffelturm",
+        "title": "Gesucht ist ein Bauwerk",
+        "solution": "Eiffelturm",
+        "hints": [
+            { "hint": "Ich wurde für eine Weltausstellung gebaut.", "question": "Wie viele Beine hat eine Spinne?", "answer": "8" },
+            { "hint": "Viele fanden mich am Anfang hässlich.", "question": "Welche Farbe entsteht aus Blau und Gelb?", "answer": "Grün" },
+            { "hint": "Ich bestehe aus Eisen.", "question": "Welcher Planet ist der Sonne am nächsten?", "answer": "Merkur" },
+            { "hint": "Ich bin über 300 Meter hoch.", "question": "Wie heißt der längste Fluss Deutschlands?", "answer": "Rhein" },
+            { "hint": "Ich wurde 1889 fertig.", "question": "Wie viele Spieler hat eine Fußballmannschaft auf dem Feld?", "answer": "11" },
+            { "hint": "Ich stehe in Paris.", "question": "Wie heißt die Währung in Japan?", "answer": "Yen" }
+        ]
+    }
+]

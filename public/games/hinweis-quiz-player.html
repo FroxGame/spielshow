@@ -1,0 +1,89 @@
+<style>
+    .hq-game { text-align: center; }
+    .hq-title { color: #a4b0be; margin: 6px 0; }
+    .hq-question { margin: 12px 0; padding: 12px; border-radius: 8px; background: #202a2b; font-size: 1.2rem; }
+    .hq-question-answer { margin-top: 6px; color: #2ed573; font-weight: bold; }
+    .hq-hints { text-align: left; }
+    .hq-hint { margin: 8px 0; padding: 10px; border: 1px solid #566078; border-radius: 7px; }
+    .hq-hint-text { font-size: 1.2rem; font-weight: bold; color: #ffd166; }
+    .hq-hint-question { color: #a4b0be; font-size: 0.9rem; }
+    .hq-solution { margin-top: 14px; font-size: 1.6rem; font-weight: bold; color: #2ed573; }
+</style>
+
+<div class="hq-game">
+    <h2>Hinweis Quiz</h2>
+    <div id="hqPlayerTitle" class="hq-title">Warte auf die nächste Runde...</div>
+    <div id="hqPlayerQuestion" class="hq-question" style="display:none;"></div>
+    <h3 id="hqPlayerHintsHeading" style="display:none;"></h3>
+    <div id="hqPlayerHints" class="hq-hints"></div>
+    <div id="hqPlayerSolution" class="hq-solution"></div>
+</div>
+
+<script>
+    let hqPlayerHints = [];
+    let hqPlayerState = null;
+    let hqPlayerTeam = null;
+
+    function hqHintBox(entry, showOwner) {
+        const box = document.createElement('div');
+        box.className = 'hq-hint';
+        const title = document.createElement('div');
+        title.className = 'hq-hint-question';
+        title.textContent = `Hinweis ${entry.index + 1}` + (showOwner && entry.owner ? ` (${entry.owner})` : '')
+            + ` · Frage: ${entry.question} · Antwort: ${entry.answer}`;
+        const text = document.createElement('div');
+        text.className = 'hq-hint-text';
+        text.textContent = entry.hint;
+        box.append(text, title);
+        return box;
+    }
+
+    function hqPlayerRender() {
+        const titleEl = document.getElementById('hqPlayerTitle');
+        if (!titleEl || !hqPlayerState) return;
+        const game = hqPlayerState.hinweisQuizGame || {};
+        const idle = game.phase === 'IDLE';
+        titleEl.textContent = idle ? 'Warte auf die nächste Runde...' : game.title;
+        const question = document.getElementById('hqPlayerQuestion');
+        question.style.display = !idle && game.question && game.phase === 'PLAYING' ? 'block' : 'none';
+        question.replaceChildren();
+        if (game.question) {
+            const label = document.createElement('div');
+            label.textContent = `Frage für Hinweis ${game.activeIndex + 1}: ${game.question}`;
+            question.appendChild(label);
+            if (game.questionAnswer) {
+                const answer = document.createElement('div');
+                answer.className = 'hq-question-answer';
+                answer.textContent = `Antwort: ${game.questionAnswer}`;
+                question.appendChild(answer);
+            }
+        }
+        // Nach der Endlösung sehen alle alle Hinweise, vorher nur die des eigenen Teams
+        const solved = game.phase === 'SOLVED';
+        const hints = solved ? (game.allHints || []).map((entry, index) => ({ index, ...entry })) : hqPlayerHints;
+        const heading = document.getElementById('hqPlayerHintsHeading');
+        heading.style.display = idle ? 'none' : 'block';
+        heading.textContent = solved ? 'Alle Hinweise' : (hints.length ? 'Eure Hinweise' : 'Ihr habt noch keine Hinweise.');
+        document.getElementById('hqPlayerHints').replaceChildren(...(idle ? [] : hints).map(entry => hqHintBox(entry, solved)));
+        document.getElementById('hqPlayerSolution').textContent = solved ? `Lösung: ${game.solution}` : '';
+    }
+
+    socket.off('hinweisQuizView');
+    socket.on('hinweisQuizView', view => {
+        hqPlayerHints = (view && view.hints) || [];
+        hqPlayerRender();
+    });
+
+    window.onModuleStateUpdate = function(state) {
+        hqPlayerState = state;
+        const me = (state.players || {})[socket.id];
+        const team = me ? me.team : null;
+        if (team !== hqPlayerTeam) {
+            hqPlayerTeam = team;
+            socket.emit('getHinweisQuizView');
+        }
+        hqPlayerRender();
+    };
+
+    socket.emit('getHinweisQuizView');
+</script>
